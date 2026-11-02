@@ -9,6 +9,7 @@ import pandas as pd
 
 from fresh_replenish.config import DATASET_FILES, DATASET_REVISION, RAW_DIR, REPORTS_DIR
 from fresh_replenish.data.db import connect
+from fresh_replenish.report import md_table
 
 EXPECTED_ROWS = {"train": 4_500_000, "eval": 350_000}
 OPERATING_HOURS = 16  # 6:00-22:00, the window stock_hour6_22_cnt covers
@@ -96,11 +97,6 @@ def run_audit(
     return AuditResult(checks, {name: con.execute(sql).df() for name, sql in TABLES.items()})
 
 
-def _md_table(df: pd.DataFrame) -> str:
-    rows = [list(df.columns), ["---"] * len(df.columns), *df.round(4).astype(str).values.tolist()]
-    return "\n".join("| " + " | ".join(map(str, row)) + " |" for row in rows)
-
-
 def render_report(result: AuditResult) -> str:
     share = result.tables["headline"].iloc[0]
     checks = pd.DataFrame(
@@ -115,11 +111,11 @@ def render_report(result: AuditResult) -> str:
         f"**Stockout share of operating hours (6:00-22:00): {share.stockout_share:.1%}.** "
         f"Store-days with at least one stockout hour: {share.days_with_a_stockout:.1%}.",
         "## Hard checks",
-        _md_table(checks),
+        md_table(checks),
     ]
     for name in TABLES:
         if name != "headline":
-            parts += [f"## {name.replace('_', ' ').capitalize()}", _md_table(result.tables[name])]
+            parts += [f"## {name.replace('_', ' ').capitalize()}", md_table(result.tables[name])]
     return "\n\n".join(parts) + "\n"
 
 

@@ -2,11 +2,14 @@ import math
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from fresh_replenish.analysis.drivers import (
     TERMS,
     build_frame,
+    effects,
     fit_drivers,
+    render_report,
     split_stores,
     stability,
 )
@@ -121,3 +124,34 @@ def test_stability_missing_term_is_unstable():
     a = _fit({"activity_flag": (0.30, 0.05), "holiday_flag": (0.2, 0.05)})
     b = _fit({"activity_flag": (0.30, 0.05)})  # pyfixest dropped holiday_flag in this half
     assert not bool(stability(a, b).loc["holiday_flag", "stable"])
+
+
+def _full_fit(coefs: dict[str, float], se: float = 0.01) -> pd.DataFrame:
+    fit = _fit({t: (c, se) for t, c in coefs.items()})
+    fit["p"] = 0.001
+    return fit
+
+
+def test_effects_price_elasticity():
+    row = effects(_full_fit({"log_discount": -1.5})).set_index("term").loc["log_discount"]
+    assert row.effect_pct == pytest.approx((0.9**-1.5 - 1) * 100)  # a 10% price cut: +17.1%
+    assert row.ci_low_pct < row.effect_pct < row.ci_high_pct
+
+
+def test_effects_percent_change():
+    table = effects(_full_fit({"activity_flag": math.log(1.3)})).set_index("term")
+    assert table.loc["activity_flag", "effect_pct"] == pytest.approx(30.0)
+
+
+def test_report_says_associations():
+    fit = _full_fit(dict.fromkeys(TERMS, 0.1))
+    results = {
+        "effects": effects(fit),
+        "stability": stability(fit, fit).reset_index(),
+        "robustness": fit[["coef"]].reset_index(),
+        "excluded": pd.DataFrame({"split": ["train"], "rows": [10], "mean_sales": [15.0]}),
+        "timing": pd.DataFrame({"fit": ["all stores"], "rows": [100], "seconds": [1.0]}),
+    }
+    report = render_report(results)
+    assert "associations, not causes" in report
+    assert "7 of 7 drivers" in report
