@@ -3,7 +3,13 @@ import math
 import numpy as np
 import pandas as pd
 
-from fresh_replenish.analysis.drivers import TERMS, build_frame, fit_drivers
+from fresh_replenish.analysis.drivers import (
+    TERMS,
+    build_frame,
+    fit_drivers,
+    split_stores,
+    stability,
+)
 from fresh_replenish.data.db import connect
 
 TRUE = {
@@ -86,3 +92,32 @@ def test_fit_recovers_known_effects():
     assert list(fit.index) == TERMS
     for term, true in TRUE.items():
         assert abs(fit.loc[term, "coef"] - true) < 4 * fit.loc[term, "se"], term
+
+
+def test_split_stores_partitions():
+    df = simulate(n_series=60, days=7)
+    a, b = split_stores(df, seed=42)
+    assert not set(a.store_id) & set(b.store_id)
+    assert len(a) + len(b) == len(df)
+    assert split_stores(df, seed=42)[0].equals(a)
+
+
+def _fit(coefs: dict[str, tuple[float, float]]) -> pd.DataFrame:
+    return pd.DataFrame(
+        {"coef": [c for c, _ in coefs.values()], "se": [s for _, s in coefs.values()]},
+        index=pd.Index(list(coefs), name="term"),
+    )
+
+
+def test_stability_flags_planted_difference():
+    a = _fit({"activity_flag": (0.30, 0.05), "log_discount": (-1.5, 0.1)})
+    b = _fit({"activity_flag": (0.31, 0.05), "log_discount": (-0.5, 0.1)})
+    table = stability(a, b)
+    assert bool(table.loc["activity_flag", "stable"])
+    assert not bool(table.loc["log_discount", "stable"])
+
+
+def test_stability_missing_term_is_unstable():
+    a = _fit({"activity_flag": (0.30, 0.05), "holiday_flag": (0.2, 0.05)})
+    b = _fit({"activity_flag": (0.30, 0.05)})  # pyfixest dropped holiday_flag in this half
+    assert not bool(stability(a, b).loc["holiday_flag", "stable"])
