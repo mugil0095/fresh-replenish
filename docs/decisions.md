@@ -34,11 +34,44 @@ Each entry gives the decision, why it was made, and the evidence behind it.
 
 - **Why:** the dataset is 115 MB and licensed CC BY 4.0. Anyone can fetch the same files with the pinned download command.
 
+## 2026-11-03: Drop `discount = 0` rows from the driver regression
+
+- **Why:** `ln(0)` is undefined, and these rows aren't normal prices. They sell 14.5× the normal mean in train and 23× in eval, so they look like giveaways or a coding quirk.
+- **Evidence:** 16,039 train rows and 1,300 eval rows (0.36%). They are reported separately in `reports/demand_drivers.md`.
+
+## 2026-11-03: Poisson regression (PPML) with store-product and week fixed effects, clustered by store
+
+- **Why:**
+  - It handles zero-sales days (4.5% of train).
+  - It is unaffected by the normalised sales scale.
+  - Log price gives a price elasticity directly.
+  - Week fixed effects keep the date-level holiday flag measurable; date fixed effects would absorb it.
+- **Evidence:** a simulation test recovers 7 known effects within 4 standard errors. The full fit on 4.48 M rows takes 33 s.
+
+## 2026-11-03: `holiday_flag` means "non-working day"
+
+- **Evidence:** it is the same for every store on a given date. It covers 33 of 97 days: all weekends, plus Qingming (Apr 4–6), Labour Day (May 1–5) and Dragon Boat (Jun 10).
+
+## 2026-11-03: Demand drivers (associations, not causes)
+
+- **Price:** elasticity −1.26, so a 10% price cut goes with +14.2% sales (95% CI +13.8% to +14.6%).
+- **Non-working day:** +31.7% sales.
+- **Promotion:** +1.4% holding price fixed. Weather effects are about 1% per unit or less.
+- **Stability:** 7 of 7 drivers are stable across two random halves of the stores. Price is the closest call (z = −1.94 against a 1.96 bound).
+- **Robustness:**
+  - Without city 0, the elasticity is −1.10 (same sign, smaller).
+  - On in-stock days the promotion effect is four times larger (+5.8% vs +1.4%). That fits stockouts hiding promotion demand; Phase 3 tests it.
+  - Weather is fragile: wind changes sign on in-stock days.
+
+## Known issue
+
+- **pyfixest warnings:** pyfixest 0.60 uses pandas options deprecated for pandas 4, which produces warnings. Versions are pinned in `uv.lock`.
+
 ## Facts that differ from the paper
 
 - **Products:** the data has 865 distinct products (paper: 863; dataset card: 865). We use what the data says.
 
-## Open questions for Phase 2
+## Phase 1 open questions, now answered
 
-- **Discount values:** `discount` ranges from 0.0 to 1.088, and 51.4% of rows are below 1. It looks like a price ratio. Rows at 0.0 and above 1 need checking before the demand-driver regression.
-- **City balance:** city 0 holds 2,503,667 rows (51.6% of all rows). Analyses should report per city, or weight cities, so one city doesn't dominate.
+- **Discount values:** `discount` is a price ratio. Rows at 0 are dropped (see above). The 34 rows above 1 are kept as small price rises.
+- **City balance:** city 0 holds 51.6% of rows, so every analysis also reports a fit without it.
