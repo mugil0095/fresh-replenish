@@ -8,4 +8,7 @@ DATASET_FILES: dict[str, int] = {
     "data/train.parquet": 106_436_287,
     "data/eval.parquet": 8_440_124,
 }
-RAW_DIR = Path("data/raw")
+# shortcut: assumes the editable install (uv sync); use a settings env var if the package ships.
+REPO_ROOT = Path(__file__).resolve().parents[2]
+RAW_DIR = REPO_ROOT / "data" / "raw"
+REPORTS_DIR = REPO_ROOT / "reports"

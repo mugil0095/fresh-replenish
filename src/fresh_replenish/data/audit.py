@@ -7,7 +7,7 @@ from pathlib import Path
 import duckdb
 import pandas as pd
 
-from fresh_replenish.config import DATASET_FILES, DATASET_REVISION, RAW_DIR
+from fresh_replenish.config import DATASET_FILES, DATASET_REVISION, RAW_DIR, REPORTS_DIR
 from fresh_replenish.data.db import connect
 
 EXPECTED_ROWS = {"train": 4_500_000, "eval": 350_000}
@@ -123,7 +123,7 @@ def render_report(result: AuditResult) -> str:
     return "\n\n".join(parts) + "\n"
 
 
-def main(raw_dir: Path = RAW_DIR, out_dir: Path = Path("reports")) -> int:
+def main(raw_dir: Path = RAW_DIR, out_dir: Path = REPORTS_DIR) -> int:
     train, eval_ = (raw_dir / name for name in DATASET_FILES)
     if not (train.exists() and eval_.exists()):
         print(

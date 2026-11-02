@@ -26,5 +26,5 @@ def connect(train_path: Path, eval_path: Path) -> duckdb.DuckDBPyConnection:
     # read_parquet takes the path as a value, so folders with spaces need no SQL quoting.
     con.read_parquet(str(train_path)).create_view("train")
     con.read_parquet(str(eval_path)).create_view("eval")
-    con.execute(DAILY_VIEW)
+    con.execute(DAILY_VIEW).fetchall()  # consume the result: DuckDB 2 blocks half-read connections
     return con
