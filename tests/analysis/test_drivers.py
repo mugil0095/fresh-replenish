@@ -87,7 +87,14 @@ def test_exclude_cities(tiny_dataset):
 
 
 def test_week_number(tiny_dataset):
-    assert set(frame(tiny_dataset).week) == {1}  # 2024-01-01..03 are in ISO week 1
+    assert set(frame(tiny_dataset).week) == {"2024-01-01"}  # Monday that starts the week
+
+
+def test_week_key_is_unique_across_years(make_dataset):
+    def next_year(train, eval_):
+        train[0]["dt"] = "2024-12-30"  # ISO week 1 of 2025, like 2024-01-01
+
+    assert "2024-12-30" in set(frame(make_dataset(next_year)).week)
 
 
 def test_fit_recovers_known_effects():

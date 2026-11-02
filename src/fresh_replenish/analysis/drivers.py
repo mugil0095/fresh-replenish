@@ -28,7 +28,7 @@ FRAME_SQL = """
 SELECT store_id, product_id, city_id, sale_amount,
        ln(discount) AS log_discount, activity_flag, holiday_flag,
        precpt, avg_temperature, avg_humidity, avg_wind_level,
-       weekofyear(CAST(dt AS DATE)) AS week
+       strftime(date_trunc('week', CAST(dt AS DATE)), '%Y-%m-%d') AS week
 FROM daily
 WHERE split = 'train' AND discount > 0
   AND (NOT $in_stock_only OR stockout_hours = 0)
@@ -120,14 +120,23 @@ ROBUSTNESS = {
 
 def run(con: duckdb.DuckDBPyConnection) -> dict[str, pd.DataFrame]:
     """Main fit, two random store halves and two robustness fits, with timings."""
-    frames = {"all stores": build_frame(con)}
-    frames["half A"], frames["half B"] = split_stores(frames["all stores"])
-    frames.update({name: build_frame(con, **kwargs) for name, kwargs in ROBUSTNESS.items()})
     fits, timing = {}, []
-    for name, frame in frames.items():
+
+    def fit(name: str, frame: pd.DataFrame) -> None:
         start = time.perf_counter()
         fits[name] = fit_drivers(frame)
         timing.append((name, len(frame), round(time.perf_counter() - start, 1)))
+
+    # Build one frame (or one pair) at a time so peak memory stays near a single frame.
+    main_frame = build_frame(con)
+    fit("all stores", main_frame)
+    half_a, half_b = split_stores(main_frame)
+    del main_frame
+    fit("half A", half_a)
+    fit("half B", half_b)
+    del half_a, half_b
+    for name, kwargs in ROBUSTNESS.items():
+        fit(name, build_frame(con, **kwargs))
     robustness = pd.concat({n: fits[n].coef for n in ["all stores", *ROBUSTNESS]}, axis=1)
     excluded = con.execute(
         "SELECT split, count(*) AS rows, avg(sale_amount) AS mean_sales FROM daily"

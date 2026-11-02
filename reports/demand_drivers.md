@@ -61,8 +61,8 @@ Poisson regression (PPML) of daily sales on the train split (90 days), with stor
 
 | fit | rows | seconds |
 | --- | --- | --- |
-| all stores | 4483961 | 33.3 |
-| half A | 2297313 | 10.3 |
-| half B | 2186648 | 11.2 |
-| in-stock days only | 2504457 | 14.5 |
-| without city 0 | 2160972 | 12.0 |
+| all stores | 4483961 | 31.4 |
+| half A | 2297313 | 10.7 |
+| half B | 2186648 | 11.5 |
+| in-stock days only | 2504457 | 14.7 |
+| without city 0 | 2160972 | 11.8 |
