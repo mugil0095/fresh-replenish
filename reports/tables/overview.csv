@@ -1,0 +1,3 @@
+split,series,stores,cities,products,days,first_day,last_day
+train,50000,898,18,865,90,2024-03-28,2024-06-25
+eval,50000,898,18,865,7,2024-06-26,2024-07-02
