@@ -2,6 +2,7 @@
 
 import duckdb
 import pandas as pd
+import pyfixest as pf
 
 TERMS = [
     "log_discount",
@@ -35,3 +36,17 @@ def build_frame(
     """Narrow model frame (no hourly lists) for the train split."""
     params = {"in_stock_only": in_stock_only, "exclude": list(exclude_cities)}
     return con.execute(FRAME_SQL, params).df()
+
+
+# Week FE (not date FE) keep the date-level holiday flag identifiable.
+FORMULA = f"sale_amount ~ {' + '.join(TERMS)} | store_id^product_id + week"
+
+
+def fit_drivers(frame: pd.DataFrame) -> pd.DataFrame:
+    """PPML coefficients with store-clustered standard errors, indexed by term."""
+    tidy = pf.fepois(FORMULA, data=frame, vcov={"CRV1": "store_id"}).tidy()
+    out = pd.DataFrame(
+        {"coef": tidy["Estimate"], "se": tidy["Std. Error"], "p": tidy["Pr(>|t|)"]}
+    )
+    out.index.name = "term"
+    return out
