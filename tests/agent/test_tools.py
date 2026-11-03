@@ -46,6 +46,10 @@ def test_saved_orders_count_toward_store_capacity(orders, tmp_path):
     assert later.compute_order(1, 11, "2024-06-26", units=11)["within_limits"] is False
 
 
+def test_a_negative_quantity_is_refused(toolbox):
+    assert "units" in toolbox.compute_order(1, 10, "2024-06-26", units=-40).get("error", "")
+
+
 def test_bad_ratio_is_refused(toolbox):
     assert "ratio" in toolbox.compute_order(1, 10, "2024-06-26", ratio=20)["error"]
 

@@ -68,8 +68,11 @@ def _failed(state: State) -> list[int]:
 
 
 def sources(messages: list) -> list[str]:
-    """What an answer's numbers may come from: the rules, tool outputs and the user's words."""
-    return [SYSTEM] + [
+    """What an answer's numbers may come from: tool outputs and the user's (or planner's) words.
+
+    Not the rules: their 9, 50 or 90 must not pass as an order quantity.
+    """
+    return [
         m.text for m in messages
         if isinstance(m, ToolMessage) or (isinstance(m, HumanMessage) and m.name != "checker")
     ]

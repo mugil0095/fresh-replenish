@@ -5,7 +5,7 @@ TOOL = '{"date": "2024-06-26", "median": 5.0372, "high": 9.0, "critical_ratio": 
 
 def test_numbers_keep_dates_commas_decimals_and_signs():
     text = "Order 1,234.5 units (25.0%) on 2024-06-26, a -3.2 change, from q90 of Chronos-2."
-    assert numbers(text) == ["2024-06-26", "1,234.5", "25.0", "-3.2", "2"]
+    assert numbers(text) == ["2024-06-26", "1,234.5", "25.0%", "-3.2", "2"]
 
 
 def test_tool_numbers_pass_with_rounding():
@@ -29,3 +29,17 @@ def test_typographic_dashes_and_spaces_are_read_like_plain_ones():
 
 def test_a_negative_result_may_be_stated_as_a_fall():
     assert unsupported("Demand falls by 13.8%.", ['{"change_pct": -13.8}']) == []
+
+
+def test_a_fraction_counts_as_a_percentage_only_with_a_percent_sign():
+    assert unsupported("At the 90% level, order 90 units.", [TOOL]) == ["90"]
+    assert unsupported("A 90 percent (or 90-percent) level.", [TOOL]) == []
+
+
+def test_ranks_are_not_quantities():
+    assert unsupported("Between the 25th and 75th percentile.", [TOOL]) == []
+
+
+def test_numbers_written_as_words_are_caught():
+    assert unsupported("Order twelve units.", [TOOL]) == ["twelve"]
+    assert unsupported("Order twelve units.", [TOOL, "Can store 1 order twelve?"]) == []

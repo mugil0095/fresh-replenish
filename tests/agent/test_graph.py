@@ -58,6 +58,12 @@ def test_decision_record_gets_the_tool_outputs(toolbox):
     assert record["tool_outputs"][0]["order"] == 9.0
 
 
+def test_numbers_in_the_rules_are_not_a_source(toolbox):
+    script = [call("get_forecast"), AIMessage("Order 50 units."), AIMessage("Order 9.0 units.")]
+    out = run(toolbox, script)
+    assert out["retries"] == 1 and out["answer"] == "Order 9.0 units."
+
+
 def test_percentile_words_from_the_rules_pass_the_checker(toolbox):
     answer = "The 10th to 90th percentile range is 1.0 to 9.0."
     assert run(toolbox, [call("get_forecast"), AIMessage(answer)])["answer"] == answer
