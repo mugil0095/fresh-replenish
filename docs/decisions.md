@@ -294,6 +294,24 @@ Each entry gives the decision, why it was made, and the evidence behind it.
     - coverage in 5 categories;
     - stockouts in 8 categories, for example category 14, from 20% to 52%.
 
+## 2026-11-03: Replenishment agent design (spec step 8)
+
+- **Graph:** one LangGraph agent with four plain-code tools (`get_forecast`, `compute_order`, `what_if`, `write_decision_record`) over the nightly batch's calibrated forecasts. The LLM is chosen by `FRESH_LLM` through LangChain's `init_chat_model`, so the provider is a setting.
+- **Assumed limits** (the data has no prices or capacities):
+  - an order above 1.5 × the item's calibrated 90th-percentile forecast needs a planner;
+  - so does a store-day total above 400 units, against a planned 99th percentile of 366.
+- **Hand-off:** the graph pauses (a LangGraph interrupt) for every over-limit order, and after 3 failed limit checks since the last review.
+  - `write_decision_record` checks the limits itself, because a tool call in the same step can't see the others. It records an over-limit order only if a planner approved that exact line.
+- **Number checker:** every number in an answer must appear in a tool output, the question or the agent's rules.
+  - It allows rounding, a fraction stated as a percentage, and counts 0–10.
+  - A rejected answer gets 2 retries, then becomes a refusal.
+- **What-ifs:** Chronos-2 forecasts the planned and the changed inputs in one batch, and the answer is labelled a model-based estimate.
+- **Evaluation:**
+  - 50 questions in `eval/questions.jsonl`, drawn from the real orders with seed 42: 10 lookups, 8 "why this order?", 6 other cost ratios, 8 what-ifs, 8 limit violations, 4 records, 4 missing-data and 2 out-of-scope.
+  - Each runs 3 times, and a planner rejects every hand-off.
+  - Measured: tool choice, numbers matching tools (final and first try), hand-offs, refusals, latency, tokens, and cost when `FRESH_LLM_PRICE` is set.
+- **Status:** built and tested with a scripted model (26 tests). The real evaluation waits for the LLM choice.
+
 ## Known issues
 
 - **Hugging Face downloads on this laptop:** the antivirus intercepts HTTPS, so Hugging Face requests fail certificate checks. The forecasting run therefore used `HF_HUB_OFFLINE=1`, with the pinned weights already in the local cache.

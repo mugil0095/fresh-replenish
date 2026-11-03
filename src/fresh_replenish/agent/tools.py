@@ -137,15 +137,15 @@ def chronos_scenario(con: duckdb.DuckDBPyConnection, recovered: Path, forecaster
         origin = len(train.dates)
         if not len(rows) or not len(day) or not 0 <= day[0] - origin < HORIZON:
             return None
-        one = Series(
-            ids=series.ids.iloc[rows].reset_index(drop=True), dates=series.dates,
-            demand=series.demand[rows], in_stock=series.in_stock[rows],
-            inputs=series.inputs[rows].copy(),
+        pair = np.repeat(rows[:1], 2)  # row 0 keeps the planned inputs, row 1 gets the change
+        two = Series(
+            ids=series.ids.iloc[pair].reset_index(drop=True), dates=series.dates,
+            demand=series.demand[pair], in_stock=series.in_stock[pair],
+            inputs=series.inputs[pair].copy(),
         )
-        base = forecaster(one, origin, HORIZON)[0, len(DECILE_COLUMNS) // 2, day[0] - origin]
         for name, value in changes.items():
-            one.inputs[0, day[0], INPUTS.index(name)] = value
-        changed = forecaster(one, origin, HORIZON)[0, len(DECILE_COLUMNS) // 2, day[0] - origin]
-        return float(base), float(changed)
+            two.inputs[1, day[0], INPUTS.index(name)] = value
+        median = forecaster(two, origin, HORIZON)[:, len(DECILE_COLUMNS) // 2, day[0] - origin]
+        return float(median[0]), float(median[1])
 
     return run

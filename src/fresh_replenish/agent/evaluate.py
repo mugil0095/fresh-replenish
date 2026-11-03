@@ -97,15 +97,19 @@ def score(question: dict, out: dict, seconds: float) -> dict:
         "id": question["id"], "type": question["type"], "tool_choice": float(tool_ok),
         "numbers_match": float(not unsupported(out["answer"], sources)),
         "first_try": float(out["retries"] == 0),
-        "handoff_correct": float(out["handoff"] == question["handoff"]),
+        "handoff_correct": float((out["handoffs"] > 0) == question["handoff"]),
         "refusal_correct": np.nan if refusal is None else float(refusal),
         "seconds": seconds,
-        "tokens": sum(u.get("input_tokens", 0) + u.get("output_tokens", 0) for u in usage),
+        "input_tokens": sum(u.get("input_tokens", 0) for u in usage),
+        "output_tokens": sum(u.get("output_tokens", 0) for u in usage),
     }
 
 
-def evaluate(build, questions: list[dict], repeats: int = REPEATS):
-    """Run every question `repeats` times; `build(question)` returns the agent to ask."""
+def evaluate(build, questions: list[dict], repeats: int = REPEATS, price=None):
+    """Run every question `repeats` times; `build(question)` returns the agent to ask.
+
+    price: (input, output) US dollars per million tokens, to report the cost per run.
+    """
     rows = []
     for question in questions:
         for _ in range(repeats):
@@ -120,7 +124,10 @@ def evaluate(build, questions: list[dict], repeats: int = REPEATS):
         return {
             "runs": len(part), **part[measures].mean().to_dict(),
             "p50_seconds": part.seconds.median(), "p95_seconds": part.seconds.quantile(0.95),
-            "tokens_per_run": part.tokens.mean(),
+            "tokens_per_run": (part.input_tokens + part.output_tokens).mean(),
+            **({} if price is None else {"usd_per_run": (
+                part.input_tokens * price[0] + part.output_tokens * price[1]
+            ).mean() / 1e6}),
         }
 
     summary = pd.DataFrame(
@@ -148,7 +155,8 @@ def render_report(summary: pd.DataFrame, model: str) -> str:
         f"decisions overall {total.handoff_correct:.0%}.",
         f"- **Refusals and missing data handled:** {total.refusal_correct:.0%}.",
         f"- **Latency:** p50 {total.p50_seconds:.1f} s, p95 {total.p95_seconds:.1f} s per "
-        f"question; {total.tokens_per_run:,.0f} tokens per run.",
+        f"question; {total.tokens_per_run:,.0f} tokens per run"
+        + (f", ${total.usd_per_run:.4f} per run." if "usd_per_run" in total else "."),
         "## By question type",
         md_table(summary),
     ]
@@ -192,7 +200,11 @@ def main(
         records=processed_dir.parent / "decisions" / "eval_records.jsonl",
     )
     app = build_agent(init_chat_model(model_name), toolbox)
-    runs, summary = evaluate(lambda question: app, questions)
+    price = os.environ.get("FRESH_LLM_PRICE")  # "input,output" US dollars per million tokens
+    runs, summary = evaluate(
+        lambda question: app, questions,
+        price=None if not price else tuple(float(x) for x in price.split(",")),
+    )
     (out_dir / "tables").mkdir(parents=True, exist_ok=True)
     runs.to_csv(out_dir / "tables" / "agent_runs.csv", index=False)
     summary.to_csv(out_dir / "tables" / "agent_summary.csv", index=False)

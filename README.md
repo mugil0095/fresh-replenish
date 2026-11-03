@@ -7,7 +7,7 @@ Fresh-food replenishment for quick-commerce dark stores. The project:
 3. turns forecasts into cost-based daily orders;
 4. explains each order with an AI agent.
 
-**Status:** Phases 1–6 are done.
+**Status:** Phases 1–6 are done. The Phase 7 agent is built; its evaluation waits for the choice of LLM.
 - **Data foundation:** the data is verified; see the [data audit](reports/data_audit.md).
 - **Demand drivers:** see [what drives demand](reports/demand_drivers.md).
 - **Hidden demand:** see [recovering hidden demand](reports/demand_recovery.md).
@@ -35,6 +35,7 @@ uv run uvicorn --factory fresh_replenish.serving.api:create_app  # GET /reorder?
 uv run python -m fresh_replenish.serving.latency        # writes reports/service.md
 uv run python -m fresh_replenish.monitoring.drift       # writes reports/monitoring.md
 docker compose up                                       # the API on :8000 and MLflow on :5000
+FRESH_LLM=groq:llama-3.3-70b-versatile uv run python -m fresh_replenish.agent.evaluate  # needs the provider's API key
 uv run pytest                                    # data and model tests run once the data and weights are downloaded
 ```
 
@@ -90,6 +91,15 @@ The checks use a held-out week (Jun 26–Jul 2) that no model saw.
 - **API:** `GET /reorder?store_id=…&ratio=…` returns a store's orders, recomputed for any cost ratio. p95 latency is 7.3 ms.
 - **Monitoring:** it checks median bias, range coverage and stockout drift, overall and per category. On the held-out week everything is within limits overall (coverage 81.5%), and a few categories raise alerts.
 - **Docker:** the image serves the API only, with no ML stack, and GitHub Actions builds and smoke-tests it.
+
+## Agent
+
+A LangGraph agent turns the forecasts into explained orders.
+
+- **Tools:** four plain-code tools: forecast lookup, cost-based order within limits, Chronos-2 what-if, and decision record.
+- **Numbers:** a checker rejects any number that doesn't come from a tool.
+- **Hand-off:** orders over the limits pause for a planner's approval.
+- **Evaluation:** 50 scripted questions, each run three times, score tool choice, numbers, hand-offs, refusals, latency and cost.
 
 ## Data
 

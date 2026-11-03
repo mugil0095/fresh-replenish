@@ -1,8 +1,9 @@
 import json
 
+from fakes import Scripted
 from langchain_core.messages import AIMessage
 
-from fresh_replenish.agent.graph import REFUSAL, Scripted, ask, build_agent
+from fresh_replenish.agent.graph import REFUSAL, ask, build_agent
 
 DAY = {"store_id": 1, "product_id": 10, "date": "2024-06-26"}
 
@@ -18,7 +19,7 @@ def run(toolbox, script, question="How much should store 1 order of product 10 o
 def test_tool_loop_answers_with_tool_numbers(toolbox):
     out = run(toolbox, [call("get_forecast"), AIMessage("Median 5.0, likely 1.0 to 9.0.")])
     assert out["answer"] == "Median 5.0, likely 1.0 to 9.0."
-    assert out["tools"] == ["get_forecast"] and not out["handoff"]
+    assert out["tools"] == ["get_forecast"] and not out["handoffs"]
 
 
 def test_checker_rejects_an_invented_number_then_accepts_a_retry(toolbox):
@@ -37,14 +38,14 @@ def test_over_limit_order_pauses_for_a_human_and_resumes(toolbox):
         AIMessage("A planner rejected the order of 20 units."),
     ]
     out = run(toolbox, script, "Order 20 units of product 10 for store 1 on 2024-06-26.")
-    assert out["handoff"] and out["approval"] == "rejected"
+    assert out["handoffs"] == 1 and out["approval"] == "rejected"
     assert out["answer"] == "A planner rejected the order of 20 units."
 
 
 def test_three_failed_limit_checks_hand_off(toolbox):
     script = [call("compute_order", units=u) for u in (20, 18, 15)] + [AIMessage("Handed over.")]
     out = run(toolbox, script)
-    assert out["handoff"] and out["tools"] == ["compute_order"] * 3
+    assert out["handoffs"] == 1 and out["tools"] == ["compute_order"] * 3
 
 
 def test_decision_record_gets_the_tool_outputs(toolbox):
@@ -55,3 +56,25 @@ def test_decision_record_gets_the_tool_outputs(toolbox):
     run(toolbox, script)
     record = json.loads(toolbox.records.read_text(encoding="utf-8"))
     assert record["tool_outputs"][0]["order"] == 9.0
+
+
+def test_percentile_words_from_the_rules_pass_the_checker(toolbox):
+    answer = "The 10th to 90th percentile range is 1.0 to 9.0."
+    assert run(toolbox, [call("get_forecast"), AIMessage(answer)])["answer"] == answer
+
+
+def test_an_unapproved_over_limit_order_is_not_recorded(toolbox):
+    both = AIMessage("", tool_calls=[
+        {"name": "compute_order", "args": {**DAY, "units": 20}, "id": "a"},
+        {"name": "write_decision_record", "args": {**DAY, "order": 20, "reason": "x"}, "id": "b"},
+    ])
+    out = run(toolbox, [both, AIMessage("20 units needs approval."), AIMessage("Rejected: 20.")])
+    assert out["handoffs"] == 1 and not toolbox.records.exists()
+
+
+def test_every_over_limit_order_gets_its_own_hand_off(toolbox):
+    script = [
+        call("compute_order", units=20), AIMessage("20 needs approval."),
+        call("compute_order", units=30), AIMessage("30 needs approval."), AIMessage("Done."),
+    ]
+    assert run(toolbox, script)["handoffs"] == 2
