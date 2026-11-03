@@ -190,8 +190,11 @@ def render_report(summary: pd.DataFrame, model: str) -> str:
 
 def chat_model(name: str):
     """A chat model from "provider:model"; with OLLAMA_API_KEY set, Ollama means Ollama Cloud."""
+    import truststore
     from langchain.chat_models import init_chat_model
 
+    # The OS certificate store, so HTTPS works where an antivirus inspects it with its own root.
+    truststore.inject_into_ssl()
     provider = name.partition(":")[0]
     kwargs = {}
     if provider == "google_genai":

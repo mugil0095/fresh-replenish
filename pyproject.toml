@@ -34,6 +34,7 @@ agent = [
     "langchain-ollama",
     "langgraph>=1.2",
     "python-dotenv",
+    "truststore>=0.10.5",
 ]
 
 [tool.uv]

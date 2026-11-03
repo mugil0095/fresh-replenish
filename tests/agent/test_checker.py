@@ -19,3 +19,9 @@ def test_question_numbers_small_counts_and_percent_of_fractions_pass():
 
 def test_unsupported_numbers_and_dates_are_caught():
     assert unsupported("Order 12.5 units on 2024-06-27.", [TOOL]) == ["2024-06-27", "12.5"]
+
+
+def test_typographic_dashes_and_spaces_are_read_like_plain_ones():
+    answer = "On 2024‑06‑26 the range is 1.0–9.0 (median 5.04)."
+    assert numbers(answer) == ["2024-06-26", "1.0", "9.0", "5.04"]
+    assert unsupported(answer, [TOOL]) == ["1.0"]  # 1.0 is not in the tool output
