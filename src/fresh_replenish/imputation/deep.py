@@ -28,6 +28,8 @@ def _model(name: str, n_steps: int, n_features: int, epochs: int, batch_size: in
 def _windows(sales, covariates, cov_mean, cov_std) -> np.ndarray:
     """As in the paper: 3 windows per series, each step [sales, covariates, hour / (hours - 1)]."""
     n, days, hours = sales.shape
+    if days % 3:
+        raise ValueError(f"days must be divisible by 3 (3 windows per series), got {days}")
     cov = (covariates.astype(np.float32) - cov_mean) / cov_std
     hour = np.arange(hours, dtype=np.float32) / (hours - 1)
     X = np.concatenate(

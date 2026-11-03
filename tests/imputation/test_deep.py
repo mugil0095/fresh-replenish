@@ -29,6 +29,11 @@ def test_chunked_prediction_matches_whole_batch():
     assert np.allclose(small, whole, atol=1e-5)
 
 
+def test_days_not_divisible_by_three_raise_clearly():
+    with pytest.raises(ValueError, match="divisible by 3"):
+        fit_deep(np.zeros((2, 4, 16), np.float32), np.zeros((2, 4, 4), np.float32), "saits")
+
+
 def test_unknown_model_raises():
     with pytest.raises(ValueError):
         deep_recover(np.zeros((3, 3, 16), np.float32), np.zeros((3, 3, 4), np.float32), "lstm")

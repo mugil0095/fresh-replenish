@@ -73,6 +73,8 @@ def run(
     masked, valid = mimic_missing(h.sales.reshape(n * 3, days // 3, hours), rng)
     masked, valid = masked.reshape(h.sales.shape), valid.reshape(h.sales.shape)
     valid_days = valid.any(axis=-1) & (h.stockout_hours == 0)
+    if not valid_days.any():
+        raise ValueError("no hidden in-stock day to score; use a larger sample_share")
 
     operating, deep, timing = {"no recovery": np.nansum(masked, axis=-1)}, {}, []
     for name in STATISTICAL + DEEP:

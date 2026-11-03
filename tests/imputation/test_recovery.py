@@ -48,5 +48,11 @@ def test_run_wires_methods_and_recovers_every_day(tiny_dataset, monkeypatch):
     assert (recovered.recovered_demand[in_stock] == recovered.sale_amount[in_stock]).all()
 
 
+def test_run_stops_when_nothing_can_be_scored(tiny_dataset, monkeypatch):
+    monkeypatch.setattr(recovery, "mimic_missing", lambda x, rng: (x, np.zeros(x.shape, bool)))
+    with pytest.raises(ValueError, match="no hidden in-stock day"):
+        recovery.run(connect(*tiny_dataset), sample_share=1.0, epochs=1)
+
+
 def test_main_without_data_returns_2(tmp_path):
     assert recovery.main(raw_dir=tmp_path / "empty", out_dir=tmp_path / "out") == 2
