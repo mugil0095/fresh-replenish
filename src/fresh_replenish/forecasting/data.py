@@ -14,6 +14,7 @@ ATTRIBUTES = [
     "city_id", "management_group_id", "first_category_id", "second_category_id",
     "third_category_id",
 ]
+BASELINE, CLASSICAL = "seasonal naive", "lightgbm"  # model names shared by the phases
 HORIZON = 7
 ORIGINS = (62, 69, 76, 83)  # weekly folds; the last one forecasts the final 7 train days
 

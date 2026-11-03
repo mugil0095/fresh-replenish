@@ -17,7 +17,14 @@ from fresh_replenish.config import PROCESSED_DIR, RAW_DIR, REPORTS_DIR
 from fresh_replenish.data.db import connect, sample_stores
 from fresh_replenish.data.download import local_paths
 from fresh_replenish.forecasting import models
-from fresh_replenish.forecasting.data import HORIZON, ORIGINS, Series, load_series
+from fresh_replenish.forecasting.data import (
+    BASELINE,
+    CLASSICAL,
+    HORIZON,
+    ORIGINS,
+    Series,
+    load_series,
+)
 from fresh_replenish.metrics import (
     DECILE_COLUMNS,
     DECILES,
@@ -31,7 +38,6 @@ from fresh_replenish.metrics import (
 from fresh_replenish.report import md_table
 
 SAMPLE_SHARE = 0.10  # of stores: the same draw as Phase 3
-BASELINE, CLASSICAL = "seasonal naive", "lightgbm"
 MODELS = {
     BASELINE: models.seasonal_naive,
     CLASSICAL: models.lightgbm_quantiles,
