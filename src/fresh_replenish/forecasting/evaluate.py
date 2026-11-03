@@ -17,7 +17,14 @@ from fresh_replenish.config import PROCESSED_DIR, RAW_DIR, REPORTS_DIR
 from fresh_replenish.data.db import connect, sample_stores
 from fresh_replenish.data.download import local_paths
 from fresh_replenish.forecasting import models
-from fresh_replenish.forecasting.data import HORIZON, ORIGINS, Series, load_series
+from fresh_replenish.forecasting.data import (
+    BASELINE,
+    CLASSICAL,
+    HORIZON,
+    ORIGINS,
+    Series,
+    load_series,
+)
 from fresh_replenish.metrics import (
     DECILE_COLUMNS,
     DECILES,
@@ -31,7 +38,6 @@ from fresh_replenish.metrics import (
 from fresh_replenish.report import md_table
 
 SAMPLE_SHARE = 0.10  # of stores: the same draw as Phase 3
-BASELINE, CLASSICAL = "seasonal naive", "lightgbm"
 MODELS = {
     BASELINE: models.seasonal_naive,
     CLASSICAL: models.lightgbm_quantiles,
@@ -53,7 +59,7 @@ PRETRAINING = pd.DataFrame(
 )
 
 
-def _fold_frame(name: str, series: Series, q: np.ndarray, days: np.ndarray) -> pd.DataFrame:
+def forecast_frame(name: str, series: Series, q: np.ndarray, days: np.ndarray) -> pd.DataFrame:
     """One row per series and forecast day, with the deciles as q10 ... q90."""
     n, t = len(series.demand), len(days)
     frame = pd.DataFrame({
@@ -105,7 +111,7 @@ def run(
             "coverage_80": coverage(q, actual),
             "wape_in_stock": in_stock[0].sum() / in_stock[2].sum(),
         })
-        saved.append(_fold_frame(name, series, q, days))
+        saved.append(forecast_frame(name, series, q, days))
 
     methods = pd.DataFrame(rows)
     wape = methods.set_index("model").wape

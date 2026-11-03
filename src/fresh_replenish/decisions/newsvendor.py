@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 
 from fresh_replenish.config import PROCESSED_DIR, REPORTS_DIR
-from fresh_replenish.forecasting.evaluate import BASELINE
+from fresh_replenish.forecasting.data import BASELINE
 from fresh_replenish.metrics import CALIBRATED_COLUMNS, DECILE_COLUMNS, DECILES, bootstrap
 from fresh_replenish.report import md_table
 

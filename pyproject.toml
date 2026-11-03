@@ -5,12 +5,19 @@ description = "Fresh-food replenishment for quick-commerce dark stores: hidden-d
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
-    "chronos-forecasting>=2.3",
     "duckdb",
     "huggingface_hub",
-    "lightgbm>=4.7",
     "pandas",
     "pyarrow",
+]
+
+[dependency-groups]
+dev = ["httpx", "pytest", "ruff"]
+# Models, statistics and experiment tracking: everything the batch job and the analyses need.
+ml = [
+    "chronos-forecasting>=2.3",
+    "lightgbm>=4.7",
+    "mlflow>=3",
     "pyfixest>=0.60.0",
     "pypots>=1.5",
     "scipy",
@@ -18,11 +25,11 @@ dependencies = [
     "torch>=2.14,<2.15",
     "toto-2>=2.0",
 ]
-
-[dependency-groups]
-dev = ["pytest", "ruff"]
+# The API only: the Docker image installs this group and nothing heavy.
+serve = ["fastapi", "uvicorn"]
 
 [tool.uv]
+default-groups = ["dev", "ml", "serve"]
 # pypots caps transformers at 4.57.6; without a floor uv backtracks to 4.12, which needs Rust to build.
 constraint-dependencies = ["transformers>=4.40"]
 
