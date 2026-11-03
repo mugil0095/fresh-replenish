@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from fresh_replenish.config import DATASET_REPO, DATASET_REVISION
-from fresh_replenish.data.download import DatasetIntegrityError, download_dataset
+from fresh_replenish.config import DATASET_FILES, DATASET_REPO, DATASET_REVISION
+from fresh_replenish.data.download import DatasetIntegrityError, download_dataset, local_paths
 
 SIZES = {"data/train.parquet": 10, "data/eval.parquet": 5}
 
@@ -65,3 +65,15 @@ def test_raises_when_size_still_wrong(tmp_path):
     wrong = FakeFetch({"data/train.parquet": 7, "data/eval.parquet": 5})
     with pytest.raises(DatasetIntegrityError):
         download_dataset(tmp_path, SIZES, fetch=wrong)
+
+
+def test_local_paths_when_downloaded(tmp_path):
+    for name in DATASET_FILES:
+        _write(tmp_path / name, 1)
+    assert local_paths(tmp_path) == [tmp_path / name for name in DATASET_FILES]
+
+
+def test_local_paths_hints_download_when_missing(tmp_path, capsys):
+    _write(tmp_path / "data/train.parquet", 1)  # eval is missing
+    assert local_paths(tmp_path) is None
+    assert "fresh_replenish.data.download" in capsys.readouterr().err

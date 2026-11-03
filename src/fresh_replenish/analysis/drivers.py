@@ -9,8 +9,9 @@ import numpy as np
 import pandas as pd
 import pyfixest as pf
 
-from fresh_replenish.config import DATASET_FILES, RAW_DIR, REPORTS_DIR
+from fresh_replenish.config import RAW_DIR, REPORTS_DIR
 from fresh_replenish.data.db import connect
+from fresh_replenish.data.download import local_paths
 from fresh_replenish.report import md_table
 
 TERMS = [
@@ -188,12 +189,8 @@ def render_report(results: dict[str, pd.DataFrame]) -> str:
 
 
 def main(raw_dir: Path = RAW_DIR, out_dir: Path = REPORTS_DIR) -> int:
-    paths = [raw_dir / name for name in DATASET_FILES]
-    if not all(p.exists() for p in paths):
-        print(
-            "Data not found. Run: uv run python -m fresh_replenish.data.download",
-            file=sys.stderr,
-        )
+    paths = local_paths(raw_dir)
+    if paths is None:
         return 2
     results = run(connect(*paths))
     (out_dir / "tables").mkdir(parents=True, exist_ok=True)

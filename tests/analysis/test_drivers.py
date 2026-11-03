@@ -179,3 +179,7 @@ def test_run_wires_all_fits(tiny_dataset, monkeypatch):
         "all stores", "half A", "half B", "in-stock days only", "without city 0"
     ]
     assert sizes == [12, 6, 6, 11, 6]
+
+
+def test_main_without_data_returns_2(tmp_path):
+    assert drivers.main(raw_dir=tmp_path / "empty", out_dir=tmp_path / "out") == 2

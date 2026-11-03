@@ -1,5 +1,6 @@
 """Download FreshRetailNet-50K at a pinned revision and check each file's size."""
 
+import sys
 from collections.abc import Callable
 from pathlib import Path
 
@@ -35,6 +36,15 @@ def download_dataset(
                 raise DatasetIntegrityError(f"{path}: expected {size:,} bytes, got {actual:,}")
         paths[Path(name).stem] = path
     return paths
+
+
+def local_paths(raw_dir: Path = RAW_DIR) -> list[Path] | None:
+    """The downloaded files (train, eval), or None after printing how to download them."""
+    paths = [Path(raw_dir) / name for name in DATASET_FILES]
+    if all(p.exists() for p in paths):
+        return paths
+    print("Data not found. Run: uv run python -m fresh_replenish.data.download", file=sys.stderr)
+    return None
 
 
 if __name__ == "__main__":

@@ -7,8 +7,9 @@ from pathlib import Path
 import duckdb
 import pandas as pd
 
-from fresh_replenish.config import DATASET_FILES, DATASET_REVISION, RAW_DIR, REPORTS_DIR
+from fresh_replenish.config import DATASET_REVISION, RAW_DIR, REPORTS_DIR
 from fresh_replenish.data.db import connect
+from fresh_replenish.data.download import local_paths
 from fresh_replenish.report import md_table
 
 EXPECTED_ROWS = {"train": 4_500_000, "eval": 350_000}
@@ -120,14 +121,10 @@ def render_report(result: AuditResult) -> str:
 
 
 def main(raw_dir: Path = RAW_DIR, out_dir: Path = REPORTS_DIR) -> int:
-    train, eval_ = (raw_dir / name for name in DATASET_FILES)
-    if not (train.exists() and eval_.exists()):
-        print(
-            "Data not found. Run: uv run python -m fresh_replenish.data.download",
-            file=sys.stderr,
-        )
+    paths = local_paths(raw_dir)
+    if paths is None:
         return 2
-    result = run_audit(connect(train, eval_))
+    result = run_audit(connect(*paths))
     (out_dir / "tables").mkdir(parents=True, exist_ok=True)
     for name, table in result.tables.items():
         table.to_csv(out_dir / "tables" / f"{name}.csv", index=False)

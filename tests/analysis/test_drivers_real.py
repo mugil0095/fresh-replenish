@@ -1,22 +1,13 @@
 import pytest
 
 from fresh_replenish.analysis.drivers import build_frame
-from fresh_replenish.config import DATASET_FILES, RAW_DIR
 from fresh_replenish.data.db import connect
 
-PATHS = [RAW_DIR / name for name in DATASET_FILES]
-
-pytestmark = [
-    pytest.mark.data,
-    pytest.mark.skipif(
-        not all(p.exists() for p in PATHS),
-        reason="run `uv run python -m fresh_replenish.data.download` first",
-    ),
-]
+pytestmark = pytest.mark.data
 
 
-def test_frame_is_train_minus_zero_discount_rows():
-    con = connect(*PATHS)
+def test_frame_is_train_minus_zero_discount_rows(real_paths):
+    con = connect(*real_paths)
     zero = con.execute(
         "SELECT count(*) FROM daily WHERE split = 'train' AND discount = 0"
     ).fetchall()[0][0]

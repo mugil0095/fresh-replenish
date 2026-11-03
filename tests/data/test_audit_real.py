@@ -1,22 +1,13 @@
 import pytest
 
-from fresh_replenish.config import DATASET_FILES, RAW_DIR
 from fresh_replenish.data.audit import run_audit
 from fresh_replenish.data.db import connect
 
-PATHS = [RAW_DIR / name for name in DATASET_FILES]
-
-pytestmark = [
-    pytest.mark.data,
-    pytest.mark.skipif(
-        not all(p.exists() for p in PATHS),
-        reason="run `uv run python -m fresh_replenish.data.download` first",
-    ),
-]
+pytestmark = pytest.mark.data
 
 
-def test_real_data_passes_hard_checks():
-    result = run_audit(connect(*PATHS))
+def test_real_data_passes_hard_checks(real_paths):
+    result = run_audit(connect(*real_paths))
     assert result.passed, [c for c in result.checks if not c.passed]
     overview = result.tables["overview"].set_index("split")
     assert overview.loc["train", "series"] == 50_000
