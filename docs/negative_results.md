@@ -27,4 +27,6 @@ What didn't work, or didn't hold, and is reported rather than hidden. The eviden
 - **Remaining misses:** in 3 of 150 runs the agent didn't record an order when asked, and in 1 run it recorded one nobody asked for.
 - **What-ifs are not causal.** Chronos-2's covariate effects can have the "wrong" sign: a 20% discount lowered one item's forecast by 13.8%.
 - **Gemini was not evaluated.** The free tier allows 20 requests a day per model, and the run needs about 375. A Google AI Plus subscription doesn't cover API keys.
-- **The first evaluation run had a scoring bug:** the scorer ignored the agent's rules text, which made "numbers matching" 52%. Fixed; the reported run is the second.
+- **The first evaluation run had a scoring bug:** the scorer rejected rule words like "90th percentile", which made "numbers matching" 52%. The fix counted the rules as a source; the reported run is the second.
+- **The scores are in-sample.** After the first run, the prompt, the scorer and one question were changed, and the same 50 questions were run again. There is no fresh question set.
+- **The reported run predates the audit fixes.** It used the earlier number checker, which let numbers from the rules (such as 50 or 90) pass as quantities, and the earlier hand-off rule. The checker now allows ranks like "90th" instead, so a re-run with the current code is pending.

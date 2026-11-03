@@ -95,7 +95,7 @@ cols[2].metric(
     help="Share of actual demand inside the calibrated 10-90% range; the target is 80%.",
 )
 cols[3].metric(
-    "Agent numbers from tools", f"{d['agent'].loc['all', 'numbers_match']:.0%}",
+    "Answers passing number check", f"{d['agent'].loc['all', 'numbers_match']:.0%}",
     help=f"Correct tool choice: {d['agent'].loc['all', 'tool_choice']:.0%} of 150 runs.",
 )
 
@@ -203,9 +203,10 @@ with agent_tab:
     agent = d["agent"]
     st.markdown(
         f"On 150 scripted runs (Ollama Cloud gpt-oss:120b) the agent chose the right tools "
-        f"**{agent.loc['all', 'tool_choice']:.0%}** of the time, every stated number came from "
-        f"a tool (**{agent.loc['all', 'numbers_match']:.0%}**), and every over-limit order "
-        f"went to a planner (**{agent.loc['limit', 'handoff_correct']:.0%}**)."
+        f"**{agent.loc['all', 'tool_choice']:.0%}** of the time, every final answer passed the "
+        f"number checker (**{agent.loc['all', 'numbers_match']:.0%}**), and every over-limit "
+        f"order went to a planner (**{agent.loc['limit', 'handoff_correct']:.0%}**). "
+        "Measured before the audit fixes; see the negative results."
     )
     st.dataframe(data.records(RECORDS), hide_index=True)
     st.caption("Decision records written by the agent during the evaluation.")

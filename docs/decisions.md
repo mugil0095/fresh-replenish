@@ -12,7 +12,7 @@ Each entry gives the decision, why it was made, and the evidence behind it.
 - **Why:** night-hour flags would inflate stockout rates. The dataset's own count covers 6:00–22:00.
 - **Evidence:**
   - 19.7% of operating hours are stockouts.
-  - 44.0% of store-days have at least one stockout hour.
+  - 44.0% of product-days (one product at one store) have at least one stockout hour.
   - The share rises from 4.9% at 7:00 to 40.7% at 21:00, so evening demand is the most hidden.
 
 ## 2026-11-03: Pin the dataset revision and check file sizes
@@ -372,6 +372,17 @@ A full re-check (tests on a clean copy, re-runs of Phases 1, 2 and 5, the API, t
 - **Baseline label:** the seasonal-naive policy reorders last week's *recovered* demand, not sales, and every label now says so. Reordering last week's recorded sales would cost more, so the comparison as built is the conservative one.
 - **Demo and summary:** moving the slider from 9 to 1 shifts cost from waste to lost sales; the median costs more than the naive policy only at 9×; it runs out on 56% of days, not 57%; the simulation uses recovered demand; the what-if example now uses a day without a planned promotion.
 - **CI image check:** curl retries any connection error while uvicorn starts, and the smoke test serves a one-line orders file through `/reorder`.
+
+## 2026-11-03: Audit fixes (the 6 should-fix findings)
+
+- **Number checker:** the agent's rules no longer count as a source, so their 9, 50 or 90 can't pass as an order quantity; ranks like "90th" are allowed instead. A fraction counts as a percentage only when a % sign follows it, and numbers written as words above ten ("twelve") are checked.
+  - Still not read: numbers stuck to letters ("Rs500"). The data has no prices, and reading them would reject identifiers like "q90".
+  - Dates written in words are still rejected; the agent then retries with YYYY-MM-DD.
+- **Negative orders:** `compute_order` refuses a negative or NaN quantity.
+- **API:** it reads `orders.parquet` again whenever the file changes, so a new nightly batch needs no restart. `/health` returns 503 until orders are loaded, so container health checks show it.
+- **Dashboard health check:** Compose gives the dashboard its own check on Streamlit's `/_stcore/health`.
+- **Wording:** the README and summary now say store-product lines (538 products), product-days for the 44% stockout share, 50 questions × 3 runs, ratios from 1/9 to 9, 13 of 32 alerting categories and the current Docker setup. The agent's number claim now says what was measured: every final answer passed the number checker.
+- **Evaluation:** negative results now say the agent scores are in-sample and were measured before the audit fixes; a re-run with the current code is pending.
 
 ## Known issues
 
