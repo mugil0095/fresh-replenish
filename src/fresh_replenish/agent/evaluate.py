@@ -2,7 +2,9 @@
 
 Measures tool choice, numbers matching tool outputs, hand-offs on limit violations, refusals,
 latency and tokens. The questions come from the batch's real orders with a fixed seed.
-Run with FRESH_LLM set to a LangChain model id, for example `groq:llama-3.3-70b-versatile`.
+Run with FRESH_LLM set to a LangChain model id: `google_genai:gemini-3.6-flash` (Gemini) or
+`ollama:gpt-oss:120b` (Ollama Cloud). Keys come from the environment or a git-ignored `.env`:
+GEMINI_API_KEY (or GOOGLE_API_KEY) and OLLAMA_API_KEY.
 """
 
 import json
@@ -36,7 +38,6 @@ OUT_OF_SCOPE = [
 ]
 MISSING = re.compile(r"not available|no (?:forecast|data)|(?:don't|do not) have|unavailable", re.I)
 REFUSED = re.compile(r"can't|cannot|can not|only help|not able|unable|outside|sorry", re.I)
-EXTRA_OK = {"get_forecast"}  # looking up the forecast first is never a wrong extra step
 
 
 def make_questions(orders: pd.DataFrame, seed: int = 42) -> list[dict]:
@@ -49,6 +50,7 @@ def make_questions(orders: pd.DataFrame, seed: int = 42) -> list[dict]:
             # row["dt"], not row.dt: on a pandas row .dt is the date accessor
             s, p, d = int(row.store_id), int(row.product_id), str(row["dt"])
             tools, handoff = ["get_forecast"], False
+            optional = ["get_forecast"]  # looking up the forecast is never a wrong extra step
             if kind == "lookup":
                 text = f"What is the demand forecast for product {p} at store {s} on {d}?"
             elif kind == "why":
@@ -66,6 +68,7 @@ def make_questions(orders: pd.DataFrame, seed: int = 42) -> list[dict]:
                 units = math.ceil(3 * row.q90)  # twice the 1.5 x q90 approval limit
                 text = f"Place an order of {units} units of product {p} for store {s} on {d}."
                 tools, handoff = ["compute_order"], True
+                optional.append("write_decision_record")  # "place" may try to record it
             elif kind == "record":
                 text = f"Record the cost-based order for product {p} at store {s} on {d}."
                 tools = ["compute_order", "write_decision_record"]
@@ -73,10 +76,11 @@ def make_questions(orders: pd.DataFrame, seed: int = 42) -> list[dict]:
                 p, d = (p + 1_000_000, d) if i % 2 == 0 else (p, "2024-08-15")
                 text = f"What is the demand forecast for product {p} at store {s} on {d}?"
             else:
-                text, tools, s, p, d = OUT_OF_SCOPE[i], [], None, None, None
+                text, tools, optional, s, p, d = OUT_OF_SCOPE[i], [], [], None, None, None
             questions.append({
                 "id": len(questions) + 1, "type": kind, "question": text, "tools": tools,
-                "handoff": handoff, "store_id": s, "product_id": p, "date": d,
+                "optional": optional, "handoff": handoff, "store_id": s, "product_id": p,
+                "date": d,
             })
     return questions
 
@@ -84,7 +88,8 @@ def make_questions(orders: pd.DataFrame, seed: int = 42) -> list[dict]:
 def score(question: dict, out: dict, seconds: float) -> dict:
     """One run's verdicts; refusal_correct only applies to missing-data and out-of-scope types."""
     called, expected = set(out["tools"]), set(question["tools"])
-    tool_ok = not called if not expected else expected <= called <= expected | EXTRA_OK
+    allowed = expected | set(question["optional"])
+    tool_ok = not called if not expected else expected <= called <= allowed
     sources = [
         m.text for m in out["messages"] if m.type in ("tool", "human") and m.name != "checker"
     ]
@@ -163,6 +168,21 @@ def render_report(summary: pd.DataFrame, model: str) -> str:
     return "\n\n".join(parts) + "\n"
 
 
+def chat_model(name: str):
+    """A chat model from "provider:model"; with OLLAMA_API_KEY set, Ollama means Ollama Cloud."""
+    from langchain.chat_models import init_chat_model
+
+    provider = name.partition(":")[0]
+    kwargs = {}
+    if provider == "google_genai":
+        key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
+        kwargs = {"google_api_key": key, "max_retries": 6, "timeout": 120}
+    elif provider == "ollama" and os.environ.get("OLLAMA_API_KEY"):
+        auth = {"Authorization": f"Bearer {os.environ['OLLAMA_API_KEY']}"}
+        kwargs = {"base_url": "https://ollama.com", "client_kwargs": {"headers": auth}}
+    return init_chat_model(name, **kwargs)
+
+
 def write_questions(orders: pd.DataFrame, path: Path = QUESTIONS) -> list[dict]:
     questions = make_questions(orders)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -173,11 +193,14 @@ def write_questions(orders: pd.DataFrame, path: Path = QUESTIONS) -> list[dict]:
 def main(
     raw_dir: Path = RAW_DIR, processed_dir: Path = PROCESSED_DIR, out_dir: Path = REPORTS_DIR
 ) -> int:
+    from dotenv import load_dotenv
+
+    load_dotenv(REPO_ROOT / ".env")
     model_name = os.environ.get("FRESH_LLM")
     if not model_name:
         print(
-            "Set FRESH_LLM to a LangChain model id (for example groq:llama-3.3-70b-versatile) "
-            "and that provider's API key.", file=sys.stderr,
+            "Set FRESH_LLM to a LangChain model id (google_genai:gemini-3.6-flash or "
+            "ollama:gpt-oss:120b) and that provider's API key.", file=sys.stderr,
         )
         return 2
     paths = local_paths(raw_dir)
@@ -187,8 +210,6 @@ def main(
             "Run the batch first: uv run python -m fresh_replenish.serving.batch", file=sys.stderr
         )
         return 2
-    from langchain.chat_models import init_chat_model
-
     orders = pd.read_parquet(orders_path)
     questions = (
         [json.loads(line) for line in QUESTIONS.read_text(encoding="utf-8").splitlines()]
@@ -199,16 +220,17 @@ def main(
         orders, scenario=chronos_scenario(con, processed_dir / "recovered_demand.parquet"),
         records=processed_dir.parent / "decisions" / "eval_records.jsonl",
     )
-    app = build_agent(init_chat_model(model_name), toolbox)
+    app = build_agent(chat_model(model_name), toolbox)
     price = os.environ.get("FRESH_LLM_PRICE")  # "input,output" US dollars per million tokens
     runs, summary = evaluate(
         lambda question: app, questions,
         price=None if not price else tuple(float(x) for x in price.split(",")),
     )
+    slug = re.sub(r"[^a-z0-9.]+", "-", model_name.split(":", 1)[1].lower()).strip("-")
     (out_dir / "tables").mkdir(parents=True, exist_ok=True)
-    runs.to_csv(out_dir / "tables" / "agent_runs.csv", index=False)
-    summary.to_csv(out_dir / "tables" / "agent_summary.csv", index=False)
-    report = out_dir / "agent.md"
+    runs.to_csv(out_dir / "tables" / f"agent_runs_{slug}.csv", index=False)
+    summary.to_csv(out_dir / "tables" / f"agent_summary_{slug}.csv", index=False)
+    report = out_dir / f"agent_{slug}.md"
     report.write_text(render_report(summary, model_name), encoding="utf-8")
     print(f"Report written to {report}.")
     return 0

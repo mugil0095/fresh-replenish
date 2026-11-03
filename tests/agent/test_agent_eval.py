@@ -12,6 +12,7 @@ def test_fifty_questions_of_every_type_from_the_orders(orders):
     assert counts == evaluate.TYPES
     limit = next(q for q in questions if q["type"] == "limit")
     assert limit["handoff"] and limit["tools"] == ["compute_order"]
+    assert "write_decision_record" in limit["optional"]  # "place an order" may try to record it
 
 
 def _factory(toolbox):
