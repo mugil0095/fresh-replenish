@@ -9,6 +9,7 @@ dependencies = [
     "huggingface_hub",
     "pandas",
     "pyarrow",
+    "pyfixest>=0.60.0",
 ]
 
 [dependency-groups]

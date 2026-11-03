@@ -7,7 +7,11 @@ Fresh-food replenishment for quick-commerce dark stores. The project:
 3. turns forecasts into cost-based daily orders;
 4. explains each order with an AI agent.
 
-**Status:** Phase 1 (data foundation) is done. The data is verified; see the [data audit](reports/data_audit.md) and [decisions](docs/decisions.md).
+**Status:** Phases 1–2 are done.
+- **Data foundation:** the data is verified; see the [data audit](reports/data_audit.md).
+- **Demand drivers:** see [what drives demand](reports/demand_drivers.md).
+
+Each choice is explained in [decisions](docs/decisions.md).
 
 ## Run it
 
@@ -17,6 +21,7 @@ You need Python 3.12 and [uv](https://docs.astral.sh/uv/).
 uv sync
 uv run python -m fresh_replenish.data.download   # 115 MB, pinned dataset revision
 uv run python -m fresh_replenish.data.audit      # writes reports/data_audit.md
+uv run python -m fresh_replenish.analysis.drivers  # writes reports/demand_drivers.md (~1.5 min)
 uv run pytest                                    # data tests run once the data is downloaded
 ```
 
@@ -25,6 +30,15 @@ uv run pytest                                    # data tests run once the data 
 - **Size:** 4.85 M daily rows covering 50,000 store-product series, 898 stores and 18 cities. Train runs 90 days and eval 7 days.
 - **Stockouts:** 19.7% of operating hours (6:00–22:00) are stockouts, and 44% of store-days have at least one.
 - **Time of day:** stockouts climb from about 5% at 7 am to 41% by 9 pm. Evening demand is the most hidden, which is the problem this project goes after.
+
+## What drives demand
+
+These are associations, not causes.
+
+- **Price:** a 10% price cut goes with +14.2% sales (price elasticity −1.26).
+- **Non-working days:** they lift sales by 31.7%.
+- **Promotions:** holding price fixed, they add +1.4%. On in-stock days alone they add +5.8%, a hint that stockouts hide promotion demand.
+- **Stability:** all 7 drivers are stable across random halves of the stores.
 
 ## Data
 

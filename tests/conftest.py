@@ -4,6 +4,8 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 
+from fresh_replenish.data.download import local_paths
+
 SCHEMA = pa.schema(
     [
         ("city_id", pa.int64()),
@@ -91,3 +93,12 @@ def make_dataset(tmp_path):
 @pytest.fixture
 def tiny_dataset(make_dataset):
     return make_dataset()
+
+
+@pytest.fixture
+def real_paths():
+    """The downloaded dataset files; skips the test when they aren't downloaded."""
+    paths = local_paths()
+    if paths is None:
+        pytest.skip("run `uv run python -m fresh_replenish.data.download` first")
+    return paths
