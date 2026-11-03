@@ -24,6 +24,8 @@ from fresh_replenish.data.download import local_paths
 
 def converse(app, question: str, ask_planner=input) -> None:
     """Print each tool call and the answer; a hand-off asks the planner to approve."""
+    if hasattr(sys.stdout, "reconfigure"):  # a StringIO or notebook stream has no encoding
+        sys.stdout.reconfigure(encoding="utf-8")  # models write typographic dashes cp1252 lacks
     config = {"configurable": {"thread_id": uuid.uuid4().hex}}
     result = app.invoke({"messages": [HumanMessage(question)]}, config)
     while "__interrupt__" in result:

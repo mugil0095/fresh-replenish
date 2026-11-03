@@ -1,7 +1,7 @@
 import json
 
 from fakes import Scripted
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage, HumanMessage
 
 from fresh_replenish.agent.graph import REFUSAL, ask, build_agent
 
@@ -78,3 +78,23 @@ def test_every_over_limit_order_gets_its_own_hand_off(toolbox):
         call("compute_order", units=30), AIMessage("30 needs approval."), AIMessage("Done."),
     ]
     assert run(toolbox, script)["handoffs"] == 2
+
+
+def test_a_failed_order_is_handed_off_even_when_a_later_one_passes(toolbox):
+    script = [
+        call("compute_order", units=20), call("compute_order"),
+        AIMessage("20 is over the limit; the cost-based order is 9.0."),
+        AIMessage("A planner rejected 20; order 9.0."),
+    ]
+    assert run(toolbox, script)["handoffs"] == 1
+
+
+def test_the_planner_is_shown_a_failed_order(toolbox):
+    calls = [
+        {"name": "compute_order", "args": {**DAY, "units": u}, "id": str(u)} for u in (20, 18, 15)
+    ]
+    calls.append({"name": "compute_order", "args": DAY, "id": "ok"})
+    app = build_agent(Scripted(responses=[AIMessage("", tool_calls=calls)]), toolbox)
+    result = app.invoke({"messages": [HumanMessage("Order product 10.")]},
+                        {"configurable": {"thread_id": "t"}})
+    assert result["__interrupt__"][0].value["order"]["within_limits"] is False

@@ -213,7 +213,9 @@ def chat_model(name: str):
         kwargs = {"google_api_key": key, "max_retries": 6, "timeout": 120}
     elif provider == "ollama" and os.environ.get("OLLAMA_API_KEY"):
         auth = {"Authorization": f"Bearer {os.environ['OLLAMA_API_KEY']}"}
-        kwargs = {"base_url": "https://ollama.com", "client_kwargs": {"headers": auth}}
+        kwargs = {
+            "base_url": "https://ollama.com", "client_kwargs": {"headers": auth, "timeout": 120},
+        }
     return init_chat_model(name, **kwargs)
 
 
@@ -250,11 +252,14 @@ def main(
         if QUESTIONS.exists() else write_questions(orders)
     )
     con = connect(*paths)
+    model = chat_model(model_name)  # a bad model setting fails before the last run's records go
+    records = processed_dir.parent / "decisions" / "eval_records.jsonl"
+    records.unlink(missing_ok=True)  # saved orders count toward capacity: start each run empty
     toolbox = Toolbox(
         orders, scenario=chronos_scenario(con, processed_dir / "recovered_demand.parquet"),
-        records=processed_dir.parent / "decisions" / "eval_records.jsonl",
+        records=records,
     )
-    app = build_agent(chat_model(model_name), toolbox)
+    app = build_agent(model, toolbox)
     price = os.environ.get("FRESH_LLM_PRICE")  # "input,output" US dollars per million tokens
     runs, summary = evaluate(
         lambda question: app, questions,

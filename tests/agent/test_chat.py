@@ -1,3 +1,6 @@
+import io
+import sys
+
 from fakes import Scripted
 from langchain_core.messages import AIMessage
 
@@ -17,3 +20,12 @@ def test_chat_shows_tool_calls_and_asks_the_planner(toolbox, capsys):
                   ask_planner=lambda prompt: next(answers))
     shown = capsys.readouterr().out
     assert "compute_order" in shown and "approved 20 units" in shown
+
+
+def test_chat_prints_typographic_answers_on_a_cp1252_console(toolbox, monkeypatch):
+    out = io.TextIOWrapper(io.BytesIO(), encoding="cp1252")
+    monkeypatch.setattr(sys, "stdout", out)
+    app = build_agent(Scripted(responses=[AIMessage("A non‑breaking answer.")]), toolbox)
+    chat.converse(app, "Hello?")
+    out.flush()
+    assert "non‑breaking" in out.buffer.getvalue().decode("utf-8")
