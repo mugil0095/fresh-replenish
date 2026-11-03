@@ -102,7 +102,10 @@ def main(
         with_future(con, series), len(series.dates), pd.read_csv(shifts), models.lightgbm_quantiles
     )
     runtime = round(time.perf_counter() - start, 1)
-    orders.to_parquet(processed_dir / "orders.parquet", index=False)
+    # Written aside, then swapped in: the API re-reads the file on change and must not see half.
+    partial = processed_dir / "orders.parquet.tmp"
+    orders.to_parquet(partial, index=False)
+    partial.replace(processed_dir / "orders.parquet")
     summary = {
         "as_of": orders.as_of.iloc[0], "model": CLASSICAL, "ratio": HEADLINE,
         "series": len(series.ids), "order_lines": len(orders), "runtime_s": runtime,

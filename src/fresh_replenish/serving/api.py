@@ -7,7 +7,7 @@ ratio is recomputed from the stored calibrated deciles, so no model runs at requ
 from pathlib import Path
 
 import pandas as pd
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Response
 from pydantic import BaseModel
 
 from fresh_replenish.config import PROCESSED_DIR
@@ -35,22 +35,42 @@ class Reorder(BaseModel):
 
 
 def create_app(orders_path: Path = ORDERS) -> FastAPI:
-    orders = pd.read_parquet(orders_path) if orders_path.exists() else None
-    orders = None if orders is None or orders.empty else orders
-    stores = {} if orders is None else dict(tuple(orders.groupby("store_id")))
-    as_of = None if orders is None else str(orders.as_of.iloc[0])
+    loaded = (None, {}, None)  # (file mtime, orders by store, as_of), replaced as one tuple
     app = FastAPI(title="fresh-replenish", summary="Cost-based daily orders for dark stores")
 
+    def current() -> tuple[dict, str | None]:
+        """Orders by store and their as-of date, read again whenever the batch rewrites them."""
+        nonlocal loaded
+        try:
+            mtime = orders_path.stat().st_mtime_ns
+        except FileNotFoundError:
+            mtime = None
+        if mtime != loaded[0]:
+            orders = None if mtime is None else pd.read_parquet(orders_path)
+            if orders is None or orders.empty:
+                loaded = (mtime, {}, None)
+            else:
+                stores = dict(tuple(orders.groupby("store_id")))
+                loaded = (mtime, stores, str(orders.as_of.iloc[0]))
+        return loaded[1], loaded[2]
+
     @app.get("/health")
-    def health() -> dict:
-        return {"status": "ok", "orders_loaded": orders is not None, "as_of": as_of}
+    def health(response: Response) -> dict:
+        stores, as_of = current()
+        if not stores:
+            response.status_code = 503  # so a health check fails until the batch has run
+        return {
+            "status": "ok" if stores else "no orders", "orders_loaded": bool(stores),
+            "as_of": as_of,
+        }
 
     @app.get("/reorder")
     def reorder(
         store_id: int,
         ratio: float = Query(HEADLINE, ge=1 / 9, le=9, description="lost-sale cost / waste cost"),
     ) -> Reorder:
-        if orders is None:
+        stores, as_of = current()
+        if not stores:
             raise HTTPException(503, "no orders yet: run the batch job")
         rows = stores.get(store_id)
         if rows is None:
