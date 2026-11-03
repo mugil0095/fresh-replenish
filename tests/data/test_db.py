@@ -1,6 +1,7 @@
+import numpy as np
 import pytest
 
-from fresh_replenish.data.db import connect
+from fresh_replenish.data.db import connect, sample_stores
 
 FIRST_ROW = "store_id = 1 AND product_id = 10 AND dt = '2024-01-01'"
 
@@ -29,3 +30,11 @@ def test_hours_sale_sum_matches_sale_amount(tiny_dataset):
     con = connect(*tiny_dataset)
     total = con.execute(f"SELECT hours_sale_sum FROM daily WHERE {FIRST_ROW}").fetchall()[0][0]
     assert total == pytest.approx(0.2)
+
+
+def test_sample_stores_repeats_for_the_same_seed(tiny_dataset):
+    con = connect(*tiny_dataset)
+    first = sample_stores(con, 0.5, np.random.default_rng(42))
+    assert first == sample_stores(con, 0.5, np.random.default_rng(42))
+    assert len(first) == 1 and first[0] in {1, 2}
+    assert sample_stores(con, 0.01, np.random.default_rng(0)) != []  # at least one store
