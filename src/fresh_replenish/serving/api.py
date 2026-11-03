@@ -1,7 +1,7 @@
 """Reorder API (spec step 7): serves the nightly batch's orders, one store per request.
 
-Run it with `uv run uvicorn fresh_replenish.serving.api:app`. Another cost ratio is recomputed
-from the stored calibrated deciles, so no model runs at request time.
+Run it with `uv run uvicorn --factory fresh_replenish.serving.api:create_app`. Another cost
+ratio is recomputed from the stored calibrated deciles, so no model runs at request time.
 """
 
 from pathlib import Path
@@ -36,6 +36,7 @@ class Reorder(BaseModel):
 
 def create_app(orders_path: Path = ORDERS) -> FastAPI:
     orders = pd.read_parquet(orders_path) if orders_path.exists() else None
+    orders = None if orders is None or orders.empty else orders
     stores = {} if orders is None else dict(tuple(orders.groupby("store_id")))
     as_of = None if orders is None else str(orders.as_of.iloc[0])
     app = FastAPI(title="fresh-replenish", summary="Cost-based daily orders for dark stores")
@@ -67,5 +68,3 @@ def create_app(orders_path: Path = ORDERS) -> FastAPI:
 
     return app
 
-
-app = create_app()

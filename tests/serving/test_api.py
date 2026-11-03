@@ -53,9 +53,22 @@ def test_bad_requests(orders_path, params, status):
     assert TestClient(create_app(orders_path)).get("/reorder", params=params).status_code == status
 
 
+def test_an_empty_orders_file_counts_as_no_orders(orders_path):
+    import pandas as pd
+
+    pd.read_parquet(orders_path).iloc[:0].to_parquet(orders_path)
+    assert TestClient(create_app(orders_path)).get("/health").json()["orders_loaded"] is False
+
+
 def test_no_orders_file_means_service_unavailable(tmp_path):
     client = TestClient(create_app(tmp_path / "none.parquet"))
     assert client.get("/reorder", params={"store_id": 1}).status_code == 503
+
+
+def test_latency_gives_up_when_the_server_cannot_start(orders_path, monkeypatch):
+    monkeypatch.setattr(latency.uvicorn.Server, "run", lambda self: None)  # never starts
+    with pytest.raises(RuntimeError, match="did not start"):
+        latency.measure(create_app(orders_path), [1], requests=1, start_timeout=0.2)
 
 
 def test_latency_is_measured_over_http(orders_path):

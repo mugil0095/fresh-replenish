@@ -33,7 +33,7 @@ def _alerts(table):
 
 
 def test_a_healthy_week_raises_no_alert():
-    table = drift.monitor(_week(), _before())
+    table = drift.monitor(_week(bias=-0.12), _before())  # the median's usual low bias
     assert list(table.category) == ["all", "0", "1"]
     assert not _alerts(table).to_numpy().any()
     assert table.coverage.tolist() == pytest.approx([0.8] * 3)
@@ -41,6 +41,7 @@ def test_a_healthy_week_raises_no_alert():
 
 @pytest.mark.parametrize(("week", "alert"), [
     (_week(bias=-0.3), "bias_alert"),
+    (_week(bias=0.1), "bias_alert"),
     (_week(inside=0.5), "coverage_alert"),
     (_week(stockout=0.4), "stockout_alert"),
 ])
