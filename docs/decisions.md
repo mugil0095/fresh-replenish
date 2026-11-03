@@ -141,8 +141,65 @@ Each entry gives the decision, why it was made, and the evidence behind it.
   - the Toto 2.0 technical report (arXiv 2605.20119), sections 1 and 3;
   - the Hugging Face API dates of the two corpora.
 
-## Known issue
+## 2026-11-03: Forecasts are validated on 4 weekly folds inside the train period
 
+- **Why:** each fold scores a realistic weekly forecast from all the history before it. The eval week (Jun 26–Jul 2) stays untouched for Phase 5's held-out check.
+- **How:**
+  - Origins at days 62, 69, 76 and 83, each forecasting 7 days, so the last fold ends on the last train day.
+  - The target is Phase 3's recovered demand.
+  - Scores pool the 28 forecast days per series. WAPE per fold backs the "beats seasonal naive in every fold" check.
+
+## 2026-11-03: Forecasts use only inputs known in advance
+
+- **Inputs:** discount, promotion (`activity_flag`) and the non-working-day flag. A retailer plans all three ahead.
+- **Weather is left out:** it is known only after the fact, and Phase 2 found effects of about 1% that were fragile. Using actual weather would give the models perfect foresight that a real forecast doesn't have.
+
+## 2026-11-03: Forecaster settings
+
+- **Output:** every model gives deciles 0.1–0.9, clipped at 0 and sorted. The median is the point forecast. Seasonal naive gives a median only.
+- **LightGBM:**
+  - One global model per fold and decile.
+  - Lags 7–28 and 7- and 28-day means, all ending at least 7 days back, so one model covers the whole week.
+  - Day of week, the 3 inputs, and store, product, city and category ids as categorical features.
+  - 200 trees, learning rate 0.05, 63 leaves, not tuned. Deterministic training, so a rerun gives the same forecasts.
+- **Foundation models:** zero-shot, weights pinned to Hugging Face revisions (in `forecasting/models.py`).
+  - Chronos-2 gets the inputs as past and future covariates. A second run without them shows whether they help, with the model held fixed.
+  - TimesFM-2.5 uses the model card's settings: normalised inputs, continuous quantile head, no quantile crossing, positive outputs.
+  - Toto-2.0-313m gets its history left-padded to whole 32-day patches, with the padding masked.
+- **Sample:** the same 90 stores (4,928 series) as Phase 3. On the GTX 1650, 2,000 series take 5–20 s per model, so all 50,000 series would take about 2 hours. The sample keeps runs short, and bootstrap intervals over 4,928 series are already narrow.
+- **Install:** toto-2 needs gluonts, which caps pandas below 3, so pandas moved from 3.1.0 to 2.3.3. All earlier tests pass unchanged.
+
+## 2026-11-03: LightGBM forecasts best, and every model beats seasonal naive in every fold
+
+- **Test:** 90 stores (4,928 series), 4 weekly folds, 137,984 forecast days per model.
+
+  | Model | WAPE (95% CI) | Bias (WPE) | Against LightGBM (paired 95% CI) | Inside the 10–90% range |
+  |---|---|---|---|---|
+  | **LightGBM** | **33.2%** (32.4–34.0%) | −9.4% | — | 75.1% |
+  | Chronos-2 with inputs | 34.3% (33.3–35.2%) | −8.2% | +1.0 points (+0.8 to +1.2) | 78.0% |
+  | TimesFM-2.5 | 34.5% (33.6–35.5%) | −10.3% | +1.3 points (+1.1 to +1.5) | 79.2% |
+  | Chronos-2 without inputs | 34.8% (33.8–35.7%) | −9.9% | +1.6 points (+1.4 to +1.8) | 79.1% |
+  | Toto-2.0-313m | 35.1% (34.1–36.0%) | −9.2% | +1.9 points (+1.7 to +2.1) | 79.9% |
+  | Seasonal naive | 44.2% (43.0–45.4%) | −3.5% | +11.0 points (+10.5 to +11.5) | — |
+
+- **Exit check met:** every model beats seasonal naive in all 4 folds (fold WAPE 32–36% against 42–46%).
+- **Foundation models vs LightGBM:** zero-shot, they come within 1–2 points of a LightGBM trained on these series, but don't beat it. The spec expected this could happen; it is a real result.
+- **Known inputs help Chronos-2** by 0.6 points (34.8% to 34.3%). Both runs are paired against LightGBM, and their intervals don't overlap.
+- **Bias:** every model's median runs 8–10% low.
+  - Demand is right-skewed, so its median sits below its mean, and WAPE rewards the median.
+  - Phase 5's cost-based orders use upper quantiles, not the median.
+- **Coverage:** 75–80% of actual demand falls inside the 10–90% range before calibration (target 80%).
+- **Run time (GTX 1650):**
+  - LightGBM: 257 s (36 fits);
+  - Chronos-2: 172 s, or 40 s without inputs;
+  - TimesFM-2.5: 73 s;
+  - Toto-2.0: 66 s;
+  - whole run: 10.4 min.
+- **Known limitation (code review):** Phase 3 filled stockout hours using each series' hourly profile from all 90 train days. So on stockout days, the history each fold learns from carries a little information from later weeks. This affects every model alike; recovering demand separately for each fold would remove it.
+
+## Known issues
+
+- **Hugging Face downloads on this laptop:** the antivirus intercepts HTTPS, so Hugging Face requests fail certificate checks. The forecasting run therefore used `HF_HUB_OFFLINE=1`, with the pinned weights already in the local cache.
 - **pyfixest warnings:** pyfixest 0.60 uses pandas options deprecated for pandas 4, which produces warnings. Versions are pinned in `uv.lock`.
 
 ## Facts that differ from the paper
