@@ -27,9 +27,11 @@ ml = [
 ]
 # The API only: the Docker image installs this group and nothing heavy.
 serve = ["fastapi", "uvicorn"]
+# The replenishment agent; its LLM provider package is added once the provider is chosen.
+agent = ["langchain>=1.4", "langgraph>=1.2"]
 
 [tool.uv]
-default-groups = ["dev", "ml", "serve"]
+default-groups = ["dev", "ml", "serve", "agent"]
 # pypots caps transformers at 4.57.6; without a floor uv backtracks to 4.12, which needs Rust to build.
 constraint-dependencies = ["transformers>=4.40"]
 
