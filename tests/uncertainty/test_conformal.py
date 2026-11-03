@@ -1,8 +1,13 @@
+import shutil
+
 import numpy as np
 import pandas as pd
 import pytest
 
+from fresh_replenish.forecasting import evaluate
+from fresh_replenish.forecasting.models import seasonal_naive
 from fresh_replenish.metrics import DECILE_COLUMNS, DECILES
+from fresh_replenish.uncertainty import conformal
 from fresh_replenish.uncertainty.conformal import POOLED, calibrate, group_table, shifts
 
 CAL = [f"cal_{c}" for c in DECILE_COLUMNS]
@@ -66,3 +71,46 @@ def test_calibrated_deciles_are_sorted_and_non_negative_and_point_forecasts_kept
     assert (model >= 0).all() and (np.diff(model, axis=1) >= 0).all()
     assert out[out.model == "seasonal naive"][CAL].isna().all().all()
     assert len(out) == 40
+
+
+def _narrow(series, origin, horizon):
+    """Last week's demand with a range far too tight to cover 80%."""
+    point = seasonal_naive(series, origin, horizon)[:, 4]
+    return point[:, None, :] * np.linspace(0.96, 1.04, 9)[None, :, None]
+
+
+@pytest.fixture
+def calibrated(make_series, weekly):
+    series = make_series(weekly(n=12, days=49))  # the last 7 days play the held-out week
+    fakes = {"seasonal naive": seasonal_naive, "narrow": _narrow}
+    folds = evaluate.run(series, fakes, origins=(21, 28, 35))[1]
+    return conformal.run(series, folds, fakes)
+
+
+def test_run_calibrates_the_held_out_week(calibrated):
+    results, forecasts = calibrated
+    coverage = results["coverage"].set_index("model")
+    assert list(coverage.index) == ["narrow"]  # a point forecast has no range to calibrate
+    assert coverage.loc["narrow", "coverage_after"] > coverage.loc["narrow", "coverage_before"]
+    assert len(forecasts) == 2 * 12 * 7 and set(forecasts.dt) == {str(d) for d in range(42, 49)}
+    assert {"q10", "cal_q10", "group"} <= set(forecasts.columns)
+
+
+def test_report_states_the_exit_check(calibrated):
+    report = conformal.render_report(calibrated[0])
+    assert report.startswith("# Calibrated forecast ranges")
+    assert "**Exit check:**" in report and "narrow" in report
+
+
+def test_main_without_data_returns_2(tmp_path):
+    assert conformal.main(raw_dir=tmp_path / "none", out_dir=tmp_path, processed_dir=tmp_path) == 2
+
+
+def test_main_without_fold_forecasts_names_phase_4(tiny_dataset, tmp_path, capsys):
+    raw = tmp_path / "raw" / "data"
+    raw.mkdir(parents=True)
+    for path in tiny_dataset:
+        shutil.copy(path, raw / path.name)
+    (tmp_path / "recovered_demand.parquet").touch()
+    assert conformal.main(raw_dir=raw.parent, out_dir=tmp_path, processed_dir=tmp_path) == 2
+    assert "fresh_replenish.forecasting.evaluate" in capsys.readouterr().err
