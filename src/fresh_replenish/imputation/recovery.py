@@ -20,36 +20,13 @@ from fresh_replenish.imputation.data import load_hours
 from fresh_replenish.imputation.deep import fit_deep, predict_deep
 from fresh_replenish.imputation.masking import mimic_missing
 from fresh_replenish.imputation.statistical import profile_recover, tobit_recover
+from fresh_replenish.metrics import bootstrap, score
 from fresh_replenish.report import md_table
 
 SEED = 42
 SAMPLE_SHARE = 0.10  # of stores; keeps SAITS and TimesNet inside the GTX 1650's 4 GB
 STATISTICAL = ["profile", "tobit"]
 DEEP = ["saits", "timesnet"]
-
-
-def score(pred, actual, valid) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Per-series sums over valid days of |error|, error and actual demand."""
-    err = np.where(valid, pred - actual, 0.0)
-    return np.abs(err).sum(axis=1), err.sum(axis=1), np.where(valid, actual, 0.0).sum(axis=1)
-
-
-def bootstrap(sums, n: int = 1000, seed: int = SEED) -> tuple[dict, np.ndarray]:
-    """WAPE and WPE with 95% intervals from resampling series; also returns the WAPE draws."""
-    abs_err, err, actual = sums
-    k = len(actual)
-    weights = np.random.default_rng(seed).multinomial(k, np.full(k, 1 / k), size=n)
-    wape = weights @ abs_err / (weights @ actual)
-    wpe = weights @ err / (weights @ actual)
-    point = {
-        "wape": abs_err.sum() / actual.sum(),
-        "wape_low": np.percentile(wape, 2.5),
-        "wape_high": np.percentile(wape, 97.5),
-        "wpe": err.sum() / actual.sum(),
-        "wpe_low": np.percentile(wpe, 2.5),
-        "wpe_high": np.percentile(wpe, 97.5),
-    }
-    return point, wape
 
 
 def _recover(name: str, sales, covariates, deep: dict) -> np.ndarray:
