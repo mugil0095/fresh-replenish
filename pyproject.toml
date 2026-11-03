@@ -5,14 +5,18 @@ description = "Fresh-food replenishment for quick-commerce dark stores: hidden-d
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "chronos-forecasting>=2.3",
     "duckdb",
     "huggingface_hub",
+    "lightgbm>=4.7",
     "pandas",
     "pyarrow",
     "pyfixest>=0.60.0",
     "pypots>=1.5",
     "scipy",
+    "timesfm[torch]>=3.0",
     "torch>=2.14,<2.15",
+    "toto-2>=2.0",
 ]
 
 [dependency-groups]
