@@ -17,7 +17,7 @@ dev = ["httpx", "pytest", "ruff"]
 ml = [
     "chronos-forecasting>=2.3",
     "lightgbm>=4.7",
-    "mlflow-skinny>=3",
+    "mlflow>=3",
     "pyfixest>=0.60.0",
     "pypots>=1.5",
     "scipy",

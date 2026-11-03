@@ -1,31 +1,7 @@
 import numpy as np
-import pandas as pd
 import pytest
 
-from fresh_replenish.data.db import connect
-from fresh_replenish.forecasting.data import ATTRIBUTES, HORIZON, ORIGINS, load_series
-
-
-@pytest.fixture
-def series_from(tmp_path):
-    """series_from(paths, **kw): writes a recovered-demand file like Phase 3's, then loads it."""
-
-    def write(split_path, name):
-        rows = pd.read_parquet(split_path)
-        recovered = rows[["store_id", "product_id", "dt", "sale_amount"]].assign(
-            stockout_hours=rows.stock_hour6_22_cnt,
-            recovered_demand=rows.sale_amount + (rows.stock_hour6_22_cnt > 0),
-        )
-        recovered.to_parquet(tmp_path / name, index=False)
-        return tmp_path / name
-
-    def load(paths, with_eval=False, **kwargs):
-        files = [write(paths[0], "recovered.parquet")]
-        if with_eval:
-            files.append(write(paths[1], "recovered_eval.parquet"))
-        return load_series(connect(*paths), files, **kwargs)
-
-    return load
+from fresh_replenish.forecasting.data import ATTRIBUTES, HORIZON, ORIGINS
 
 
 def test_shapes(tiny_dataset, series_from):

@@ -59,7 +59,7 @@ PRETRAINING = pd.DataFrame(
 )
 
 
-def _fold_frame(name: str, series: Series, q: np.ndarray, days: np.ndarray) -> pd.DataFrame:
+def forecast_frame(name: str, series: Series, q: np.ndarray, days: np.ndarray) -> pd.DataFrame:
     """One row per series and forecast day, with the deciles as q10 ... q90."""
     n, t = len(series.demand), len(days)
     frame = pd.DataFrame({
@@ -111,7 +111,7 @@ def run(
             "coverage_80": coverage(q, actual),
             "wape_in_stock": in_stock[0].sum() / in_stock[2].sum(),
         })
-        saved.append(_fold_frame(name, series, q, days))
+        saved.append(forecast_frame(name, series, q, days))
 
     methods = pd.DataFrame(rows)
     wape = methods.set_index("model").wape
