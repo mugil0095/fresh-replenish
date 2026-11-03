@@ -12,6 +12,8 @@ services:
     command: streamlit run src/fresh_replenish/dashboard/app.py --server.port 8501 --server.address 0.0.0.0 --server.headless true
     ports:
       - "8501:8501"
+    healthcheck:  # the image's own check calls the API on :8000, which this container doesn't run
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8501/_stcore/health')"]
     volumes:
       - ./data:/app/data:ro
       - ./reports:/app/reports:ro
