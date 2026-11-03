@@ -124,6 +124,23 @@ Each entry gives the decision, why it was made, and the evidence behind it.
 - **Why:** CUDA 12.6 builds still support the GTX 1650 (sm_75); CI on Linux gets CPU builds.
 - **Install conflict:** PyPOTS 1.5 caps `transformers` at 4.57.6. Without a floor, uv backtracked to 4.12, which needs a Rust compiler. The floor (`>=4.40`) pulls `huggingface_hub` down to 0.36, and our download call works there unchanged.
 
+## 2026-11-03: FreshRetailNet-50K isn't in any foundation model's pretraining data
+
+- **Why:** a model that saw these series during pretraining would score unfairly well (the spec's "a model may have seen this dataset" risk).
+- **Evidence:** the dataset was first published on 2025-05-07 (Hugging Face; arXiv 2505.16319).
+
+  | Model | Pretraining data, from its model card or report | Contains FreshRetailNet-50K? |
+  |---|---|---|
+  | Chronos-2 | Subsets of the Chronos datasets (last changed 2025-03-18) and GIFT-Eval Pretrain (last changed 2025-01-21), plus synthetic data | No. Both corpora predate the dataset, and neither lists it. |
+  | TimesFM-2.5 | GIFT-Eval Pretrain, Wikimedia pageviews (to Nov 2023), Google Trends (to end of 2022), plus synthetic data | No |
+  | Toto-2.0-313m | Datadog observability metrics and synthetic series only. Its report says it "sees no public forecasting data during pretraining". | No |
+
+- **Not confirmed:** the exact subsets each team used; we rely on their published lists. Toto's fine-tuned 2.5B-FT model also trained on GIFT-Eval train data, but it isn't used here.
+- **Sources:**
+  - the model cards of `amazon/chronos-2` and `google/timesfm-2.5-200m-pytorch`;
+  - the Toto 2.0 technical report (arXiv 2605.20119), sections 1 and 3;
+  - the Hugging Face API dates of the two corpora.
+
 ## Known issue
 
 - **pyfixest warnings:** pyfixest 0.60 uses pandas options deprecated for pandas 4, which produces warnings. Versions are pinned in `uv.lock`.
