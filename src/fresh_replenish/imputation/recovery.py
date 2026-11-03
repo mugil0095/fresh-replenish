@@ -14,42 +14,18 @@ import numpy as np
 import pandas as pd
 
 from fresh_replenish.config import PROCESSED_DIR, RAW_DIR, REPORTS_DIR
-from fresh_replenish.data.db import connect
+from fresh_replenish.data.db import connect, sample_stores
 from fresh_replenish.data.download import local_paths
 from fresh_replenish.imputation.data import load_hours
 from fresh_replenish.imputation.deep import fit_deep, predict_deep
 from fresh_replenish.imputation.masking import mimic_missing
 from fresh_replenish.imputation.statistical import profile_recover, tobit_recover
+from fresh_replenish.metrics import SEED, bootstrap, score
 from fresh_replenish.report import md_table
 
-SEED = 42
 SAMPLE_SHARE = 0.10  # of stores; keeps SAITS and TimesNet inside the GTX 1650's 4 GB
 STATISTICAL = ["profile", "tobit"]
 DEEP = ["saits", "timesnet"]
-
-
-def score(pred, actual, valid) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Per-series sums over valid days of |error|, error and actual demand."""
-    err = np.where(valid, pred - actual, 0.0)
-    return np.abs(err).sum(axis=1), err.sum(axis=1), np.where(valid, actual, 0.0).sum(axis=1)
-
-
-def bootstrap(sums, n: int = 1000, seed: int = SEED) -> tuple[dict, np.ndarray]:
-    """WAPE and WPE with 95% intervals from resampling series; also returns the WAPE draws."""
-    abs_err, err, actual = sums
-    k = len(actual)
-    weights = np.random.default_rng(seed).multinomial(k, np.full(k, 1 / k), size=n)
-    wape = weights @ abs_err / (weights @ actual)
-    wpe = weights @ err / (weights @ actual)
-    point = {
-        "wape": abs_err.sum() / actual.sum(),
-        "wape_low": np.percentile(wape, 2.5),
-        "wape_high": np.percentile(wape, 97.5),
-        "wpe": err.sum() / actual.sum(),
-        "wpe_low": np.percentile(wpe, 2.5),
-        "wpe_high": np.percentile(wpe, 97.5),
-    }
-    return point, wape
 
 
 def _recover(name: str, sales, covariates, deep: dict) -> np.ndarray:
@@ -66,9 +42,8 @@ def run(
 ) -> tuple[dict[str, pd.DataFrame], pd.DataFrame]:
     """Score every method on a store sample, then recover all series with the chosen one."""
     rng = np.random.default_rng(SEED)
-    stores = np.sort(con.execute("SELECT DISTINCT store_id FROM train").fetchnumpy()["store_id"])
-    size = max(1, round(len(stores) * sample_share))
-    h = load_hours(con, stores=sorted(rng.choice(stores, size=size, replace=False).tolist()))
+    stores = sample_stores(con, sample_share, rng)
+    h = load_hours(con, stores=stores)
     n, days, hours = h.sales.shape
     masked, valid = mimic_missing(h.sales.reshape(n * 3, days // 3, hours), rng)
     masked, valid = masked.reshape(h.sales.shape), valid.reshape(h.sales.shape)
@@ -121,7 +96,7 @@ def run(
     )
 
     sample = pd.DataFrame([{
-        "stores": size, "series": n, "valid_days": int(valid_days.sum()),
+        "stores": len(stores), "series": n, "valid_days": int(valid_days.sum()),
         "hidden_hour_share": float(valid.mean()), "epochs": epochs,
     }])
     results = {
