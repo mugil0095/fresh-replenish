@@ -1,21 +1,34 @@
 # fresh-replenish
 
-Fresh-food replenishment for quick-commerce dark stores. The project:
+**Ordering fresh food by cost instead of by the most accurate forecast cut simulated waste + lost-sales cost by 56%** on a held-out week: 4,928 products in 90 quick-commerce dark stores, with a lost sale assumed to cost 9× a wasted unit. The [one-page summary](docs/summary.md) gives the business view.
+
+| What | Result |
+|---|---|
+| Demand hidden by stockouts, recovered | +28% on all days, +62% on stockout days |
+| Forecast error (WAPE), held-out week | LightGBM 32.5%; Chronos-2 33.3% zero-shot; reorder last week 41.7% |
+| Forecast ranges that hold | 80% of demand inside the calibrated 10–90% range (target 80%) |
+| Cost of orders, against the most accurate forecast's median | −56% (−55% against reordering last week's sales) |
+| Nightly batch / API | 50,000 series in 11.5 min; p95 7.3 ms per store request |
+| AI agent (50 questions × 3 runs) | 97% right tools; 100% of its numbers came from tools; every over-limit order went to a human |
+
+The project:
 
 1. recovers the demand that stockouts hide;
-2. forecasts it with time-series foundation models;
-3. turns forecasts into cost-based daily orders;
-4. explains each order with an AI agent.
+2. forecasts it with time-series foundation models and LightGBM;
+3. turns forecasts into calibrated, cost-based daily orders;
+4. explains each order with an AI agent that hands risky ones to a human.
 
-**Status:** Phases 1–7 are done.
+**Status:** all 8 phases are built.
 - **Data foundation:** the data is verified; see the [data audit](reports/data_audit.md).
 - **Demand drivers:** see [what drives demand](reports/demand_drivers.md).
 - **Hidden demand:** see [recovering hidden demand](reports/demand_recovery.md).
 - **Forecasting:** see [forecasting daily demand](reports/forecasting.md).
 - **Uncertainty and orders:** see [calibrated forecast ranges](reports/calibration.md) and [cost-based orders](reports/orders.md).
 - **Service:** see [batch and API](reports/service.md) and [monitoring](reports/monitoring.md).
+- **Agent:** see the [agent evaluation](reports/agent_gpt-oss-120b.md).
+- **Communication:** a Streamlit dashboard (`uv run streamlit run src/fresh_replenish/dashboard/app.py`) and a [demo script](docs/demo.md).
 
-Each choice is explained in [decisions](docs/decisions.md).
+Each choice is explained in [decisions](docs/decisions.md). What didn't work is in [negative results](docs/negative_results.md).
 
 ## Run it
 
@@ -34,8 +47,10 @@ uv run python -m fresh_replenish.serving.batch          # nightly orders for all
 uv run uvicorn --factory fresh_replenish.serving.api:create_app  # GET /reorder?store_id=0
 uv run python -m fresh_replenish.serving.latency        # writes reports/service.md
 uv run python -m fresh_replenish.monitoring.drift       # writes reports/monitoring.md
-docker compose up                                       # the API on :8000 and MLflow on :5000
+uv run streamlit run src/fresh_replenish/dashboard/app.py  # the dashboard on :8501
+docker compose up                                       # the API on :8000, dashboard on :8501, MLflow on :5000
 FRESH_LLM=ollama:gpt-oss:120b uv run python -m fresh_replenish.agent.evaluate  # OLLAMA_API_KEY in .env (or google_genai:gemini-3.6-flash)
+uv run python -m fresh_replenish.agent.chat "Place an order of 6 units of product 4 for store 57 on 2024-07-02."  # you approve hand-offs
 uv run pytest                                    # data and model tests run once the data and weights are downloaded
 ```
 
