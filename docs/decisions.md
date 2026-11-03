@@ -351,6 +351,17 @@ Each entry gives the decision, why it was made, and the evidence behind it.
   - The record rule also read as a permission, not an instruction.
   - All three are fixed, and the second run is the one reported.
 
+## 2026-11-03: Communication (spec step 9)
+
+- **Headline:** ordering by cost cut simulated waste + lost-sales cost by 56% compared with ordering the most accurate forecast's median (55% against reordering last week's sales). The cost ratio is assumed at 9×, and the comparison is held-out week, LightGBM, 4,928 series. It leads the README, the dashboard and the one-page summary, always with the cost assumption beside it.
+- **Dashboard:**
+  - Built with Streamlit, plus Altair, which ships with it; no Plotly dependency.
+  - Colours are the reference palette's first three categorical slots (blue, orange, aqua), validated for colour-blind separation as a set, on a light theme pinned in `.streamlit/config.toml`.
+  - It was checked by rendering it in a browser.
+  - Tabs: where money is lost (by category, store and hour), ordering policies across cost ratios, forecasts, orders, and agent decision records.
+- **Image:** installs the `serve` and `dashboard` groups (50 packages, no torch). Compose runs the API (:8000), the dashboard (:8501) and MLflow (:5000).
+- **Docs:** `docs/summary.md` (one page, non-technical), `docs/negative_results.md`, and `docs/demo.md` (a 3–5 minute script). The demo uses `fresh_replenish.agent.chat`, where you act as the planner.
+
 ## Known issues
 
 - **Hugging Face downloads on this laptop:** the antivirus intercepts HTTPS, so Hugging Face requests fail certificate checks. The forecasting run therefore used `HF_HUB_OFFLINE=1`, with the pinned weights already in the local cache.
