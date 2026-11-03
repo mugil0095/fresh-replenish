@@ -1,4 +1,4 @@
-"""p95 latency of GET /reorder over HTTP on a local Uvicorn server; and the service report."""
+"""p95 latency of GET /reorder over HTTP on a local Uvicorn server, plus the service report."""
 
 import socket
 import sys
