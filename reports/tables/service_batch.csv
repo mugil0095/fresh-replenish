@@ -1,0 +1,2 @@
+as_of,model,ratio,series,order_lines,runtime_s
+2024-06-25,lightgbm,9.0,50000,350000,689.6

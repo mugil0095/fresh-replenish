@@ -7,12 +7,13 @@ Fresh-food replenishment for quick-commerce dark stores. The project:
 3. turns forecasts into cost-based daily orders;
 4. explains each order with an AI agent.
 
-**Status:** Phases 1–5 are done.
+**Status:** Phases 1–6 are done.
 - **Data foundation:** the data is verified; see the [data audit](reports/data_audit.md).
 - **Demand drivers:** see [what drives demand](reports/demand_drivers.md).
 - **Hidden demand:** see [recovering hidden demand](reports/demand_recovery.md).
 - **Forecasting:** see [forecasting daily demand](reports/forecasting.md).
 - **Uncertainty and orders:** see [calibrated forecast ranges](reports/calibration.md) and [cost-based orders](reports/orders.md).
+- **Service:** see [batch and API](reports/service.md) and [monitoring](reports/monitoring.md).
 
 Each choice is explained in [decisions](docs/decisions.md).
 
@@ -29,6 +30,11 @@ uv run python -m fresh_replenish.imputation.recovery  # writes reports/demand_re
 uv run python -m fresh_replenish.forecasting.evaluate  # writes reports/forecasting.md (~10 min; ~2.5 GB of model weights the first time)
 uv run python -m fresh_replenish.uncertainty.conformal  # writes reports/calibration.md (~4 min)
 uv run python -m fresh_replenish.decisions.newsvendor   # writes reports/orders.md (seconds)
+uv run python -m fresh_replenish.serving.batch          # nightly orders for all 50,000 series (~12 min)
+uv run uvicorn --factory fresh_replenish.serving.api:create_app  # GET /reorder?store_id=0
+uv run python -m fresh_replenish.serving.latency        # writes reports/service.md
+uv run python -m fresh_replenish.monitoring.drift       # writes reports/monitoring.md
+docker compose up                                       # the API on :8000 and MLflow on :5000
 uv run pytest                                    # data and model tests run once the data and weights are downloaded
 ```
 
@@ -77,6 +83,13 @@ The checks use a held-out week (Jun 26–Jul 2) that no model saw.
 - **Cost-based orders win:** at 9×, LightGBM's cost-based orders cost 55% less than reordering last week's sales.
 - **The most accurate number is a poor order:** ordering LightGBM's median costs 2.3× as much as its cost-based order, and more than reordering last week's sales.
 - **LightGBM is cheapest overall,** at every cost ratio. A foundation model is cheapest in 27 of the 90 stores.
+
+## Service
+
+- **Batch job:** each night it trains LightGBM, calibrates the forecasts and writes cost-based orders for all 50,000 series. A run takes 11.5 minutes on this laptop and is tracked in MLflow.
+- **API:** `GET /reorder?store_id=…&ratio=…` returns a store's orders, recomputed for any cost ratio. p95 latency is 7.3 ms.
+- **Monitoring:** it checks median bias, range coverage and stockout drift, overall and per category. On the held-out week everything is within limits overall (coverage 81.5%), and a few categories raise alerts.
+- **Docker:** the image serves the API only, with no ML stack, and GitHub Actions builds and smoke-tests it.
 
 ## Data
 

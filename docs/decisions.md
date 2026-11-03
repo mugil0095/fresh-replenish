@@ -256,6 +256,44 @@ Each entry gives the decision, why it was made, and the evidence behind it.
 - **Store level:** at r = 9, a foundation model is cheapest in 27 of the 90 stores. That per-store comparison has no intervals, and 7 days per store is a small sample.
 - **Cost of availability:** a 95.7% fill rate means about a third of the units ordered are wasted. That is the price of r = 9 with forecasts this uncertain; lower ratios trade the other way.
 
+## 2026-11-03: Service design (spec step 7)
+
+- **Batch job:** it runs "as of" the last train day (Jun 25) and orders for the held-out week, so monitoring can check it against what happened.
+  1. Trains LightGBM, the Phase 4–5 winner, on recovered demand for all 50,000 series.
+  2. Adds the week's known inputs.
+  3. Calibrates the deciles with Phase 5's conformal shifts. Categories not seen in calibration use the pooled shift.
+  4. Orders at the 9× headline ratio.
+- **API:** serves the precomputed orders, one store per request.
+  - Another ratio is recomputed from the stored deciles, so no model runs at request time.
+  - Errors: 404 for an unknown store, 422 for a ratio outside 1/9–9, 503 before any batch has run.
+  - It is built by a factory (`uvicorn --factory`), so importing it reads no data.
+- **MLflow:** full `mlflow` with a SQLite store (`mlruns/mlflow.db`). MLflow 3.17 refuses the old file store, and `mlflow-skinny` can't write to SQLite.
+- **Dependency groups:**
+  - `ml` holds the models and MLflow;
+  - `serve` holds FastAPI and Uvicorn;
+  - all groups are installed by default, so `uv sync` and CI are unchanged.
+  - The Docker image installs only `serve`: 33 packages, no torch. To make that possible, the API imports nothing heavy.
+- **Docker:** checked in CI only, per the roadmap option, so Docker Desktop isn't installed. The image job runs on GitHub once the repo is pushed; until then it is unverified.
+  - Locally, an environment synced with only the `serve` group runs the API against the real orders file.
+  - The Compose file adds the MLflow UI (`ghcr.io/mlflow/mlflow:v3.17.2`, tag checked on GHCR).
+- **Monitoring alerts:**
+  - median bias outside −25% to +5% (the median normally runs 10–14% low);
+  - coverage outside 75–85%;
+  - stockout-day rate more than 5 points above the 4 weeks before.
+
+  Groups under 70 series-days never alert, because tiny categories gave noise alerts.
+
+## 2026-11-03: Service measurements
+
+- **Batch:** 50,000 series and 350,000 order lines in 11.5 minutes on this laptop (CPU LightGBM, 9 quantile models).
+- **API:** p95 latency of 7.3 ms per store request (p50 5.1 ms), over HTTP on this laptop, 500 requests one at a time.
+- **Monitoring of the held-out week (all series):**
+  - Overall: median bias −10.4%, coverage 81.5%, stockout days 41.0% against 41.2% the 4 weeks before. No overall alert.
+  - Category alerts:
+    - bias in 4 categories, for example category 28 at +14.7%, where stockout days fell from 22% to 4%;
+    - coverage in 5 categories;
+    - stockouts in 8 categories, for example category 14, from 20% to 52%.
+
 ## Known issues
 
 - **Hugging Face downloads on this laptop:** the antivirus intercepts HTTPS, so Hugging Face requests fail certificate checks. The forecasting run therefore used `HF_HUB_OFFLINE=1`, with the pinned weights already in the local cache.

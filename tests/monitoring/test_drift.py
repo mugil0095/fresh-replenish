@@ -61,3 +61,9 @@ def test_main_without_orders_names_the_batch(tiny_dataset, tmp_path, capsys):
         shutil.copy(path, raw / path.name)
     assert drift.main(raw_dir=raw.parent, processed_dir=tmp_path, out_dir=tmp_path) == 2
     assert "fresh_replenish.serving.batch" in capsys.readouterr().err
+
+
+def test_tiny_categories_do_not_alert():
+    week = pd.concat([_week(), _week(bias=-0.5, n=10).assign(first_category_id=9)])
+    flagged = _alerts(drift.monitor(week, _before())).loc["9"]
+    assert not flagged.any()  # 10 series-days is too few to trust
