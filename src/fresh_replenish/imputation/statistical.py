@@ -94,7 +94,12 @@ def fit_tobit(y, censored, X, series, n_series: int) -> TobitFit:
 
 
 def tobit_recover(sales: np.ndarray, covariates: np.ndarray) -> np.ndarray:
-    """Daily operating-hour demand (series, days): observed totals, or E[D | D > observed]."""
+    """Daily operating-hour demand (series, days): observed totals, or E[D | D > observed].
+
+    A series with no in-stock day can't pin down its own demand (censored-only data always push
+    it up, so its prior alone would decide), so it stays out of the fit and borrows the typical
+    uplift instead: observed x (mean in-stock day / mean sold-out day) of the fitted series.
+    """
     n, days, _ = sales.shape
     blank = np.isnan(sales)
     y = np.where(blank, 0.0, sales).sum(axis=-1).ravel().astype(float)
@@ -103,7 +108,11 @@ def tobit_recover(sales: np.ndarray, covariates: np.ndarray) -> np.ndarray:
     std = X.std(axis=0)
     X = (X - X.mean(axis=0)) / np.where(std > 0, std, 1.0)
     series = np.repeat(np.arange(n), days)
-    fit = fit_tobit(y, censored, X, series, n)
+    fitted = (np.bincount(series[~censored], minlength=n) > 0)[series]
+    fit = fit_tobit(y[fitted], censored[fitted], X[fitted], series[fitted], n)
     mu = fit.alpha[series] + X @ fit.beta
     sigma = np.exp(fit.log_sigma)[series]
-    return np.where(censored, expected_above(mu, sigma, y), y).reshape(n, days)
+    in_stock, sold_out = y[fitted & ~censored].mean(), y[fitted & censored].mean()
+    uplift = in_stock / sold_out if (~fitted).any() and sold_out > 0 else 1.0
+    recovered = np.where(fitted, expected_above(mu, sigma, y), y * uplift)
+    return np.where(censored, recovered, y).reshape(n, days)

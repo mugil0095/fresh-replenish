@@ -1,8 +1,10 @@
+from unittest.mock import create_autospec
+
 import numpy as np
 import pytest
 
 from fresh_replenish.data.db import connect
-from fresh_replenish.imputation import recovery
+from fresh_replenish.imputation import deep, recovery
 from fresh_replenish.imputation.masking import mimic_missing
 
 
@@ -35,9 +37,14 @@ def test_no_recovery_understates_demand():
 
 
 def test_run_wires_methods_and_recovers_every_day(tiny_dataset, monkeypatch):
-    # Deep models are faked here; their own tests train them for real.
-    monkeypatch.setattr(recovery, "fit_deep", lambda sales, cov, name, epochs: name)
-    monkeypatch.setattr(recovery, "predict_deep", lambda imp, sales, cov: np.nan_to_num(sales))
+    # Deep models are faked here (their own tests train them); autospec keeps the real
+    # signatures, so a changed call from run() fails here instead of in the GPU run.
+    fake_fit = create_autospec(deep.fit_deep, side_effect=lambda sales, cov, model, **kw: model)
+    fake_predict = create_autospec(
+        deep.predict_deep, side_effect=lambda imputer, sales, cov, **kw: np.nan_to_num(sales)
+    )
+    monkeypatch.setattr(recovery, "fit_deep", fake_fit)
+    monkeypatch.setattr(recovery, "predict_deep", fake_predict)
     results, recovered = recovery.run(connect(*tiny_dataset), sample_share=1.0, epochs=1)
     assert list(results["methods"].method) == [
         "no recovery", "profile", "tobit", "saits", "timesnet"

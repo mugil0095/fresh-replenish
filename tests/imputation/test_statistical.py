@@ -5,6 +5,7 @@ from fresh_replenish.imputation.statistical import (
     expected_above,
     fit_tobit,
     profile_recover,
+    tobit_recover,
 )
 
 PROFILE = np.linspace(1, 2, 16) / np.linspace(1, 2, 16).sum()
@@ -54,3 +55,13 @@ def test_tobit_recovers_slopes_and_spread():
     fit = fit_tobit(y, censored, X, series, n)
     assert fit.beta == pytest.approx(beta, abs=0.1)
     assert np.median(np.abs(np.exp(fit.log_sigma) / sigma - 1)) < 0.1
+
+
+def test_series_never_in_stock_borrows_the_typical_uplift():
+    days = 20
+    sales = np.full((2, days, 16), 10.0 / 16)  # series 0 sells 10 on in-stock days
+    sales[0, ::2, 8:] = np.nan  # ...and sells out at 14:00 every other day, observing 5
+    sales[1, :, :8] = 2.0 / 8  # series 1 sells 2 by 14:00...
+    sales[1, :, 8:] = np.nan  # ...and is sold out every afternoon
+    recovered = tobit_recover(sales, np.zeros((2, days, 4)))
+    assert recovered[1] == pytest.approx(2.0 * (10.0 / 5.0))  # observed x series 0's uplift

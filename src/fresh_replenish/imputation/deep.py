@@ -71,13 +71,18 @@ def predict_deep(
     """Fill blank hours; observed hours come back unchanged.
 
     PyPOTS collects every output of every batch, and SAITS returns attention maps per sample
-    (480 x 480 per head), so predict in chunks and keep only the imputation.
+    (480 x 480 per head), so build and predict a few series at a time (about `chunk` windows)
+    and keep only the imputation; memory stays flat however many series come in.
     """
-    X = _windows(sales, covariates, imputer.cov_mean, imputer.cov_std)
-    filled = np.concatenate(
-        [imputer.model.predict({"X": X[i : i + chunk]})["imputation"][..., 0]
-         for i in range(0, len(X), chunk)]
-    ).reshape(sales.shape)
+    step = max(1, chunk // 3)  # 3 windows per series
+    parts = [
+        imputer.model.predict(
+            {"X": _windows(sales[i : i + step], covariates[i : i + step],
+                           imputer.cov_mean, imputer.cov_std)}
+        )["imputation"][..., 0]
+        for i in range(0, len(sales), step)
+    ]
+    filled = np.concatenate(parts).reshape(sales.shape)
     return np.where(np.isnan(sales), filled, sales)
 
 
