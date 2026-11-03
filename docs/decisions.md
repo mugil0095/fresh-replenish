@@ -328,6 +328,29 @@ Each entry gives the decision, why it was made, and the evidence behind it.
   - Questions other than limit questions avoid store-days already over capacity: one record question fell on a 424-unit day, where the agent's hand-off was correct.
 - **Provider errors:** after 3 in a row (a quota or an outage), the evaluation stops and keeps the runs that finished.
 
+## 2026-11-03: Agent evaluation on Ollama Cloud gpt-oss:120b meets every target
+
+- **Test:** 50 scripted questions × 3 runs = 150 runs, 0 provider errors, 9 minutes. A planner rejects every hand-off.
+
+  | Measure | Result | Target |
+  |---|---|---|
+  | Correct tool choice | 97% (146 of 150) | ≥ 90% |
+  | Numbers matching tool outputs, final answers | 100% | 100% |
+  | Passed the number checker on the first try | 96% | — |
+  | Hand-off on limit violations | 100% (24 of 24) | 100% |
+  | Refusals and missing data handled | 100% (18 of 18) | — |
+  | Latency per question | p50 3.3 s, p95 6.1 s | — |
+  | Tokens per run | 2,419 | — |
+
+- **Misses** (`reports/tables/agent_runs_gpt-oss-120b.csv` keeps every answer):
+  - in 3 runs the agent computed an order but didn't record it when asked;
+  - in 1 run it recorded an order nobody asked for.
+- **Not reported:** cost per question. Ollama Cloud is a subscription, with no price per token. The Gemini run, which would report a cost, waits for billing.
+- **First run:** it scored 52% on numbers, which turned out to be a scoring bug: the scorer checked answers without the agent's rules text, which defines "10th/50th/90th percentile". The scorer now uses the same sources as the checker.
+  - The same run showed that "isn’t available" wasn't recognised as a missing-data answer.
+  - The record rule also read as a permission, not an instruction.
+  - All three are fixed, and the second run is the one reported.
+
 ## Known issues
 
 - **Hugging Face downloads on this laptop:** the antivirus intercepts HTTPS, so Hugging Face requests fail certificate checks. The forecasting run therefore used `HF_HUB_OFFLINE=1`, with the pinned weights already in the local cache.

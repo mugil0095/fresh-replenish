@@ -7,7 +7,7 @@ Fresh-food replenishment for quick-commerce dark stores. The project:
 3. turns forecasts into cost-based daily orders;
 4. explains each order with an AI agent.
 
-**Status:** Phases 1–6 are done. The Phase 7 agent is built; its evaluation waits for the choice of LLM.
+**Status:** Phases 1–7 are done.
 - **Data foundation:** the data is verified; see the [data audit](reports/data_audit.md).
 - **Demand drivers:** see [what drives demand](reports/demand_drivers.md).
 - **Hidden demand:** see [recovering hidden demand](reports/demand_recovery.md).
@@ -100,6 +100,12 @@ A LangGraph agent turns the forecasts into explained orders.
 - **Numbers:** a checker rejects any number that doesn't come from a tool.
 - **Hand-off:** orders over the limits pause for a planner's approval.
 - **Evaluation:** 50 scripted questions, each run three times, score tool choice, numbers, hand-offs, refusals, latency and cost.
+- **Results** ([agent evaluation](reports/agent_gpt-oss-120b.md)): on Ollama Cloud `gpt-oss:120b`:
+  - correct tool choice 97%;
+  - 100% of the numbers it stated came from a tool;
+  - every over-limit order was handed to a planner;
+  - every out-of-scope and missing-data question was handled correctly;
+  - p50 latency 3.3 s.
 
 ## Data
 
