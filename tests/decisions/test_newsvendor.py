@@ -1,7 +1,12 @@
 import numpy as np
+import pandas as pd
 import pytest
 
+from fresh_replenish.decisions import newsvendor
 from fresh_replenish.decisions.newsvendor import critical_ratio, order_at, simulate
+from fresh_replenish.metrics import DECILE_COLUMNS
+
+CALIBRATED = [f"cal_{c}" for c in DECILE_COLUMNS]
 
 
 def test_critical_ratio_is_the_cost_share_of_a_lost_sale():
@@ -28,3 +33,66 @@ def test_simulate_charges_waste_and_lost_sales():
     assert cost.tolist() == [6.0]  # 2 lost x 2 + 2 wasted x 1
     assert bias.tolist() == [0.0]
     assert demand.tolist() == [8.0]
+
+
+def _forecasts():
+    """Held-out forecasts for 2 stores x 3 products x 7 days from three models."""
+    keys = pd.DataFrame(
+        [(s, p, str(d)) for s in (1, 2) for p in (10, 11, 12) for d in range(7)],
+        columns=["store_id", "product_id", "dt"],
+    )
+    rng = np.random.default_rng(0)
+    actual = rng.uniform(1, 5, len(keys))
+    guess = actual * rng.uniform(0.9, 1.1, len(keys))  # a median that is off by up to 10%
+    around = guess[:, None] * np.linspace(0.8, 1.2, 9)
+    exact = np.repeat(actual[:, None], 9, axis=1)
+    frames = []
+    for model, deciles in (("seasonal naive", None), ("lightgbm", around), ("oracle", exact)):
+        frame = keys.assign(model=model, actual=actual)
+        frame[DECILE_COLUMNS] = np.nan if deciles is None else deciles
+        frame[CALIBRATED] = np.nan if deciles is None else deciles
+        frames.append(frame)
+    frames[0]["q50"] = actual * 1.2  # seasonal naive: a point forecast, 20% high
+    return pd.concat(frames, ignore_index=True)
+
+
+@pytest.fixture
+def results():
+    return newsvendor.run(_forecasts())
+
+
+def test_an_exact_forecast_costs_nothing_and_is_cheapest(results):
+    p = results["policies"]
+    assert set(p.policy) == {"seasonal naive", "lightgbm median", "lightgbm", "oracle"}
+    assert len(p) == len(newsvendor.RATIOS) * 4
+    oracle = p[p.policy == "oracle"]
+    assert np.allclose(oracle.cost, 0) and np.allclose(oracle.vs_cheapest, 0)
+
+
+def test_paired_differences_against_lightgbm(results):
+    p = results["policies"]
+    assert (p[p.policy == "lightgbm"].vs_lightgbm == 0).all()
+    assert (p[p.policy == "oracle"].vs_lightgbm <= 0).all()
+    assert (p[p.policy == "seasonal naive"].saving_vs_naive == 0).all()
+
+
+def test_a_dearer_lost_sale_orders_more(results):
+    p = results["policies"]
+    fill = p[p.policy == "lightgbm"].sort_values("ratio").fill_rate
+    assert fill.is_monotonic_increasing and fill.iloc[-1] == 1.0
+
+
+def test_store_counts_cover_every_store(results):
+    stores = results["stores"].set_index("policy").stores
+    assert stores.sum() == 2 and stores["oracle"] == 2
+
+
+def test_report_names_the_cheapest_policy(results):
+    report = newsvendor.render_report(results)
+    assert report.startswith("# Cost-based orders")
+    assert "**Cheapest at r = 9:** oracle" in report
+
+
+def test_main_without_held_out_forecasts_names_the_calibration_step(tmp_path, capsys):
+    assert newsvendor.main(out_dir=tmp_path, processed_dir=tmp_path) == 2
+    assert "fresh_replenish.uncertainty.conformal" in capsys.readouterr().err

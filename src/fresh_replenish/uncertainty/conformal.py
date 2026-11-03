@@ -16,12 +16,11 @@ from fresh_replenish.data.download import local_paths
 from fresh_replenish.forecasting import evaluate
 from fresh_replenish.forecasting.data import HORIZON, Series, load_series
 from fresh_replenish.imputation.recovery import recover_eval
-from fresh_replenish.metrics import DECILE_COLUMNS, DECILES, SEED, wql
+from fresh_replenish.metrics import CALIBRATED_COLUMNS, DECILE_COLUMNS, DECILES, SEED, wql
 from fresh_replenish.report import md_table
 
 TARGET, TOLERANCE = 0.8, 0.02  # the 10-90% range should cover 80% +/- 2 points
 KEYS = ["store_id", "product_id"]
-CALIBRATED = [f"cal_{c}" for c in DECILE_COLUMNS]
 SHIFTS = [f"{c}_shift" for c in DECILE_COLUMNS]
 MIN_SERIES = 10  # smaller categories share one pooled group
 POOLED = -1
@@ -60,7 +59,7 @@ def calibrate(
         shift_table, on=["model", "group"], how="left", suffixes=("", "_shift")
     )
     adjusted = frame[DECILE_COLUMNS].to_numpy() + frame[SHIFTS].to_numpy() * _spread(frame)
-    frame[CALIBRATED] = np.sort(np.maximum(adjusted, 0), axis=1)
+    frame[CALIBRATED_COLUMNS] = np.sort(np.maximum(adjusted, 0), axis=1)
     return frame.drop(columns=SHIFTS)
 
 
@@ -81,15 +80,15 @@ def run(
     table = shifts(folds, group_of)
     frame = calibrate(forecasts, table, group_of)
     rows, hits = [], []
-    for model, part in frame.dropna(subset=CALIBRATED).groupby("model", sort=False):
-        after = _coverage(part, CALIBRATED)
+    for model, part in frame.dropna(subset=CALIBRATED_COLUMNS).groupby("model", sort=False):
+        after = _coverage(part, CALIBRATED_COLUMNS)
         rows.append({
             "model": model,
             "coverage_before": _coverage(part, DECILE_COLUMNS),
             "coverage_after": after,
             "within_target": abs(after - TARGET) <= TOLERANCE,
             "wql_before": _wql(part, DECILE_COLUMNS),
-            "wql_after": _wql(part, CALIBRATED),
+            "wql_after": _wql(part, CALIBRATED_COLUMNS),
         })
         below = {c: float((part.actual <= part[f"cal_{c}"]).mean()) for c in DECILE_COLUMNS}
         hits.append({"model": model, **below})
