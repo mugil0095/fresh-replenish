@@ -114,3 +114,10 @@ def test_main_without_fold_forecasts_names_phase_4(tiny_dataset, tmp_path, capsy
     (tmp_path / "recovered_demand.parquet").touch()
     assert conformal.main(raw_dir=raw.parent, out_dir=tmp_path, processed_dir=tmp_path) == 2
     assert "fresh_replenish.forecasting.evaluate" in capsys.readouterr().err
+
+
+def test_calibrate_refuses_a_group_without_shifts():
+    calibration = _frame(np.ones(20), np.linspace(0, 2, 9))
+    table = shifts(calibration, _groups(20))
+    with pytest.raises(ValueError, match="no calibration shift"):
+        calibrate(calibration, table, _groups(20, category=5))

@@ -202,7 +202,7 @@ Each entry gives the decision, why it was made, and the evidence behind it.
 - **Why:** Phase 4 scored against recovered demand, and 42% of held-out days have a stockout, so their recorded sales understate demand.
 - **How:**
   - The eval split (Jun 26–Jul 2) is recovered with Phase 3's chosen method: the in-stock-hour profile, estimated over all 97 days and never below recorded sales.
-  - This covers the same 90 stores, and the result is saved to `data/processed/recovered_demand_eval.parquet`.
+  - This covers the same 90 stores, and the result is saved to `data/processed/recovered_demand_eval_sample.parquet`.
   - Forecasts read only the 90 train days plus the week's known inputs.
 - **Held-out accuracy** has the same ranking as the Phase 4 folds:
   - LightGBM: WAPE 32.5% (95% CI 31.7–33.3%);

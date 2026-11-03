@@ -11,8 +11,8 @@ import numpy as np
 import pandas as pd
 
 from fresh_replenish.config import PROCESSED_DIR, REPORTS_DIR
-from fresh_replenish.forecasting.evaluate import BASELINE, CLASSICAL
-from fresh_replenish.metrics import CALIBRATED_COLUMNS, DECILES, bootstrap
+from fresh_replenish.forecasting.evaluate import BASELINE
+from fresh_replenish.metrics import CALIBRATED_COLUMNS, DECILE_COLUMNS, DECILES, bootstrap
 from fresh_replenish.report import md_table
 
 RATIOS = (0.5, 1.0, 2.0, 4.0, 9.0)  # lost-sale cost / waste cost
@@ -41,21 +41,26 @@ def simulate(order, demand, r: float) -> tuple[np.ndarray, np.ndarray, np.ndarra
 
 def run(forecasts: pd.DataFrame, ratios=RATIOS, headline=HEADLINE) -> dict[str, pd.DataFrame]:
     """Simulate every ordering policy at every cost ratio on the held-out week."""
-    frame = forecasts.sort_values(["model", "store_id", "product_id", "dt"])
+    if headline not in ratios:
+        raise ValueError(f"headline ratio {headline:g} is not one of the ratios {ratios}")
+    keys = ["store_id", "product_id", "dt"]
+    frame = forecasts.sort_values(["model", *keys])
     base = frame[frame.model == BASELINE]
     ids = base.drop_duplicates(["store_id", "product_id"])
     n = len(ids)
     demand = base.actual.to_numpy().reshape(n, -1)
 
     def block(model, cols):
-        return frame.loc[frame.model == model, cols].to_numpy().reshape(n, -1, len(cols))
+        part = frame[frame.model == model]
+        if not np.array_equal(part[keys].to_numpy(), base[keys].to_numpy()):
+            raise ValueError(f"{model} must forecast every series and day that {BASELINE} does")
+        return part[cols].to_numpy().reshape(n, -1, len(cols))
 
-    fixed = {
-        BASELINE: block(BASELINE, ["q50"])[..., 0],
-        f"{CLASSICAL} median": block(CLASSICAL, ["q50"])[..., 0],
-    }
     calibrated = forecasts.dropna(subset=CALIBRATED_COLUMNS).model.unique()
     deciles = {m: block(m, CALIBRATED_COLUMNS) for m in calibrated}
+    medians = {m: block(m, DECILE_COLUMNS)[..., len(DECILES) // 2] for m in calibrated}
+    lowest = min(medians, key=lambda m: np.abs(medians[m] - demand).sum())  # lowest WAPE
+    fixed = {BASELINE: block(BASELINE, ["q50"])[..., 0], f"{lowest} median": medians[lowest]}
     rows, draws, at_headline = [], {}, {}
     for r in ratios:
         ratio = critical_ratio(r)
@@ -82,7 +87,7 @@ def run(forecasts: pd.DataFrame, ratios=RATIOS, headline=HEADLINE) -> dict[str, 
     cost = dict(zip(keys, policies.cost, strict=True))
     cheapest = policies.loc[policies.groupby("ratio").cost.idxmin()].set_index("ratio").policy
     policies["saving_vs_naive"] = [1 - cost[k] / cost[k[0], BASELINE] for k in keys]
-    for col, ref in (("vs_lightgbm", lambda r: CLASSICAL), ("vs_cheapest", cheapest.get)):
+    for col, ref in (("vs_lowest_error", lambda r: lowest), ("vs_cheapest", cheapest.get)):
         diffs = [draws[k] - draws[k[0], ref(k[0])] for k in keys]  # same resamples: paired
         policies[col] = [cost[k] - cost[k[0], ref(k[0])] for k in keys]
         policies[col + "_low"] = [np.percentile(d, 2.5) for d in diffs]
@@ -96,6 +101,7 @@ def run(forecasts: pd.DataFrame, ratios=RATIOS, headline=HEADLINE) -> dict[str, 
     sample = pd.DataFrame([{
         "stores": len(per_store), "series": n, "days": demand.shape[1],
         "ratios": ", ".join(f"{r:g}" for r in ratios), "headline_ratio": headline,
+        "lowest_error_model": lowest,
     }])
     return {"policies": policies, "stores": stores, "sample": sample}
 
@@ -106,6 +112,7 @@ def render_report(results: dict[str, pd.DataFrame]) -> str:
     r0 = s.headline_ratio
     head = p[p.ratio == r0].set_index("policy")
     best = head.cost.idxmin()
+    lowest = s.lowest_error_model
     wins = results["stores"].set_index("policy").stores
 
     def cost(row):
@@ -114,11 +121,11 @@ def render_report(results: dict[str, pd.DataFrame]) -> str:
     misses = []
     for r, part in p.groupby("ratio"):
         part = part.set_index("policy")
-        cheapest, lgbm = part.cost.idxmin(), part.loc[CLASSICAL]
-        if cheapest != CLASSICAL and lgbm.vs_cheapest_low > 0:
+        cheapest, ref = part.cost.idxmin(), part.loc[lowest]
+        if cheapest != lowest and ref.vs_cheapest_low > 0:
             misses.append(
-                f"r = {r:g}: {cheapest} is cheaper by {lgbm.vs_cheapest:.3f} "
-                f"(95% CI {lgbm.vs_cheapest_low:.3f} to {lgbm.vs_cheapest_high:.3f})"
+                f"r = {r:g}: {cheapest} is cheaper by {ref.vs_cheapest:.3f} "
+                f"(95% CI {ref.vs_cheapest_low:.3f} to {ref.vs_cheapest_high:.3f})"
             )
     store_wins = ", ".join(f"{name} in {k}" for name, k in wins.items() if k)
 
@@ -129,20 +136,20 @@ def render_report(results: dict[str, pd.DataFrame]) -> str:
         "at the end of the day and missed sales are not made up later. Demand is recovered as "
         "in Phase 3. Cost is per unit of demand. Intervals come from 1,000 bootstrap resamples "
         "of series, the same resamples for every policy, so differences are paired. Seasonal "
-        "naive orders last week's same-day sales; lightgbm median orders the most accurate "
-        "model's median; every other policy orders that model's calibrated forecast at the "
-        "critical ratio r / (1 + r), the newsvendor rule. "
+        "naive orders last week's same-day sales; the median policy orders the median of the "
+        "model with the lowest held-out WAPE; every other policy orders that model's "
+        "calibrated forecast at the critical ratio r / (1 + r), the newsvendor rule. "
         f"r = {r0:g} is the headline because quick commerce now runs availability-first "
         "(see `docs/decisions.md`). Generated by "
         "`uv run python -m fresh_replenish.decisions.newsvendor`.",
         "## Headline",
         f"- **Cheapest at r = {r0:g}:** {best}, at {cost(head.loc[best])} per unit of demand, "
         f"{head.loc[best, 'saving_vs_naive']:.0%} less than ordering last week's sales.",
-        f"- **Lowest-error model (LightGBM):** its cost-based orders cost "
-        f"{cost(head.loc[CLASSICAL])}; ordering its median instead costs "
-        f"{head.loc[f'{CLASSICAL} median', 'cost']:.3f}.",
+        f"- **Lowest-error model ({lowest}):** its cost-based orders cost "
+        f"{cost(head.loc[lowest])}; ordering its median instead costs "
+        f"{head.loc[f'{lowest} median', 'cost']:.3f}.",
         "- **Where the lowest-error model is not the cheapest decision** (paired interval above "
-        "0): " + ("; ".join(misses) or "nowhere: LightGBM's orders are also the cheapest") + ".",
+        "0): " + ("; ".join(misses) or f"nowhere: {lowest}'s orders are also the cheapest") + ".",
         f"- **Across stores at r = {r0:g}:** the cheapest policy is {store_wins} "
         f"of {int(s.stores)} stores.",
         "## Policies",

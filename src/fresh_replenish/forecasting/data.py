@@ -22,7 +22,7 @@ SELECT store_id, product_id, dt, r.recovered_demand, r.stockout_hours,
        {", ".join(f"t.{c}" for c in ATTRIBUTES + INPUTS)}
 FROM recovered r
 JOIN daily t USING (store_id, product_id, dt)
-{{store_filter}}
+WHERE list_contains($splits::VARCHAR[], t.split) {{store_filter}}
 ORDER BY store_id, product_id, dt
 """
 
@@ -37,13 +37,16 @@ class Series:
 
 
 def load_series(
-    con: duckdb.DuckDBPyConnection, recovered: Path | list[Path], stores: list[int] | None = None
+    con: duckdb.DuckDBPyConnection,
+    recovered: Path | list[Path],
+    stores: list[int] | None = None,
+    splits: tuple[str, ...] = ("train",),
 ) -> Series:
-    """Recovered demand as arrays, for the days in the file(s); every series must cover them all."""
+    """Recovered demand of the given splits as arrays; every series must cover the same days."""
     files = [str(p) for p in recovered] if isinstance(recovered, list) else str(recovered)
     con.read_parquet(files).create_view("recovered")
-    store_filter = "" if stores is None else "WHERE list_contains($stores::BIGINT[], store_id)"
-    params = {} if stores is None else {"stores": list(stores)}
+    store_filter = "" if stores is None else "AND list_contains($stores::BIGINT[], store_id)"
+    params = {"splits": list(splits)} | ({} if stores is None else {"stores": list(stores)})
     cols = con.execute(SQL.format(store_filter=store_filter), params).fetchnumpy()
     days, dates = check_grid(cols)
     n = len(cols["dt"]) // days

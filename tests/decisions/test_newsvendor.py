@@ -63,16 +63,17 @@ def results():
 
 def test_an_exact_forecast_costs_nothing_and_is_cheapest(results):
     p = results["policies"]
-    assert set(p.policy) == {"seasonal naive", "lightgbm median", "lightgbm", "oracle"}
+    assert set(p.policy) == {"seasonal naive", "oracle median", "lightgbm", "oracle"}
     assert len(p) == len(newsvendor.RATIOS) * 4
     oracle = p[p.policy == "oracle"]
     assert np.allclose(oracle.cost, 0) and np.allclose(oracle.vs_cheapest, 0)
 
 
-def test_paired_differences_against_lightgbm(results):
+def test_paired_differences_against_the_lowest_error_model(results):
     p = results["policies"]
-    assert (p[p.policy == "lightgbm"].vs_lightgbm == 0).all()
-    assert (p[p.policy == "oracle"].vs_lightgbm <= 0).all()
+    assert results["sample"].lowest_error_model.iloc[0] == "oracle"
+    assert np.allclose(p[p.policy == "oracle"].vs_lowest_error, 0)
+    assert (p[p.policy == "lightgbm"].vs_lowest_error_low > 0).all()
     assert (p[p.policy == "seasonal naive"].saving_vs_naive == 0).all()
 
 
@@ -84,13 +85,24 @@ def test_a_dearer_lost_sale_orders_more(results):
 
 def test_store_counts_cover_every_store(results):
     stores = results["stores"].set_index("policy").stores
-    assert stores.sum() == 2 and stores["oracle"] == 2
+    assert stores.sum() == 2 and stores["oracle"] + stores["oracle median"] == 2  # both exact
 
 
 def test_report_names_the_cheapest_policy(results):
     report = newsvendor.render_report(results)
     assert report.startswith("# Cost-based orders")
     assert "**Cheapest at r = 9:** oracle" in report
+
+
+def test_a_model_missing_rows_is_refused():
+    forecasts = _forecasts()
+    with pytest.raises(ValueError, match="every series and day"):
+        newsvendor.run(forecasts.drop(index=forecasts.index[forecasts.model == "lightgbm"][0]))
+
+
+def test_headline_must_be_one_of_the_ratios():
+    with pytest.raises(ValueError, match="headline"):
+        newsvendor.run(_forecasts(), ratios=(1.0, 2.0))
 
 
 def test_main_without_held_out_forecasts_names_the_calibration_step(tmp_path, capsys):

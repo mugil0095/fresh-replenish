@@ -58,6 +58,10 @@ def calibrate(
     frame = forecasts.merge(group_of, on=KEYS, how="left").merge(
         shift_table, on=["model", "group"], how="left", suffixes=("", "_shift")
     )
+    missing = frame[DECILE_COLUMNS].notna().all(axis=1) & frame[SHIFTS].isna().any(axis=1)
+    if missing.any():
+        pairs = frame.loc[missing, ["model", "group"]].drop_duplicates().to_numpy().tolist()
+        raise ValueError(f"no calibration shift for model/group {pairs}")
     adjusted = frame[DECILE_COLUMNS].to_numpy() + frame[SHIFTS].to_numpy() * _spread(frame)
     frame[CALIBRATED_COLUMNS] = np.sort(np.maximum(adjusted, 0), axis=1)
     return frame.drop(columns=SHIFTS)
@@ -172,9 +176,9 @@ def main(
             return 2
     con = connect(*paths)
     stores = sample_stores(con, evaluate.SAMPLE_SHARE, np.random.default_rng(SEED))
-    held_out = processed_dir / "recovered_demand_eval.parquet"
+    held_out = processed_dir / "recovered_demand_eval_sample.parquet"  # sample stores only
     recover_eval(con, stores).to_parquet(held_out, index=False)
-    series = load_series(con, [recovered, held_out], stores=stores)
+    series = load_series(con, [recovered, held_out], stores=stores, splits=("train", "eval"))
     results, frame = run(series, pd.read_parquet(folds))
     (out_dir / "tables").mkdir(parents=True, exist_ok=True)
     for name, table in results.items():

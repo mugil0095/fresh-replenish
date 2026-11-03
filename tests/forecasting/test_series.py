@@ -20,9 +20,9 @@ def series_from(tmp_path):
         return tmp_path / name
 
     def load(paths, with_eval=False, **kwargs):
-        files = write(paths[0], "recovered.parquet")
+        files = [write(paths[0], "recovered.parquet")]
         if with_eval:
-            files = [files, write(paths[1], "recovered_eval.parquet")]
+            files.append(write(paths[1], "recovered_eval.parquet"))
         return load_series(connect(*paths), files, **kwargs)
 
     return load
@@ -81,7 +81,11 @@ def test_unknown_store_says_no_rows(tiny_dataset, series_from):
 
 
 def test_eval_days_come_from_a_second_file(tiny_dataset, series_from):
-    s = series_from(tiny_dataset, with_eval=True)
+    s = series_from(tiny_dataset, with_eval=True, splits=("train", "eval"))
     assert s.demand.shape == (4, 4)
     assert s.inputs.shape == (4, 4, 3)
     assert s.dates[-1] == "2024-01-04"
+
+
+def test_eval_rows_stay_out_unless_asked_for(tiny_dataset, series_from):
+    assert series_from(tiny_dataset, with_eval=True).demand.shape == (4, 3)
