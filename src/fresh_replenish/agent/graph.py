@@ -26,7 +26,8 @@ SYSTEM = """You help dark-store managers decide daily orders of fresh food.
 - What-if answers must say they are model-based estimates, not proof of cause and effect.
 - If a tool returns an error, say the data is not available; never guess.
 - If an order is outside the limits, say so: a planner must approve it.
-- Call write_decision_record only when asked to place or record an order.
+- When asked to place or record an order, call write_decision_record after compute_order;
+  never call it otherwise.
 - Politely refuse anything that is not about ordering fresh food for these stores.
 Dates are YYYY-MM-DD. A discount is the price as a share of normal (0.8 means 20% off)."""
 REFUSAL = (
@@ -59,6 +60,14 @@ def _orders(state: State) -> list[dict]:
         if isinstance(m, ToolMessage) and m.name == "compute_order"
     ]
     return [r for r in results if isinstance(r, dict) and "within_limits" in r]
+
+
+def sources(messages: list) -> list[str]:
+    """What an answer's numbers may come from: the rules, tool outputs and the user's words."""
+    return [SYSTEM] + [
+        m.text for m in messages
+        if isinstance(m, ToolMessage) or (isinstance(m, HumanMessage) and m.name != "checker")
+    ]
 
 
 def _key(store_id, product_id, date, order) -> list:
@@ -123,11 +132,7 @@ def build_agent(model, toolbox: Toolbox):
         }
 
     def check(state: State) -> Command:
-        sources = [SYSTEM] + [
-            m.text for m in state["messages"]
-            if isinstance(m, ToolMessage) or (isinstance(m, HumanMessage) and m.name != "checker")
-        ]
-        bad = unsupported(state["messages"][-1].text, sources)
+        bad = unsupported(state["messages"][-1].text, sources(state["messages"]))
         if not bad:
             return Command(goto=END)
         retries = state.get("retries", 0)

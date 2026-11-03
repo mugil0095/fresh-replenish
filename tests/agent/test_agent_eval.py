@@ -21,7 +21,8 @@ def _factory(toolbox):
         if question["type"] == "lookup":
             day = {k: question[k] for k in ("store_id", "product_id", "date")}
             call = {"name": "get_forecast", "args": day, "id": "1"}
-            script = [AIMessage("", tool_calls=[call]), AIMessage("The median is 5.0.")]
+            answer = "The median is 5.0; the 10th to 90th percentile range is 1.0 to 9.0."
+            script = [AIMessage("", tool_calls=[call]), AIMessage(answer)]
         else:
             script = [AIMessage("Sorry, I can only help with fresh-food orders.")]
         return build_agent(Scripted(responses=script), toolbox)
@@ -39,6 +40,7 @@ def test_scores_tool_choice_numbers_and_refusals(toolbox, orders):
     assert by_type.loc["out_of_scope", "refusal_correct"] == 1.0
     assert by_type.loc["all", "numbers_match"] == 1.0
     assert "usd_per_run" in summary  # zero here: the scripted model reports no tokens
+    assert runs.tools.iloc[0] == "get_forecast" and "90th" in runs.answer.iloc[0]
 
 
 def test_report_lists_the_headline_measures(toolbox, orders):
@@ -69,3 +71,11 @@ def test_only_limit_questions_use_days_already_over_capacity(orders):
     questions = evaluate.make_questions(orders)
     stores = {q["store_id"] for q in questions if q["type"] not in ("limit", "out_of_scope")}
     assert stores == {1}
+
+
+def test_missing_data_answers_count_with_typographic_apostrophes():
+    question = {"id": 1, "type": "missing", "tools": ["get_forecast"], "optional": [],
+                "handoff": False}
+    out = {"tools": ["get_forecast"], "answer": "Sorry, that forecast isn\u2019t available.",
+           "messages": [], "retries": 0, "handoffs": 0}
+    assert evaluate.score(question, out, 1.0)["refusal_correct"] == 1.0
