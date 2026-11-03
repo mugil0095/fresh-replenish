@@ -5,6 +5,7 @@ written its outputs (see the README).
 """
 
 import altair as alt
+import duckdb
 import pandas as pd
 import streamlit as st
 
@@ -36,6 +37,11 @@ def load() -> dict:
 
 
 @st.cache_data
+def history(store_id: int, product_id: int) -> pd.DataFrame:
+    return data.history(PROCESSED_DIR / "recovered_demand.parquet", store_id, product_id)
+
+
+@st.cache_data
 def batch_orders() -> pd.DataFrame:
     return pd.read_parquet(PROCESSED_DIR / "orders.parquet")
 
@@ -61,8 +67,8 @@ def stacked(frame: pd.DataFrame, by: str, title: str) -> alt.Chart:
 
 try:
     d = load()
-except FileNotFoundError as missing:
-    st.error(f"Pipeline output not found ({missing.filename}). Run the steps in the README first.")
+except (FileNotFoundError, duckdb.IOException) as missing:
+    st.error(f"Pipeline output not found ({missing}). Run the steps in the README first.")
     st.stop()
 
 h = data.headline(d["policies"])
@@ -71,9 +77,11 @@ st.markdown(
     f"### Cost-based orders cut simulated waste + lost-sales cost by **{h['vs_median']:.0%}** "
     "compared with ordering the most accurate forecast."
 )
+week = d["forecasts"][d["forecasts"].model == h["model"]]
 st.caption(
-    "Held-out week (Jun 26 to Jul 2, 2024), 4,928 store-product series in 90 dark stores. "
-    f"Assumes a lost sale costs {h['ratio']:g}x a wasted unit, because the data has no prices; "
+    f"Held-out week ({week.dt.min()} to {week.dt.max()}), {len(week) // week.dt.nunique():,} "
+    f"store-product series in {week.store_id.nunique()} dark stores. Assumes a lost sale "
+    f"costs {h['ratio']:g}x a wasted unit, because the data has no prices; "
     "the Ordering policies tab shows other ratios."
 )
 cols = st.columns(4)
@@ -154,7 +162,7 @@ with forecast_tab:
     )
     week = forecasts[(forecasts.model == h["model"]) & (forecasts.store_id == store)
                      & (forecasts.product_id == product)]
-    past = data.history(PROCESSED_DIR / "recovered_demand.parquet", int(store), int(product))
+    past = history(int(store), int(product))
     band = alt.Chart(week).mark_area(color=BAND).encode(
         x=alt.X("dt:T", title=None), y=alt.Y("cal_q10:Q", title="Daily demand"), y2="cal_q90:Q",
         tooltip=[alt.Tooltip("dt:T"), alt.Tooltip("cal_q10:Q", format=".2f", title="10th pct"),
