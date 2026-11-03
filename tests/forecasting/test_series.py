@@ -68,3 +68,8 @@ def test_missing_day_raises(make_dataset, series_from):
 def test_folds_end_on_last_train_day():
     assert ORIGINS[-1] + HORIZON == 90
     assert np.diff(ORIGINS).tolist() == [HORIZON] * 3
+
+
+def test_unknown_store_says_no_rows(tiny_dataset, series_from):
+    with pytest.raises(ValueError, match="no rows"):
+        series_from(tiny_dataset, stores=[99])

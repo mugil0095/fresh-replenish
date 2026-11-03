@@ -80,6 +80,8 @@ def run(
         models.release()  # one foundation model at a time fits the 4 GB GPU
         timing.append((name, round(time.perf_counter() - start, 1)))
         median = q[:, len(DECILES) // 2]
+        if q.shape != (n, len(DECILES), len(days)) or not np.isfinite(median).all():
+            raise ValueError(f"{name} returned shape {q.shape} or blank medians")
         point, draws[name] = bootstrap(score(median, actual, True))
         in_stock = score(median, actual, series.in_stock[:, days])
         by_fold[name] = _fold_sums(np.abs(median - actual), folds) / _fold_sums(actual, folds)

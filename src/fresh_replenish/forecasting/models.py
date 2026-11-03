@@ -39,7 +39,9 @@ def _tidy(q: np.ndarray) -> np.ndarray:
 
 def seasonal_naive(series: Series, origin: int, horizon: int = HORIZON) -> np.ndarray:
     """Same weekday last week; a point forecast, so only the median is filled."""
-    q = np.full((len(series.demand), len(DECILES), horizon), np.nan, dtype=np.float32)
+    if origin < 7:
+        raise ValueError("seasonal naive needs at least 7 days of history")
+    q =np.full((len(series.demand), len(DECILES), horizon), np.nan, dtype=np.float32)
     q[:, MEDIAN] = series.demand[:, origin - 7 : origin][:, np.arange(horizon) % 7]
     return q
 

@@ -75,3 +75,11 @@ def test_main_without_recovered_demand_returns_2(tiny_dataset, tmp_path, capsys)
         shutil.copy(path, raw / path.name)
     assert evaluate.main(raw_dir=raw.parent, out_dir=tmp_path, processed_dir=tmp_path) == 2
     assert "fresh_replenish.imputation.recovery" in capsys.readouterr().err
+
+
+def test_run_rejects_a_forecaster_with_blank_medians(make_series, weekly):
+    def blank(series, origin, horizon):
+        return np.full((len(series.demand), 9, horizon), np.nan)
+
+    with pytest.raises(ValueError, match="blank"):
+        evaluate.run(make_series(weekly(n=4, days=42)), {"seasonal naive": blank}, origins=(35,))

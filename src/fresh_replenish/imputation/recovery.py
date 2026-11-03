@@ -20,10 +20,9 @@ from fresh_replenish.imputation.data import load_hours
 from fresh_replenish.imputation.deep import fit_deep, predict_deep
 from fresh_replenish.imputation.masking import mimic_missing
 from fresh_replenish.imputation.statistical import profile_recover, tobit_recover
-from fresh_replenish.metrics import bootstrap, score
+from fresh_replenish.metrics import SEED, bootstrap, score
 from fresh_replenish.report import md_table
 
-SEED = 42
 SAMPLE_SHARE = 0.10  # of stores; keeps SAITS and TimesNet inside the GTX 1650's 4 GB
 STATISTICAL = ["profile", "tobit"]
 DEEP = ["saits", "timesnet"]

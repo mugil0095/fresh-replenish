@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 from fresh_replenish.forecasting.models import lightgbm_quantiles, seasonal_naive
 
@@ -33,3 +34,8 @@ def test_lightgbm_learns_promotions_that_seasonal_naive_misses(make_series, week
 
 def test_lightgbm_does_not_peek(make_series, weekly, no_peeking):
     no_peeking(lightgbm_quantiles, make_series(weekly(n=40)), origin=56)
+
+
+def test_seasonal_naive_needs_a_week_of_history(make_series, weekly):
+    with pytest.raises(ValueError, match="7 days"):
+        seasonal_naive(make_series(weekly()), origin=3, horizon=7)

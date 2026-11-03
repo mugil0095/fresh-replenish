@@ -44,6 +44,8 @@ def sample_stores(
 def check_grid(cols: dict) -> tuple[int, np.ndarray]:
     """Days per series and their shared dates, for rows sorted by store, product and date."""
     keys = pd.DataFrame({"store_id": cols["store_id"], "product_id": cols["product_id"]})
+    if keys.empty:
+        raise ValueError("no rows for these stores")
     counts = keys.value_counts(sort=False)
     if counts.nunique() != 1:
         raise ValueError("every series must have the same number of train days")
