@@ -62,3 +62,10 @@ def test_provider_errors_are_recorded_and_stop_the_run(orders):
     runs, summary = evaluate.evaluate(broken, questions, repeats=3)
     assert len(runs) == evaluate.MAX_ERRORS and runs.error.notna().all()
     assert summary.set_index("type").loc["all", "errors"] == evaluate.MAX_ERRORS
+
+
+def test_only_limit_questions_use_days_already_over_capacity(orders):
+    orders.loc[orders.store_id == 2, "order"] = 300.0  # store 2 plans 600 units a day
+    questions = evaluate.make_questions(orders)
+    stores = {q["store_id"] for q in questions if q["type"] not in ("limit", "out_of_scope")}
+    assert stores == {1}

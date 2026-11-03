@@ -20,7 +20,7 @@ import pandas as pd
 
 from fresh_replenish.agent.checker import unsupported
 from fresh_replenish.agent.graph import ask, build_agent
-from fresh_replenish.agent.tools import Toolbox, chronos_scenario
+from fresh_replenish.agent.tools import STORE_DAY_CAPACITY, Toolbox, chronos_scenario
 from fresh_replenish.config import PROCESSED_DIR, RAW_DIR, REPO_ROOT, REPORTS_DIR
 from fresh_replenish.data.db import connect
 from fresh_replenish.data.download import local_paths
@@ -44,10 +44,14 @@ REFUSED = re.compile(r"can't|cannot|can not|only help|not able|unable|outside|so
 def make_questions(orders: pd.DataFrame, seed: int = 42) -> list[dict]:
     """The scripted questions: real store, product and date triples for every question type."""
     rng = np.random.default_rng(seed)
+    # A store-day already over capacity hands off any order, so only limit questions use one.
+    store_day = orders.groupby(["store_id", "dt"])["order"].transform("sum")
+    normal = orders[store_day <= STORE_DAY_CAPACITY]
     questions = []
     for kind, count in TYPES.items():
+        pool = orders if kind == "limit" else normal
         for i in range(count):
-            row = orders.iloc[int(rng.integers(len(orders)))]
+            row = pool.iloc[int(rng.integers(len(pool)))]
             # row["dt"], not row.dt: on a pandas row .dt is the date accessor
             s, p, d = int(row.store_id), int(row.product_id), str(row["dt"])
             tools, handoff = ["get_forecast"], False
