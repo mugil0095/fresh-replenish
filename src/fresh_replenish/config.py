@@ -12,3 +12,4 @@ DATASET_FILES: dict[str, int] = {
 REPO_ROOT = Path(__file__).resolve().parents[2]
 RAW_DIR = REPO_ROOT / "data" / "raw"
 REPORTS_DIR = REPO_ROOT / "reports"
+PROCESSED_DIR = REPO_ROOT / "data" / "processed"  # git-ignored, like the raw data
