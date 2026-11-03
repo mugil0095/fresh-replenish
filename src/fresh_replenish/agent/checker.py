@@ -29,6 +29,7 @@ def unsupported(answer: str, sources: list[str]) -> list[str]:
     dates = {d for s in sources for d in DATE.findall(s.translate(PLAIN))}
     known = [_value(t) for s in sources for t in numbers(s) if not DATE.fullmatch(t)]
     known += [100 * k for k in known if abs(k) <= 1]  # 0.9 may be stated as 90%
+    known += [-k for k in known if k < 0]  # -13.8 may be stated as a 13.8% fall
     bad = []
     for token in numbers(answer):
         if DATE.fullmatch(token):

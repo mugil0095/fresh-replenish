@@ -25,3 +25,7 @@ def test_typographic_dashes_and_spaces_are_read_like_plain_ones():
     answer = "On 2024‑06‑26 the range is 1.0–9.0 (median 5.04)."
     assert numbers(answer) == ["2024-06-26", "1.0", "9.0", "5.04"]
     assert unsupported(answer, [TOOL]) == ["1.0"]  # 1.0 is not in the tool output
+
+
+def test_a_negative_result_may_be_stated_as_a_fall():
+    assert unsupported("Demand falls by 13.8%.", ['{"change_pct": -13.8}']) == []

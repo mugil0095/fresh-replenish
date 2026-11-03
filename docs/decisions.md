@@ -312,6 +312,22 @@ Each entry gives the decision, why it was made, and the evidence behind it.
   - Measured: tool choice, numbers matching tools (final and first try), hand-offs, refusals, latency, tokens, and cost when `FRESH_LLM_PRICE` is set.
 - **Status:** built and tested with a scripted model (26 tests). The real evaluation waits for the LLM choice.
 
+## 2026-11-03: LLM providers: Ollama Cloud (gpt-oss:120b) and Gemini 3.6 Flash
+
+- **Why:** the user chose Gemini and Ollama Cloud (no Groq). Keys come from the environment or a git-ignored `.env`.
+- **Gemini:**
+  - 3.8 Flash returned 503 errors ("high demand"), and 2.5 Flash is closed to new users, so we use 3.6 Flash.
+  - The key is on the free tier: 20 requests per day per model, while the 150-run evaluation needs about 375. A Google AI Plus subscription covers the Gemini app, not API keys.
+  - The Gemini evaluation waits for billing on the key's project.
+- **Ollama Cloud:** `gpt-oss:120b`, called on `https://ollama.com` with `OLLAMA_API_KEY`.
+- **HTTPS:** the laptop's antivirus inspects HTTPS with its own root certificate. `truststore` makes Python use the Windows certificate store instead, so verification stays on.
+- **Fixes found with the real model:**
+  - gpt-oss writes typographic dashes and spaces (`2024‑06‑29` with non-breaking hyphens), and the checker now reads them as plain ones.
+  - The agent's rules name the median as the 50th percentile.
+  - A written quantity like `1.0` must come from a tool; only whole counts 0–10 are exempt.
+  - Questions other than limit questions avoid store-days already over capacity: one record question fell on a 424-unit day, where the agent's hand-off was correct.
+- **Provider errors:** after 3 in a row (a quota or an outage), the evaluation stops and keeps the runs that finished.
+
 ## Known issues
 
 - **Hugging Face downloads on this laptop:** the antivirus intercepts HTTPS, so Hugging Face requests fail certificate checks. The forecasting run therefore used `HF_HUB_OFFLINE=1`, with the pinned weights already in the local cache.

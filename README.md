@@ -35,7 +35,7 @@ uv run uvicorn --factory fresh_replenish.serving.api:create_app  # GET /reorder?
 uv run python -m fresh_replenish.serving.latency        # writes reports/service.md
 uv run python -m fresh_replenish.monitoring.drift       # writes reports/monitoring.md
 docker compose up                                       # the API on :8000 and MLflow on :5000
-FRESH_LLM=groq:llama-3.3-70b-versatile uv run python -m fresh_replenish.agent.evaluate  # needs the provider's API key
+FRESH_LLM=ollama:gpt-oss:120b uv run python -m fresh_replenish.agent.evaluate  # OLLAMA_API_KEY in .env (or google_genai:gemini-3.6-flash)
 uv run pytest                                    # data and model tests run once the data and weights are downloaded
 ```
 
