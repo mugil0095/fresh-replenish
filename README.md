@@ -7,11 +7,12 @@ Fresh-food replenishment for quick-commerce dark stores. The project:
 3. turns forecasts into cost-based daily orders;
 4. explains each order with an AI agent.
 
-**Status:** Phases 1–4 are done.
+**Status:** Phases 1–5 are done.
 - **Data foundation:** the data is verified; see the [data audit](reports/data_audit.md).
 - **Demand drivers:** see [what drives demand](reports/demand_drivers.md).
 - **Hidden demand:** see [recovering hidden demand](reports/demand_recovery.md).
 - **Forecasting:** see [forecasting daily demand](reports/forecasting.md).
+- **Uncertainty and orders:** see [calibrated forecast ranges](reports/calibration.md) and [cost-based orders](reports/orders.md).
 
 Each choice is explained in [decisions](docs/decisions.md).
 
@@ -26,6 +27,8 @@ uv run python -m fresh_replenish.data.audit      # writes reports/data_audit.md
 uv run python -m fresh_replenish.analysis.drivers  # writes reports/demand_drivers.md (~1.5 min)
 uv run python -m fresh_replenish.imputation.recovery  # writes reports/demand_recovery.md (~45 min on a GTX 1650)
 uv run python -m fresh_replenish.forecasting.evaluate  # writes reports/forecasting.md (~10 min; ~2.5 GB of model weights the first time)
+uv run python -m fresh_replenish.uncertainty.conformal  # writes reports/calibration.md (~4 min)
+uv run python -m fresh_replenish.decisions.newsvendor   # writes reports/orders.md (seconds)
 uv run pytest                                    # data and model tests run once the data and weights are downloaded
 ```
 
@@ -64,6 +67,16 @@ Each model forecast recovered demand 7 days ahead from 4 weekly starting points,
   - Toto-2.0: 35.1%.
 - **Known inputs** (discount, promotion, holiday) help Chronos-2 by 0.6 points.
 - **No leakage:** none of the foundation models' published training data includes this dataset.
+
+## Calibrated ranges and cost-based orders
+
+The checks use a held-out week (Jun 26–Jul 2) that no model saw.
+
+- **Calibrated ranges:** split-conformal calibration per product category brings every model's 10–90% range to 78.7–80.0% coverage (target 80% ± 2), up from 74.9–78.5%.
+- **Costs are assumed:** with no prices in the data, a lost sale costs 0.5× to 9× a wasted unit. The headline is 9×, because quick commerce runs availability-first.
+- **Cost-based orders win:** at 9×, LightGBM's cost-based orders cost 55% less than reordering last week's sales.
+- **The most accurate number is a poor order:** ordering LightGBM's median costs 2.3× as much as its cost-based order, and more than reordering last week's sales.
+- **LightGBM is cheapest overall,** at every cost ratio. A foundation model is cheapest in 27 of the 90 stores.
 
 ## Data
 

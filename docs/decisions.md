@@ -197,6 +197,65 @@ Each entry gives the decision, why it was made, and the evidence behind it.
   - whole run: 10.4 min.
 - **Known limitation (code review):** Phase 3 filled stockout hours using each series' hourly profile from all 90 train days. So on stockout days, the history each fold learns from carries a little information from later weeks. This affects every model alike; recovering demand separately for each fold would remove it.
 
+## 2026-11-03: The held-out week is scored against recovered demand
+
+- **Why:** Phase 4 scored against recovered demand, and 42% of held-out days have a stockout, so their recorded sales understate demand.
+- **How:**
+  - The eval split (Jun 26–Jul 2) is recovered with Phase 3's chosen method: the in-stock-hour profile, estimated over all 97 days and never below recorded sales.
+  - This covers the same 90 stores, and the result is saved to `data/processed/recovered_demand_eval.parquet`.
+  - Forecasts read only the 90 train days plus the week's known inputs.
+- **Held-out accuracy** has the same ranking as the Phase 4 folds:
+  - LightGBM: WAPE 32.5% (95% CI 31.7–33.3%);
+  - Chronos-2: +0.7 points (paired CI +0.3 to +1.1);
+  - TimesFM-2.5: +1.0 points;
+  - Toto-2.0: +1.3 points;
+  - seasonal naive: 41.7%.
+
+## 2026-11-03: Forecast ranges are calibrated with split conformal per category
+
+- **Why:** before calibration, the 10–90% ranges covered 74.9–78.5% of held-out demand against the 80% they claim. LightGBM's were the narrowest.
+- **How:**
+  - Each decile gets a one-sided shift per model and first-level category, learned on Phase 4's 4 train-period folds (137,984 forecasts per model).
+  - Errors are divided by the forecast's own spread (q90 − q10), so a shift widens wide forecasts more than narrow ones.
+  - The shift is the ⌈(n+1)τ⌉-th smallest scaled error.
+  - Categories with fewer than 10 series share one pooled group: 6 of 29 categories, 23 series.
+- **Result (exit check met):** after calibration, every model covers 78.7–80.0% of held-out demand (target 80% ± 2 points). LightGBM goes from 74.9% to 80.0%. Pinball loss also improves slightly for every model.
+- **Remaining drift:** every calibrated decile sits 1–5 points below its level (q50 holds 45–48% of demand, not 50%). The held-out week runs a little above the folds' demand, and calibration can only learn from the past.
+
+## 2026-11-03: Cost assumptions follow quick commerce's availability-first practice
+
+- **Why:** the data has no prices. The user asked to follow the latest trend.
+- **Assumption:** a wasted unit costs 1, and a lost sale costs r.
+  - **Range:** r ∈ {0.5, 1, 2, 4, 9}, so orders sit at the 33rd to the 90th percentile of the forecast.
+  - **Headline:** r = 9 (order the 90th percentile).
+- **Evidence for the headline:**
+  - Bernstein puts Blinkit's average in-stock rate at 94.4%.
+  - A December 2025 newsvendor study (IEOM) found a retailer holding stockouts near 0.7%, prioritising availability over cost.
+  - ECR's 2025 retail-loss study adds handling costs of 1.8% of sales on unsold food, so waste costs more than the product alone.
+- **Model:**
+  - one-day shelf life: unsold stock is thrown away, and missed sales are not made up later;
+  - orders are interpolated between calibrated deciles.
+
+## 2026-11-03: Cost-based orders beat ordering the most accurate number
+
+- **Test:** 90 stores (4,928 series), 7 held-out days.
+  - Cost is per unit of demand.
+  - Intervals come from 1,000 bootstrap resamples of series, the same for every policy, so differences are paired.
+
+  | Policy at r = 9 | Cost (95% CI) | Fill rate | Stockout days | Waste share of units ordered |
+  |---|---|---|---|---|
+  | **LightGBM, cost-based** | **0.947** (0.914–0.980) | 95.7% | 11.7% | 36.8% |
+  | Chronos-2, cost-based | 1.019 | 95.1% | 12.5% | 37.8% |
+  | TimesFM-2.5, cost-based | 1.041 | 95.3% | 11.0% | 39.4% |
+  | Toto-2.0, cost-based | 1.068 | 95.4% | 11.4% | 40.6% |
+  | Seasonal naive (last week's sales) | 2.111 | 78.8% | 48.3% | 20.7% |
+  | LightGBM median (the most accurate number) | 2.166 | 77.0% | 56.5% | 11.0% |
+
+- **The decision rule matters more than the model.** At r = 9, ordering LightGBM's median costs 2.3× its cost-based order, and even more than seasonal naive. The gap appears whenever a lost sale costs more than a wasted unit (r ≥ 2), and grows with r.
+- **Across models (negative result for the spec's claim):** LightGBM's cost-based orders are the cheapest at every ratio. Every other model's paired interval is above 0: +0.003 to +0.12 per unit of demand.
+- **Store level:** at r = 9, a foundation model is cheapest in 27 of the 90 stores. That per-store comparison has no intervals, and 7 days per store is a small sample.
+- **Cost of availability:** a 95.7% fill rate means about a third of the units ordered are wasted. That is the price of r = 9 with forecasts this uncertain; lower ratios trade the other way.
+
 ## Known issues
 
 - **Hugging Face downloads on this laptop:** the antivirus intercepts HTTPS, so Hugging Face requests fail certificate checks. The forecasting run therefore used `HF_HUB_OFFLINE=1`, with the pinned weights already in the local cache.

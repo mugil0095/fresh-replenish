@@ -1,0 +1,8 @@
+policy,stores,share
+seasonal naive,0,0.0
+lightgbm median,0,0.0
+lightgbm,63,0.7
+chronos2,9,0.1
+chronos2 without inputs,9,0.1
+timesfm2.5,7,0.07777777777777778
+toto2,2,0.022222222222222223

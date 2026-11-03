@@ -1,0 +1,7 @@
+model,seconds
+seasonal naive,0.0
+lightgbm,88.5
+chronos2,50.1
+chronos2 without inputs,12.2
+timesfm2.5,20.9
+toto2,28.2
