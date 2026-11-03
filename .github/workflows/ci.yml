@@ -13,3 +13,11 @@ jobs:
       - run: uv sync --locked
       - run: uv run ruff check .
       - run: uv run pytest
+
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t fresh-replenish-api .
+      - run: docker run -d --name api -p 8000:8000 fresh-replenish-api
+      - run: curl --retry 10 --retry-connrefused --retry-delay 2 -fsS http://localhost:8000/health
