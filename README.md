@@ -7,7 +7,7 @@
 | Demand hidden by stockouts, recovered | +28% on all days, +62% on stockout days |
 | Forecast error (WAPE), held-out week | LightGBM 32.5%; Chronos-2 33.3% zero-shot; reorder last week 41.7% |
 | Forecast ranges that hold | 80% of demand inside the calibrated 10–90% range (target 80%) |
-| Cost of orders, against the most accurate forecast's median | −56% (−55% against reordering last week's sales) |
+| Cost of orders, against the most accurate forecast's median | −56% (−55% against reordering last week's demand) |
 | Nightly batch / API | 50,000 series in 11.5 min; p95 7.3 ms per store request |
 | AI agent (50 questions × 3 runs) | 97% right tools; 100% of its numbers came from tools; every over-limit order went to a human |
 
@@ -96,8 +96,8 @@ The checks use a held-out week (Jun 26–Jul 2) that no model saw.
 
 - **Calibrated ranges:** split-conformal calibration per product category brings every model's 10–90% range to 78.7–80.0% coverage (target 80% ± 2), up from 74.9–78.5%.
 - **Costs are assumed:** with no prices in the data, a lost sale costs 0.5× to 9× a wasted unit. The headline is 9×, because quick commerce runs availability-first.
-- **Cost-based orders win:** at 9×, LightGBM's cost-based orders cost 55% less than reordering last week's sales.
-- **The most accurate number is a poor order:** ordering LightGBM's median costs 2.3× as much as its cost-based order, and more than reordering last week's sales.
+- **Cost-based orders win:** at 9×, LightGBM's cost-based orders cost 55% less than reordering last week's demand (recovered, so its stockout gaps are filled in).
+- **The most accurate number is a poor order:** ordering LightGBM's median costs 2.3× as much as its cost-based order, and more than reordering last week's demand.
 - **LightGBM is cheapest overall,** at every cost ratio. A foundation model is cheapest in 27 of the 90 stores.
 
 ## Service

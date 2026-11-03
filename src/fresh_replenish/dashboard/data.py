@@ -32,7 +32,7 @@ def losses(
 
 
 def headline(policies: pd.DataFrame, ratio: float = HEADLINE) -> dict:
-    """Cost-based orders against the most accurate model's median and against last week's sales."""
+    """Cost-based orders against the most accurate model's median and against last week's demand."""
     at = policies[policies.ratio == ratio].set_index("policy").cost
     median = next(p for p in at.index if p.endswith(" median"))
     model = median.removesuffix(" median")

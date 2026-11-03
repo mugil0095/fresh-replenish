@@ -11,13 +11,13 @@ Open `docs/summary.md`. Read the headline: ordering by cost cut waste + lost-sal
 ## 0:30 The dashboard (2 min)
 `uv run streamlit run src/fresh_replenish/dashboard/app.py`
 1. **Headline cards:** −56%, −55%, 80% of demand inside the range, 100% of the agent's numbers from tools.
-2. **Where money is lost:** move the slider from 9 to 1, and show the cost moving from lost sales to waste. Point at the stockouts-by-hour chart (evenings).
-3. **Ordering policies:** the "most accurate forecast" line overtakes "reorder last week" once a lost sale costs more than a wasted unit.
+2. **Where money is lost:** move the slider from 9 to 1, and show the cost moving from waste to lost sales. Point at the stockouts-by-hour chart (evenings).
+3. **Ordering policies:** the cost-based order is the cheapest line at every ratio. The "most accurate forecast" line climbs fastest and ends above "reorder last week's demand" at 9×.
 4. **Forecasts:** pick a store and product. Show the history, the forecast range and the actual demand.
 
 ## 2:30 The agent (1.5 min)
 1. A what-if:
-   `uv run python -m fresh_replenish.agent.chat "What would demand be for product 638 at store 434 on 2024-06-29 if it is on promotion?"`
+   `uv run python -m fresh_replenish.agent.chat "What would demand be for product 118 at store 434 on 2024-07-01 if it is on promotion?"`
    It says the answer is a model-based estimate.
 2. A risky order:
    `uv run python -m fresh_replenish.agent.chat "Place an order of 6 units of product 4 for store 57 on 2024-07-02."`

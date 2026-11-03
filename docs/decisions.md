@@ -248,7 +248,7 @@ Each entry gives the decision, why it was made, and the evidence behind it.
   | Chronos-2, cost-based | 1.019 | 95.1% | 12.5% | 37.8% |
   | TimesFM-2.5, cost-based | 1.041 | 95.3% | 11.0% | 39.4% |
   | Toto-2.0, cost-based | 1.068 | 95.4% | 11.4% | 40.6% |
-  | Seasonal naive (last week's sales) | 2.111 | 78.8% | 48.3% | 20.7% |
+  | Seasonal naive (last week's recovered demand) | 2.111 | 78.8% | 48.3% | 20.7% |
   | LightGBM median (the most accurate number) | 2.166 | 77.0% | 56.5% | 11.0% |
 
 - **The decision rule matters more than the model.** At r = 9, ordering LightGBM's median costs 2.3× its cost-based order, and even more than seasonal naive. The gap appears whenever a lost sale costs more than a wasted unit (r ≥ 2), and grows with r.
@@ -353,7 +353,7 @@ Each entry gives the decision, why it was made, and the evidence behind it.
 
 ## 2026-11-03: Communication (spec step 9)
 
-- **Headline:** ordering by cost cut simulated waste + lost-sales cost by 56% compared with ordering the most accurate forecast's median (55% against reordering last week's sales). The cost ratio is assumed at 9×, and the comparison is held-out week, LightGBM, 4,928 series. It leads the README, the dashboard and the one-page summary, always with the cost assumption beside it.
+- **Headline:** ordering by cost cut simulated waste + lost-sales cost by 56% compared with ordering the most accurate forecast's median (55% against reordering last week's demand). The cost ratio is assumed at 9×, and the comparison is held-out week, LightGBM, 4,928 series. It leads the README, the dashboard and the one-page summary, always with the cost assumption beside it.
 - **Dashboard:**
   - Built with Streamlit, plus Altair, which ships with it; no Plotly dependency.
   - Colours are the reference palette's first three categorical slots (blue, orange, aqua), validated for colour-blind separation as a set, on a light theme pinned in `.streamlit/config.toml`.
@@ -361,6 +361,17 @@ Each entry gives the decision, why it was made, and the evidence behind it.
   - Tabs: where money is lost (by category, store and hour), ordering policies across cost ratios, forecasts, orders, and agent decision records.
 - **Image:** installs the `serve` and `dashboard` groups (50 packages, no torch). Compose runs the API (:8000), the dashboard (:8501) and MLflow (:5000).
 - **Docs:** `docs/summary.md` (one page, non-technical), `docs/negative_results.md`, and `docs/demo.md` (a 3–5 minute script). The demo uses `fresh_replenish.agent.chat`, where you act as the planner.
+
+## 2026-11-03: Audit fixes (the 7 must-fix findings)
+
+A full re-check (tests on a clean copy, re-runs of Phases 1, 2 and 5, the API, the dashboard and the demo commands) found these; all are fixed.
+- **Hand-offs:** every order that fails its limits now goes to the planner, not only the latest one. After 3 failed checks, one hand-off still covers them all, and it shows a failed order.
+- **Store-day cap:** saved orders now count toward the 400 units, including orders saved in earlier sessions. The check and the save run under one lock, because parallel tool calls run in threads. Each evaluation run now starts with an empty record file, so earlier runs can't change its limit checks.
+- **Chat output:** the chat command writes UTF-8, so the model's typographic dashes no longer crash it when output is piped on Windows.
+- **Ollama timeout:** Ollama Cloud requests now time out after 120 s, like Gemini's; demo runs had hung for minutes.
+- **Baseline label:** the seasonal-naive policy reorders last week's *recovered* demand, not sales, and every label now says so. Reordering last week's recorded sales would cost more, so the comparison as built is the conservative one.
+- **Demo and summary:** moving the slider from 9 to 1 shifts cost from waste to lost sales; the median costs more than the naive policy only at 9×; it runs out on 56% of days, not 57%; the simulation uses recovered demand; the what-if example now uses a day without a planned promotion.
+- **CI image check:** curl retries any connection error while uvicorn starts, and the smoke test serves a one-line orders file through `/reorder`.
 
 ## Known issues
 

@@ -86,7 +86,10 @@ st.caption(
 )
 cols = st.columns(4)
 cols[0].metric("vs most accurate forecast", f"-{h['vs_median']:.0%}")
-cols[1].metric("vs last week's sales", f"-{h['vs_naive']:.0%}")
+cols[1].metric(
+    "vs last week's demand", f"-{h['vs_naive']:.0%}",
+    help="Reordering last week's demand, with its stockout gaps filled in.",
+)
 cols[2].metric(
     "Demand in forecast range", f"{d['coverage'].loc[h['model'], 'coverage_after']:.0%}",
     help="Share of actual demand inside the calibrated 10-90% range; the target is 80%.",
@@ -124,7 +127,7 @@ with money:
 
 with policy_tab:
     shown = [BASELINE, f"{h['model']} median", h["model"]]
-    labels = {BASELINE: "Reorder last week's sales", f"{h['model']} median":
+    labels = {BASELINE: "Reorder last week's demand", f"{h['model']} median":
               "Order the most accurate forecast", h["model"]: "Cost-based order"}
     curve = d["policies"][d["policies"].policy.isin(shown)].assign(
         policy=lambda f: f.policy.map(labels)
