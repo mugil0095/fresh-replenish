@@ -294,6 +294,63 @@ Each entry gives the decision, why it was made, and the evidence behind it.
     - coverage in 5 categories;
     - stockouts in 8 categories, for example category 14, from 20% to 52%.
 
+## 2026-11-03: Replenishment agent design (spec step 8)
+
+- **Graph:** one LangGraph agent with four plain-code tools (`get_forecast`, `compute_order`, `what_if`, `write_decision_record`) over the nightly batch's calibrated forecasts. The LLM is chosen by `FRESH_LLM` through LangChain's `init_chat_model`, so the provider is a setting.
+- **Assumed limits** (the data has no prices or capacities):
+  - an order above 1.5 × the item's calibrated 90th-percentile forecast needs a planner;
+  - so does a store-day total above 400 units, against a planned 99th percentile of 366.
+- **Hand-off:** the graph pauses (a LangGraph interrupt) for every over-limit order, and after 3 failed limit checks since the last review.
+  - `write_decision_record` checks the limits itself, because a tool call in the same step can't see the others. It records an over-limit order only if a planner approved that exact line.
+- **Number checker:** every number in an answer must appear in a tool output, the question or the agent's rules.
+  - It allows rounding, a fraction stated as a percentage, and counts 0–10.
+  - A rejected answer gets 2 retries, then becomes a refusal.
+- **What-ifs:** Chronos-2 forecasts the planned and the changed inputs in one batch, and the answer is labelled a model-based estimate.
+- **Evaluation:**
+  - 50 questions in `eval/questions.jsonl`, drawn from the real orders with seed 42: 10 lookups, 8 "why this order?", 6 other cost ratios, 8 what-ifs, 8 limit violations, 4 records, 4 missing-data and 2 out-of-scope.
+  - Each runs 3 times, and a planner rejects every hand-off.
+  - Measured: tool choice, numbers matching tools (final and first try), hand-offs, refusals, latency, tokens, and cost when `FRESH_LLM_PRICE` is set.
+- **Status:** built and tested with a scripted model (26 tests). The real evaluation waits for the LLM choice.
+
+## 2026-11-03: LLM providers: Ollama Cloud (gpt-oss:120b) and Gemini 3.6 Flash
+
+- **Why:** the user chose Gemini and Ollama Cloud (no Groq). Keys come from the environment or a git-ignored `.env`.
+- **Gemini:**
+  - 3.8 Flash returned 503 errors ("high demand"), and 2.5 Flash is closed to new users, so we use 3.6 Flash.
+  - The key is on the free tier: 20 requests per day per model, while the 150-run evaluation needs about 375. A Google AI Plus subscription covers the Gemini app, not API keys.
+  - The Gemini evaluation waits for billing on the key's project.
+- **Ollama Cloud:** `gpt-oss:120b`, called on `https://ollama.com` with `OLLAMA_API_KEY`.
+- **HTTPS:** the laptop's antivirus inspects HTTPS with its own root certificate. `truststore` makes Python use the Windows certificate store instead, so verification stays on.
+- **Fixes found with the real model:**
+  - gpt-oss writes typographic dashes and spaces (`2024‑06‑29` with non-breaking hyphens), and the checker now reads them as plain ones.
+  - The agent's rules name the median as the 50th percentile.
+  - A written quantity like `1.0` must come from a tool; only whole counts 0–10 are exempt.
+  - Questions other than limit questions avoid store-days already over capacity: one record question fell on a 424-unit day, where the agent's hand-off was correct.
+- **Provider errors:** after 3 in a row (a quota or an outage), the evaluation stops and keeps the runs that finished.
+
+## 2026-11-03: Agent evaluation on Ollama Cloud gpt-oss:120b meets every target
+
+- **Test:** 50 scripted questions × 3 runs = 150 runs, 0 provider errors, 9 minutes. A planner rejects every hand-off.
+
+  | Measure | Result | Target |
+  |---|---|---|
+  | Correct tool choice | 97% (146 of 150) | ≥ 90% |
+  | Numbers matching tool outputs, final answers | 100% | 100% |
+  | Passed the number checker on the first try | 96% | — |
+  | Hand-off on limit violations | 100% (24 of 24) | 100% |
+  | Refusals and missing data handled | 100% (18 of 18) | — |
+  | Latency per question | p50 3.3 s, p95 6.1 s | — |
+  | Tokens per run | 2,419 | — |
+
+- **Misses** (`reports/tables/agent_runs_gpt-oss-120b.csv` keeps every answer):
+  - in 3 runs the agent computed an order but didn't record it when asked;
+  - in 1 run it recorded an order nobody asked for.
+- **Not reported:** cost per question. Ollama Cloud is a subscription, with no price per token. The Gemini run, which would report a cost, waits for billing.
+- **First run:** it scored 52% on numbers, which turned out to be a scoring bug: the scorer checked answers without the agent's rules text, which defines "10th/50th/90th percentile". The scorer now uses the same sources as the checker.
+  - The same run showed that "isn’t available" wasn't recognised as a missing-data answer.
+  - The record rule also read as a permission, not an instruction.
+  - All three are fixed, and the second run is the one reported.
+
 ## Known issues
 
 - **Hugging Face downloads on this laptop:** the antivirus intercepts HTTPS, so Hugging Face requests fail certificate checks. The forecasting run therefore used `HF_HUB_OFFLINE=1`, with the pinned weights already in the local cache.
