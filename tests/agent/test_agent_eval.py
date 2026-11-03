@@ -52,3 +52,13 @@ def test_main_without_a_model_names_the_setting(tmp_path, capsys, monkeypatch):
     monkeypatch.delenv("FRESH_LLM", raising=False)
     assert evaluate.main(processed_dir=tmp_path, out_dir=tmp_path) == 2
     assert "FRESH_LLM" in capsys.readouterr().err
+
+
+def test_provider_errors_are_recorded_and_stop_the_run(orders):
+    def broken(question):
+        raise RuntimeError("429 RESOURCE_EXHAUSTED")
+
+    questions = evaluate.make_questions(orders)[:5]
+    runs, summary = evaluate.evaluate(broken, questions, repeats=3)
+    assert len(runs) == evaluate.MAX_ERRORS and runs.error.notna().all()
+    assert summary.set_index("type").loc["all", "errors"] == evaluate.MAX_ERRORS
