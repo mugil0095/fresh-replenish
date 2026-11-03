@@ -1,8 +1,17 @@
 """Deep-learning demand recovery with PyPOTS (SAITS, TimesNet), set up like the dataset paper."""
 
+from dataclasses import dataclass
+
 import numpy as np
 import torch
 from pypots.imputation import SAITS, TimesNet
+
+
+@dataclass
+class DeepImputer:
+    model: SAITS | TimesNet  # fitted
+    cov_mean: np.ndarray  # covariate scaling learned at fit time, reused for prediction
+    cov_std: np.ndarray
 
 
 def _model(name: str, n_steps: int, n_features: int, epochs: int, batch_size: int, device: str):
@@ -16,27 +25,10 @@ def _model(name: str, n_steps: int, n_features: int, epochs: int, batch_size: in
     raise ValueError(f"unknown model {name!r}; use 'saits' or 'timesnet'")
 
 
-def deep_recover(
-    sales: np.ndarray,
-    covariates: np.ndarray,
-    model: str,
-    epochs: int = 10,
-    seed: int = 42,
-    device: str | None = None,
-    batch_size: int = 32,
-) -> np.ndarray:
-    """Fill blank hours; observed hours come back unchanged.
-
-    sales: (series, days, hours) with NaN where hidden; covariates: (series, days, k).
-    As in the paper, each series is cut into 3 windows and every step gets
-    [sales, standardised covariates, hour / (hours - 1)].
-    """
+def _windows(sales, covariates, cov_mean, cov_std) -> np.ndarray:
+    """As in the paper: 3 windows per series, each step [sales, covariates, hour / (hours - 1)]."""
     n, days, hours = sales.shape
-    window = days // 3
-    cov = covariates.astype(np.float32)
-    flat = cov.reshape(-1, cov.shape[-1])
-    std = flat.std(axis=0)
-    cov = (cov - flat.mean(axis=0)) / np.where(std > 0, std, 1.0)
+    cov = (covariates.astype(np.float32) - cov_mean) / cov_std
     hour = np.arange(hours, dtype=np.float32) / (hours - 1)
     X = np.concatenate(
         [
@@ -45,12 +37,48 @@ def deep_recover(
             np.broadcast_to(hour[None, None, :, None], (n, days, hours, 1)),
         ],
         axis=-1,
-    ).astype(np.float32).reshape(n * 3, window * hours, -1)
+    )
+    return X.astype(np.float32).reshape(n * 3, (days // 3) * hours, -1)
 
+
+def fit_deep(
+    sales: np.ndarray,
+    covariates: np.ndarray,
+    model: str,
+    epochs: int = 10,
+    seed: int = 42,
+    device: str | None = None,
+    batch_size: int = 32,
+) -> DeepImputer:
+    """Train on (series, days, hours) sales with NaN where hidden; covariates (series, days, k)."""
+    flat = covariates.reshape(-1, covariates.shape[-1]).astype(np.float32)
+    std = flat.std(axis=0)
+    mean, std = flat.mean(axis=0), np.where(std > 0, std, 1.0)
+    X = _windows(sales, covariates, mean, std)
     torch.manual_seed(seed)
     np.random.seed(seed)  # PyPOTS draws its training masks from numpy's global generator
     device = device or ("cuda" if torch.cuda.is_available() else "cpu")
     imputer = _model(model, X.shape[1], X.shape[2], epochs, batch_size, device)
     imputer.fit({"X": X})
-    filled = imputer.predict({"X": X})["imputation"][..., 0].reshape(n, days, hours)
+    return DeepImputer(imputer, mean, std)
+
+
+def predict_deep(
+    imputer: DeepImputer, sales: np.ndarray, covariates: np.ndarray, chunk: int = 64
+) -> np.ndarray:
+    """Fill blank hours; observed hours come back unchanged.
+
+    PyPOTS collects every output of every batch, and SAITS returns attention maps per sample
+    (480 x 480 per head), so predict in chunks and keep only the imputation.
+    """
+    X = _windows(sales, covariates, imputer.cov_mean, imputer.cov_std)
+    filled = np.concatenate(
+        [imputer.model.predict({"X": X[i : i + chunk]})["imputation"][..., 0]
+         for i in range(0, len(X), chunk)]
+    ).reshape(sales.shape)
     return np.where(np.isnan(sales), filled, sales)
+
+
+def deep_recover(sales, covariates, model: str, **fit_kwargs) -> np.ndarray:
+    """Fit on the given sales and fill their blanks."""
+    return predict_deep(fit_deep(sales, covariates, model, **fit_kwargs), sales, covariates)
