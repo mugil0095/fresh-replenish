@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from fresh_replenish.analysis import drivers
 from fresh_replenish.analysis.drivers import (
     TERMS,
     build_frame,
@@ -162,3 +163,19 @@ def test_report_says_associations():
     report = render_report(results)
     assert "associations, not causes" in report
     assert "7 of 7 drivers" in report
+
+
+def test_run_wires_all_fits(tiny_dataset, monkeypatch):
+    sizes = []
+
+    def fake_fit(frame):  # checks the wiring only; the real fit has its own test
+        sizes.append(len(frame))
+        return _full_fit(dict.fromkeys(TERMS, 0.1))
+
+    monkeypatch.setattr(drivers, "fit_drivers", fake_fit)
+    results = drivers.run(connect(*tiny_dataset))
+    assert set(results) == {"effects", "stability", "robustness", "excluded", "timing"}
+    assert list(results["timing"].fit) == [
+        "all stores", "half A", "half B", "in-stock days only", "without city 0"
+    ]
+    assert sizes == [12, 6, 6, 11, 6]
