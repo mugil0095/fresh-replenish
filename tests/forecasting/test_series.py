@@ -10,15 +10,20 @@ from fresh_replenish.forecasting.data import ATTRIBUTES, HORIZON, ORIGINS, load_
 def series_from(tmp_path):
     """series_from(paths, **kw): writes a recovered-demand file like Phase 3's, then loads it."""
 
-    def load(paths, **kwargs):
-        rows = pd.read_parquet(paths[0])
+    def write(split_path, name):
+        rows = pd.read_parquet(split_path)
         recovered = rows[["store_id", "product_id", "dt", "sale_amount"]].assign(
             stockout_hours=rows.stock_hour6_22_cnt,
             recovered_demand=rows.sale_amount + (rows.stock_hour6_22_cnt > 0),
         )
-        path = tmp_path / "recovered.parquet"
-        recovered.to_parquet(path, index=False)
-        return load_series(connect(*paths), path, **kwargs)
+        recovered.to_parquet(tmp_path / name, index=False)
+        return tmp_path / name
+
+    def load(paths, with_eval=False, **kwargs):
+        files = write(paths[0], "recovered.parquet")
+        if with_eval:
+            files = [files, write(paths[1], "recovered_eval.parquet")]
+        return load_series(connect(*paths), files, **kwargs)
 
     return load
 
@@ -73,3 +78,10 @@ def test_folds_end_on_last_train_day():
 def test_unknown_store_says_no_rows(tiny_dataset, series_from):
     with pytest.raises(ValueError, match="no rows"):
         series_from(tiny_dataset, stores=[99])
+
+
+def test_eval_days_come_from_a_second_file(tiny_dataset, series_from):
+    s = series_from(tiny_dataset, with_eval=True)
+    assert s.demand.shape == (4, 4)
+    assert s.inputs.shape == (4, 4, 3)
+    assert s.dates[-1] == "2024-01-04"
