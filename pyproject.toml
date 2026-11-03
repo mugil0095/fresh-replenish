@@ -52,7 +52,10 @@ packages = ["src/fresh_replenish"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-markers = ["data: needs the downloaded FreshRetailNet-50K files in data/raw"]
+markers = [
+    "data: needs the downloaded FreshRetailNet-50K files in data/raw",
+    "models: needs the foundation-model weights in the Hugging Face cache",
+]
 
 [tool.ruff]
 line-length = 100

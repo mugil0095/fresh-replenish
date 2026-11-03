@@ -49,4 +49,5 @@ def no_peeking():
 def _no_peeking(forecaster, series, origin, horizon=7):
     before = forecaster(series, origin, horizon)
     series.demand[:, origin:] *= 3
-    assert np.array_equal(before, forecaster(series, origin, horizon), equal_nan=True)
+    # A tolerance, not equality: GPU kernels may differ in the last bits between calls.
+    np.testing.assert_allclose(forecaster(series, origin, horizon), before, rtol=1e-4, atol=1e-6)
