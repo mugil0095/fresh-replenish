@@ -18,7 +18,16 @@ from fresh_replenish.data.db import connect, sample_stores
 from fresh_replenish.data.download import local_paths
 from fresh_replenish.forecasting import models
 from fresh_replenish.forecasting.data import HORIZON, ORIGINS, Series, load_series
-from fresh_replenish.metrics import DECILES, SEED, bootstrap, coverage, mase, score, wql
+from fresh_replenish.metrics import (
+    DECILE_COLUMNS,
+    DECILES,
+    SEED,
+    bootstrap,
+    coverage,
+    mase,
+    score,
+    wql,
+)
 from fresh_replenish.report import md_table
 
 SAMPLE_SHARE = 0.10  # of stores: the same draw as Phase 3
@@ -56,8 +65,7 @@ def _fold_frame(name: str, series: Series, q: np.ndarray, days: np.ndarray) -> p
         "actual": series.demand[:, days].ravel(),
         "in_stock": series.in_stock[:, days].ravel(),
     })
-    for k, level in enumerate(DECILES):
-        frame[f"q{round(level * 100)}"] = q[:, k].ravel()
+    frame[DECILE_COLUMNS] = q.transpose(0, 2, 1).reshape(-1, len(DECILES))
     return frame
 
 

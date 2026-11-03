@@ -43,3 +43,9 @@ def test_store_filter(tiny_dataset):
 def test_uneven_days_raise(make_dataset):
     with pytest.raises(ValueError):
         hours(make_dataset(lambda train, eval_: train.pop(5)))
+
+
+def test_eval_split_adds_its_days(tiny_dataset):
+    h = hours(tiny_dataset, splits=("train", "eval"))
+    assert h.sales.shape == (4, 4, 16)
+    assert h.dates[-1] == "2024-01-04"

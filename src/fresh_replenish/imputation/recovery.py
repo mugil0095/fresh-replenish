@@ -16,7 +16,7 @@ import pandas as pd
 from fresh_replenish.config import PROCESSED_DIR, RAW_DIR, REPORTS_DIR
 from fresh_replenish.data.db import connect, sample_stores
 from fresh_replenish.data.download import local_paths
-from fresh_replenish.imputation.data import load_hours
+from fresh_replenish.imputation.data import Hours, load_hours
 from fresh_replenish.imputation.deep import fit_deep, predict_deep
 from fresh_replenish.imputation.masking import mimic_missing
 from fresh_replenish.imputation.statistical import profile_recover, tobit_recover
@@ -35,6 +35,33 @@ def _recover(name: str, sales, covariates, deep: dict) -> np.ndarray:
     if name == "tobit":
         return tobit_recover(sales, covariates)
     return predict_deep(deep[name], sales, covariates).sum(axis=-1)
+
+
+def floor_at_sales(demand: np.ndarray, h: Hours) -> np.ndarray:
+    """Demand is never below what was sold: a stockout hour can still record sales."""
+    return np.where(h.stockout_hours == 0, h.sale_amount, np.maximum(demand, h.sale_amount))
+
+
+def demand_frame(h: Hours, demand: np.ndarray, keep: np.ndarray | None = None) -> pd.DataFrame:
+    """Recovered demand as rows: one per series and kept day (all days by default)."""
+    keep = np.ones(len(h.dates), dtype=bool) if keep is None else keep
+    n, days = len(h.ids), int(keep.sum())
+    return pd.DataFrame({
+        "store_id": np.repeat(h.ids.store_id.to_numpy(), days),
+        "product_id": np.repeat(h.ids.product_id.to_numpy(), days),
+        "dt": np.tile(h.dates[keep], n),
+        "sale_amount": h.sale_amount[:, keep].ravel(),
+        "stockout_hours": h.stockout_hours[:, keep].ravel(),
+        "recovered_demand": demand[:, keep].ravel(),
+    })
+
+
+def recover_eval(con: duckdb.DuckDBPyConnection, stores: list[int] | None = None) -> pd.DataFrame:
+    """Held-out week demand, recovered with Phase 3's chosen method over train and eval days."""
+    h = load_hours(con, stores=stores, splits=("train", "eval"))
+    demand = floor_at_sales(profile_recover(h.sales).sum(axis=-1) + h.night, h)
+    eval_dates = con.execute("SELECT DISTINCT dt FROM eval").fetchnumpy()["dt"]
+    return demand_frame(h, demand, keep=np.isin(h.dates, eval_dates))
 
 
 def run(
@@ -81,19 +108,7 @@ def run(
     start = time.perf_counter()
     demand = _recover(chosen, full.sales, full.covariates, deep) + full.night
     timing.append((f"recover all series ({chosen})", round(time.perf_counter() - start, 1)))
-    n_all = len(full.ids)
-    recovered = pd.DataFrame({
-        "store_id": np.repeat(full.ids.store_id.to_numpy(), days),
-        "product_id": np.repeat(full.ids.product_id.to_numpy(), days),
-        "dt": np.tile(full.dates, n_all),
-        "sale_amount": full.sale_amount.ravel(),
-        "stockout_hours": full.stockout_hours.ravel(),
-    })
-    in_stock = recovered.stockout_hours.to_numpy() == 0
-    # Demand is never below what was sold: a stockout hour can still record sales.
-    recovered["recovered_demand"] = np.where(
-        in_stock, recovered.sale_amount, np.maximum(demand.ravel(), recovered.sale_amount)
-    )
+    recovered = demand_frame(full, floor_at_sales(demand, full))
 
     sample = pd.DataFrame([{
         "stores": len(stores), "series": n, "valid_days": int(valid_days.sum()),

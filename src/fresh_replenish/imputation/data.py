@@ -16,7 +16,7 @@ SELECT store_id, product_id, dt, sale_amount, stockout_hours, {", ".join(COVARIA
        {", ".join(f"hours_sale[{i}] AS s{i}" for i in LIST_INDEX)},
        {", ".join(f"hours_stock_status[{i}] AS o{i}" for i in LIST_INDEX)}
 FROM daily
-WHERE split = 'train' {{store_filter}}
+WHERE list_contains($splits::VARCHAR[], split) {{store_filter}}
 ORDER BY store_id, product_id, dt
 """
 
@@ -32,10 +32,14 @@ class Hours:
     stockout_hours: np.ndarray  # (series, days)
 
 
-def load_hours(con: duckdb.DuckDBPyConnection, stores: list[int] | None = None) -> Hours:
-    """Train-split hours as arrays; every series must cover the same days."""
+def load_hours(
+    con: duckdb.DuckDBPyConnection,
+    stores: list[int] | None = None,
+    splits: tuple[str, ...] = ("train",),
+) -> Hours:
+    """Hours of the given splits as arrays; every series must cover the same days."""
     store_filter = "" if stores is None else "AND list_contains($stores::BIGINT[], store_id)"
-    params = {} if stores is None else {"stores": list(stores)}
+    params = {"splits": list(splits)} | ({} if stores is None else {"stores": list(stores)})
     cols = con.execute(SQL.format(store_filter=store_filter), params).fetchnumpy()
     days, dates = check_grid(cols)
     keys = pd.DataFrame({"store_id": cols["store_id"], "product_id": cols["product_id"]})

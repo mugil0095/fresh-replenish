@@ -98,3 +98,17 @@ def test_run_stops_when_nothing_can_be_scored(tiny_dataset, monkeypatch):
 
 def test_main_without_data_returns_2(tmp_path):
     assert recovery.main(raw_dir=tmp_path / "empty", out_dir=tmp_path / "out") == 2
+
+
+def test_recover_eval_returns_held_out_days_never_below_sales(make_dataset):
+    def eval_stockout(train, eval_):
+        eval_[0]["hours_stock_status"] = [0] * 20 + [1, 1, 0, 0]  # out of stock 20:00-22:00
+        eval_[0]["stock_hour6_22_cnt"] = 2
+        eval_[0]["hours_sale"][20] = 5.0  # sold in an hour flagged out of stock
+        eval_[0]["sale_amount"] += 5.0
+
+    held_out = recovery.recover_eval(connect(*make_dataset(eval_stockout)))
+    assert len(held_out) == 4 and set(held_out.dt) == {"2024-01-04"}
+    assert (held_out.recovered_demand >= held_out.sale_amount).all()
+    in_stock = held_out.stockout_hours == 0
+    assert (held_out.recovered_demand[in_stock] == held_out.sale_amount[in_stock]).all()
