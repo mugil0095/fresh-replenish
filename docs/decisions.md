@@ -63,6 +63,67 @@ Each entry gives the decision, why it was made, and the evidence behind it.
   - On in-stock days the promotion effect is four times larger (+5.8% vs +1.4%). That fits stockouts hiding promotion demand; Phase 3 tests it.
   - Weather is fragile: wind changes sign on in-stock days.
 
+## 2026-11-03: Hidden-demand recovery follows the dataset paper's own protocol
+
+- **Why:** scores on known truth, comparable with the paper.
+- **How:**
+  - Each series' 90 train days are cut into 3 windows of 30 days × hours 6–21 (480 steps), with stockout hours left blank.
+  - `mimic_missing(p=0.3)` is ported from `Dingdong-Inc/frn-50k-baseline` (Apache-2.0), with a seeded random generator.
+  - Daily totals are scored only on days that got hidden hours and had no real stockout (WAPE and WPE, as in the paper's `evaluation_mnar`).
+  - Intervals come from 1,000 bootstrap resamples of series, plus paired differences against the best method.
+
+## 2026-11-03: All four methods run on the same 10% store sample
+
+- **Why:** SAITS and TimesNet must fit the GTX 1650's 4 GB of memory, and one shared sample keeps the comparison fair.
+- **Settings:**
+  - SAITS: 2 layers, d_model 64, 4 heads, d_ffn 128, dropout 0.1.
+  - TimesNet: 2 layers, top_k 3, d_model 32, d_ffn 64, 4 kernels.
+  - Both: 10 epochs, batch 32, seed 42.
+  - Covariates (discount, holiday, rain, temperature) are standardised; sales are not.
+
+## 2026-11-03: Series that never had an in-stock day borrow the typical uplift
+
+- **Why:** censored-only data always push the Tobit's demand estimate up, so the prior alone decided. A test showed 2.05 recovered against 2.0 observed.
+- **Rule:** these series stay out of the Tobit fit and get observed × (mean in-stock day ÷ mean sold-out day) from the fitted series.
+
+## 2026-11-03: Deep models predict a few series at a time
+
+- **Why:** PyPOTS gathers every batch output, and SAITS returns 480 × 480 attention maps per window and head. All at once, that's about 55 GB for the sample.
+- **Rule:** predict about 21 series (≈64 windows) per call and keep only the filled values.
+
+## 2026-11-03: The in-stock-hour profile recovers demand for Phase 4
+
+- **Test:** 90 stores (4,928 series), 12.7% of hours hidden, 76,684 days scored.
+
+  | Method | WAPE | Bias (WPE) |
+  |---|---|---|
+  | No recovery | 70.9% | −70.9% |
+  | **Profile** | **37.9%** (95% CI 37.2–38.6%) | **−0.0%** (CI −0.4% to +0.4%) |
+  | SAITS | 45.5% | −43.3% |
+  | Tobit | 47.7% | +35.9% |
+  | TimesNet | 71.0% | −70.8% |
+
+- **Choice:** the profile method has the lowest WAPE, 7.6 points better than SAITS (paired 95% CI 7.1–8.1). It is also the only unbiased method, so the selection rule picks it directly.
+- **Negative results:**
+  - With these settings (10 epochs), SAITS under-recovers.
+  - TimesNet learned to fill hidden hours with zeros, so it is no better than doing nothing.
+  - Tobit over-recovers.
+  - Tuning the deep models was outside the plan.
+- **Effect:** recovered demand for all 50,000 series adds 28.2% to total train demand, and 61.9% on stockout days.
+- **Rule:** on a stockout day, recovered demand is never below recorded sales, because a stockout hour can still record sales. Before this rule, 50,028 days fell below.
+- **Run time (GTX 1650):**
+  - profile: 0.2 s;
+  - Tobit: 105 s;
+  - SAITS: 17 min;
+  - TimesNet: 25 min;
+  - whole run: 44 min.
+- **Note:** after a formatting fix, the report was regenerated from the run's saved tables, and the saved recovered-demand file was patched with the rule above. A full rerun gives the same output.
+
+## 2026-11-03: PyTorch 2.14.1 with CUDA 12.6, and a floor on `transformers`
+
+- **Why:** CUDA 12.6 builds still support the GTX 1650 (sm_75); CI on Linux gets CPU builds.
+- **Install conflict:** PyPOTS 1.5 caps `transformers` at 4.57.6. Without a floor, uv backtracked to 4.12, which needs a Rust compiler. The floor (`>=4.40`) pulls `huggingface_hub` down to 0.36, and our download call works there unchanged.
+
 ## Known issue
 
 - **pyfixest warnings:** pyfixest 0.60 uses pandas options deprecated for pandas 4, which produces warnings. Versions are pinned in `uv.lock`.
