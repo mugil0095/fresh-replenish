@@ -28,7 +28,7 @@ The project:
 - **Agent:** see the [agent evaluation](reports/agent_gpt-oss-120b.md).
 - **Communication:** a Streamlit dashboard (`uv run streamlit run src/fresh_replenish/dashboard/app.py`) and a [demo script](docs/demo.md).
 
-Each choice is explained in [decisions](docs/decisions.md). What didn't work is in [negative results](docs/negative_results.md).
+Each choice is explained in [decisions](docs/decisions.md). What didn't work is in [negative results](docs/negative_results.md), what the results can't claim is in [limitations](docs/limitations.md), and the dataset is described in the [data card](docs/data_card.md).
 
 ## Run it
 
@@ -125,3 +125,7 @@ A LangGraph agent turns the forecasts into explained orders.
 ## Data
 
 [FreshRetailNet-50K](https://huggingface.co/datasets/Dingdong-Inc/FreshRetailNet-50K) by Dingdong, licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). See the paper: [arXiv 2505.16319](https://arxiv.org/abs/2505.16319).
+
+## Licence
+
+Code: [MIT](LICENSE). The dataset keeps its own CC BY 4.0 licence.
