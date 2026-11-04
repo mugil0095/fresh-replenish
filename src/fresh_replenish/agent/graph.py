@@ -5,6 +5,7 @@ agent -> tools -> limit check (a human takes over after 3 failed checks) -> agen
 """
 
 import json
+import re
 import uuid
 from typing import Annotated
 
@@ -26,8 +27,8 @@ SYSTEM = """You help dark-store managers decide daily orders of fresh food.
 - What-if answers must say they are model-based estimates, not proof of cause and effect.
 - If a tool returns an error, say the data is not available; never guess.
 - If an order is outside the limits, say so: a planner must approve it.
-- When asked to place or record an order, call write_decision_record after compute_order;
-  never call it otherwise.
+- When asked to place or record an order, call write_decision_record after compute_order and
+  before you answer: an answer without the saved record is incomplete. Never call it otherwise.
 - Politely refuse anything that is not about ordering fresh food for these stores.
 Dates are YYYY-MM-DD. A discount is the price as a share of normal (0.8 means 20% off)."""
 REFUSAL = (
@@ -82,12 +83,23 @@ def _key(store_id, product_id, date, order) -> list:
     return [int(store_id), int(product_id), str(date), round(float(order), 2)]
 
 
+SAVE = re.compile(r"\b(place|record|save)\b", re.IGNORECASE)
+
+
+def _asks_to_save(messages: list) -> bool:
+    """Whether the user's question asks to place, record or save an order."""
+    return any(isinstance(m, HumanMessage) and m.name is None and SAVE.search(m.text)
+               for m in messages[:1])
+
+
 def make_tools(toolbox: Toolbox) -> list[StructuredTool]:
     def write_decision_record(
         store_id: int, product_id: int, date: str, order: float, reason: str,
         state: Annotated[dict, InjectedState],
     ) -> dict:
         """Save the order, its reason and this conversation's tool outputs."""
+        if not _asks_to_save(state["messages"]):
+            return {"error": "only save an order when the user asks to place or record it"}
         # Checked here, not from earlier messages: a call in the same step can't see them.
         with toolbox.lock:  # parallel calls run in threads: check and save as one step
             check = toolbox.compute_order(store_id, product_id, date, units=order)
@@ -106,9 +118,11 @@ def make_tools(toolbox: Toolbox) -> list[StructuredTool]:
 def build_agent(model, toolbox: Toolbox):
     tools = make_tools(toolbox)
     bound = model.bind_tools(tools)
+    no_save = model.bind_tools(tools[:-1])  # the model can't save what nobody asked to save
 
     def agent(state: State) -> dict:
-        return {"messages": [bound.invoke([SystemMessage(SYSTEM), *state["messages"]])]}
+        llm = bound if _asks_to_save(state["messages"]) else no_save
+        return {"messages": [llm.invoke([SystemMessage(SYSTEM), *state["messages"]])]}
 
     def after_agent(state: State) -> str:
         if state["messages"][-1].tool_calls:

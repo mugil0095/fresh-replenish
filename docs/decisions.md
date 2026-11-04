@@ -382,7 +382,7 @@ A full re-check (tests on a clean copy, re-runs of Phases 1, 2 and 5, the API, t
 - **API:** it reads `orders.parquet` again whenever the file changes, so a new nightly batch needs no restart. `/health` returns 503 until orders are loaded, so container health checks show it.
 - **Dashboard health check:** Compose gives the dashboard its own check on Streamlit's `/_stcore/health`.
 - **Wording:** the README and summary now say store-product lines (538 products), product-days for the 44% stockout share, 50 questions × 3 runs, ratios from 1/9 to 9, 13 of 32 alerting categories and the current Docker setup. The agent's number claim now says what was measured: every final answer passed the number checker.
-- **Evaluation:** negative results now say the agent scores are in-sample and were measured before the audit fixes. Re-run on 2026-11-04 with the current code: tool choice 97%, all 150 final answers pass the number checker (77% on the first try), hand-offs and refusals 100%, p50 3.3 s.
+- **Evaluation:** negative results now say the agent scores are in-sample and were measured before the audit fixes. Re-run on 2026-11-04 with the current code, after offering the save tool only when the question asks to place, record or save an order: tool choice, hand-offs and refusals 100%, all 150 final answers pass the number checker (79% on the first try), p50 3.5 s.
 
 ## 2026-11-04: Audit fixes (the 6 nice-to-have findings)
 
