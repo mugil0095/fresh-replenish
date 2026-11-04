@@ -6,24 +6,24 @@ Model: `ollama:gpt-oss:120b`. 150 runs: each scripted question in `eval/question
 
 - **Correct tool choice:** 97% (target: at least 90%).
 
-- **Numbers matching tool outputs:** 100% of final answers (target 100%); 96% passed the checker on the first try.
+- **Numbers matching tool outputs:** 100% of final answers (target 100%); 77% passed the checker on the first try.
 
 - **Hand-off on limit violations:** 100% (target 100%); correct hand-off decisions overall 100%.
 
 - **Refusals and missing data handled:** 100%.
 
-- **Latency:** p50 3.3 s, p95 6.1 s per question; 2,419 tokens per run.
+- **Latency:** p50 3.3 s, p95 8.0 s per question; 2,978 tokens per run.
 
 ## By question type
 
 | type | runs | errors | tool_choice | numbers_match | first_try | handoff_correct | refusal_correct | p50_seconds | p95_seconds | tokens_per_run |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| all | 150 | 0 | 0.9733 | 1.0 | 0.96 | 1.0 | 1.0 | 3.3198 | 6.0697 | 2418.7067 |
-| lookup | 30 | 0 | 1.0 | 1.0 | 0.8667 | 1.0 | nan | 1.86 | 3.7275 | 1606.2333 |
-| why | 24 | 0 | 1.0 | 1.0 | 1.0 | 1.0 | nan | 3.5333 | 4.4458 | 2629.0417 |
-| ratio | 18 | 0 | 0.9444 | 1.0 | 1.0 | 1.0 | nan | 3.381 | 3.9546 | 2699.7778 |
-| what_if | 24 | 0 | 1.0 | 1.0 | 1.0 | 1.0 | nan | 3.1373 | 3.8437 | 1649.125 |
-| limit | 24 | 0 | 1.0 | 1.0 | 0.9583 | 1.0 | nan | 5.4942 | 8.3522 | 4177.625 |
-| record | 12 | 0 | 0.75 | 1.0 | 0.9167 | 1.0 | nan | 4.3457 | 6.3044 | 3600.6667 |
-| missing | 12 | 0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.7104 | 1.9657 | 1346.0833 |
-| out_of_scope | 6 | 0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 0.7926 | 0.8569 | 620.5 |
+| all | 150 | 0 | 0.9667 | 1.0 | 0.7733 | 1.0 | 1.0 | 3.2997 | 8.0026 | 2977.7133 |
+| lookup | 30 | 0 | 1.0 | 1.0 | 0.9667 | 1.0 | nan | 1.7098 | 2.8366 | 1463.4 |
+| why | 24 | 0 | 1.0 | 1.0 | 0.25 | 1.0 | nan | 6.4385 | 8.045 | 5087.9167 |
+| ratio | 18 | 0 | 1.0 | 1.0 | 0.5556 | 1.0 | nan | 3.2322 | 7.4731 | 3757.2222 |
+| what_if | 24 | 0 | 1.0 | 1.0 | 1.0 | 1.0 | nan | 3.2968 | 4.3813 | 1591.8333 |
+| limit | 24 | 0 | 1.0 | 1.0 | 0.9167 | 1.0 | nan | 4.7293 | 7.3361 | 4217.2083 |
+| record | 12 | 0 | 0.5833 | 1.0 | 0.5833 | 1.0 | nan | 5.2337 | 10.3829 | 4482.5 |
+| missing | 12 | 0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.6149 | 3.4347 | 1339.3333 |
+| out_of_scope | 6 | 0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 0.8983 | 0.9716 | 622.6667 |
