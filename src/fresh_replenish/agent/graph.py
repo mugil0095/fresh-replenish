@@ -144,7 +144,12 @@ def build_agent(model, toolbox: Toolbox):
             return Command(goto=END)
         retries = state.get("retries", 0)
         if retries >= MAX_RETRIES:
-            return Command(goto=END, update={"messages": [AIMessage(REFUSAL)]})
+            saved = any(
+                m.name == "write_decision_record" and _payload(m) == {"saved": True}
+                for m in state["messages"] if isinstance(m, ToolMessage)
+            )
+            note = " An order from this conversation was already saved." if saved else ""
+            return Command(goto=END, update={"messages": [AIMessage(REFUSAL + note)]})
         retry = HumanMessage(
             f"The number checker rejected {', '.join(bad)}: these are not in any tool output. "
             "Answer again using only numbers from the tool outputs.", name="checker",

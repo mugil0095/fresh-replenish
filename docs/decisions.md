@@ -384,6 +384,15 @@ A full re-check (tests on a clean copy, re-runs of Phases 1, 2 and 5, the API, t
 - **Wording:** the README and summary now say store-product lines (538 products), product-days for the 44% stockout share, 50 questions × 3 runs, ratios from 1/9 to 9, 13 of 32 alerting categories and the current Docker setup. The agent's number claim now says what was measured: every final answer passed the number checker.
 - **Evaluation:** negative results now say the agent scores are in-sample and were measured before the audit fixes; a re-run with the current code is pending.
 
+## 2026-11-04: Audit fixes (the 6 nice-to-have findings)
+
+- **Ratio message:** the agent's error now says "between 1/9 and 9"; it said 0.11, which itself fails the check.
+- **Lowest ratio:** `order_at` keeps its interpolation weight between 0 and 1, so the 1/9 ratio can't order a hair below q10.
+- **Audit:** a missing hourly list now fails `bad_hour_lists` (its NULL length used to be skipped), and the stock-count check is NULL-safe. The pinned files still pass.
+- **Refusal:** when the agent gives up after rejected answers, it says if an order from the conversation was already saved.
+- **Dashboard:** the orders file is read with the other pipeline files, so a missing batch shows the "run the pipeline" message instead of a traceback.
+- **Negative results:** the wrong-sign what-if example now points to a saved run (evaluation question 30).
+
 ## Known issues
 
 - **Hugging Face downloads on this laptop:** the antivirus intercepts HTTPS, so Hugging Face requests fail certificate checks. The forecasting run therefore used `HF_HUB_OFFLINE=1`, with the pinned weights already in the local cache.

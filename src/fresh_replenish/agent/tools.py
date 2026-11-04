@@ -86,7 +86,7 @@ class Toolbox:
         if line is None:
             return self._missing(store_id, product_id, date)
         if not 1 / 9 <= ratio <= 9:
-            return {"error": "ratio (lost-sale cost / waste cost) must be between 0.11 and 9"}
+            return {"error": "ratio (lost-sale cost / waste cost) must be between 1/9 and 9"}
         if units is not None and not units >= 0:  # also refuses NaN
             return {"error": "units must be zero or more"}
         level = critical_ratio(ratio)

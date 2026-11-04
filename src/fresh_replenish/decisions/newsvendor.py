@@ -30,6 +30,7 @@ def order_at(q: np.ndarray, ratio: float) -> np.ndarray:
         raise ValueError(f"critical ratio {ratio:.2f} is outside the deciles 0.1-0.9")
     k = min(int(np.searchsorted(DECILES, ratio + 1e-9)) - 1, len(DECILES) - 2)
     w = (ratio - DECILES[k]) / (DECILES[k + 1] - DECILES[k])
+    w = min(max(w, 0.0), 1.0)  # 1/9 gives 0.0999...: rounding must not step below q10
     return q[..., k] * (1 - w) + q[..., k + 1] * w
 
 

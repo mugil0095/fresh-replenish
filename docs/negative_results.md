@@ -25,7 +25,7 @@ What didn't work, or didn't hold, and is reported rather than hidden. The eviden
 
 ## Agent (Phase 7)
 - **Remaining misses:** in 3 of 150 runs the agent didn't record an order when asked, and in 1 run it recorded one nobody asked for.
-- **What-ifs are not causal.** Chronos-2's covariate effects can have the "wrong" sign: a 20% discount lowered one item's forecast by 13.8%.
+- **What-ifs are not causal.** Chronos-2's covariate effects can have the "wrong" sign: in evaluation question 30, a promotion lowered product 766's median at store 343 from 1.27 to 1.15 units (`reports/tables/agent_runs_gpt-oss-120b.csv`).
 - **Gemini was not evaluated.** The free tier allows 20 requests a day per model, and the run needs about 375. A Google AI Plus subscription doesn't cover API keys.
 - **The first evaluation run had a scoring bug:** the scorer rejected rule words like "90th percentile", which made "numbers matching" 52%. The fix counted the rules as a source; the reported run is the second.
 - **The scores are in-sample.** After the first run, the prompt, the scorer and one question were changed, and the same 50 questions were run again. There is no fresh question set.

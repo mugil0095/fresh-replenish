@@ -32,6 +32,15 @@ def test_checker_gives_up_with_a_refusal(toolbox):
     assert out["answer"] == REFUSAL
 
 
+def test_the_refusal_mentions_an_order_already_saved(toolbox):
+    script = [
+        call("compute_order"), call("write_decision_record", order=9.0, reason="90% service"),
+        AIMessage("Order 12.5."), AIMessage("Order 14.5."), AIMessage("Order 16.5."),
+    ]
+    out = run(toolbox, script)
+    assert out["answer"].startswith(REFUSAL) and "saved" in out["answer"]
+
+
 def test_over_limit_order_pauses_for_a_human_and_resumes(toolbox):
     script = [
         call("compute_order", units=20), AIMessage("20 units is over the 13.5 limit."),

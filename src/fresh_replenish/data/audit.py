@@ -92,8 +92,13 @@ def run_audit(
         Check("rows_train", expected_rows["train"], rows.get("train", 0)),
         Check("rows_eval", expected_rows["eval"], rows.get("eval", 0)),
         Check("duplicate_keys", 0, duplicates),
-        Check("bad_hour_lists", 0, _count(con, "n_hours != 24 OR n_status != 24")),
-        Check("stock_count_mismatch", 0, _count(con, "stock_hour6_22_cnt != stockout_hours")),
+        # A missing list gives NULL lengths, which `!=` would quietly skip.
+        Check("bad_hour_lists", 0, _count(
+            con, "coalesce(n_hours, 0) != 24 OR coalesce(n_status, 0) != 24"
+        )),
+        Check("stock_count_mismatch", 0, _count(
+            con, "stock_hour6_22_cnt IS DISTINCT FROM stockout_hours"
+        )),
     ]
     return AuditResult(checks, {name: con.execute(sql).df() for name, sql in TABLES.items()})
 

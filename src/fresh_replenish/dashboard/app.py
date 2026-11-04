@@ -33,17 +33,13 @@ def load() -> dict:
         "stockouts": pd.read_csv(TABLES / "stockout_by_hour.csv"),
         "coverage": pd.read_csv(TABLES / "calibration_coverage.csv").set_index("model"),
         "agent": pd.read_csv(TABLES / "agent_summary_gpt-oss-120b.csv").set_index("type"),
+        "orders": pd.read_parquet(PROCESSED_DIR / "orders.parquet"),
     }
 
 
 @st.cache_data
 def history(store_id: int, product_id: int) -> pd.DataFrame:
     return data.history(PROCESSED_DIR / "recovered_demand.parquet", store_id, product_id)
-
-
-@st.cache_data
-def batch_orders() -> pd.DataFrame:
-    return pd.read_parquet(PROCESSED_DIR / "orders.parquet")
 
 
 def stacked(frame: pd.DataFrame, by: str, title: str) -> alt.Chart:
@@ -185,7 +181,7 @@ with forecast_tab:
     ), use_container_width=True)
 
 with order_tab:
-    orders = batch_orders()
+    orders = d["orders"]
     left, right = st.columns(2)
     store = left.selectbox("Store ", sorted(orders.store_id.unique()))
     ratio = right.select_slider("Cost ratio ", options=list(RATIOS), value=HEADLINE)
