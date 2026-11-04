@@ -202,7 +202,7 @@ with agent_tab:
         f"**{agent.loc['all', 'tool_choice']:.0%}** of the time, every final answer passed the "
         f"number checker (**{agent.loc['all', 'numbers_match']:.0%}**), and every over-limit "
         f"order went to a planner (**{agent.loc['limit', 'handoff_correct']:.0%}**). "
-        "Measured before the audit fixes; see the negative results."
+        "Misses are listed in the negative results."
     )
     st.dataframe(data.records(RECORDS), hide_index=True)
     st.caption("Decision records written by the agent during the evaluation.")
