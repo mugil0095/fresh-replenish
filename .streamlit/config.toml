@@ -1,0 +1,6 @@
+[theme]
+# The chart colors are validated on a light surface.
+base = "light"
+
+[browser]
+gatherUsageStats = false

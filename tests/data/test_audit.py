@@ -33,6 +33,13 @@ def test_bad_list_length_fails(make_dataset):
     assert "bad_hour_lists" in failed(audit(make_dataset(cut)))
 
 
+def test_missing_hour_list_fails(make_dataset):
+    def drop(train, eval_):
+        train[1]["hours_sale"] = None
+
+    assert "bad_hour_lists" in failed(audit(make_dataset(drop)))
+
+
 def test_stock_count_mismatch_fails(make_dataset):
     def wrong_count(train, eval_):
         train[1]["stock_hour6_22_cnt"] = 5

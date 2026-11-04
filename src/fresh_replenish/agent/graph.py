@@ -1,7 +1,7 @@
 """The replenishment agent (spec section 11): one LangGraph agent with four plain-code tools.
 
 agent -> tools -> limit check (a human takes over after 3 failed checks) -> agent
-      -> human approval if the latest order failed its limits -> number check -> end.
+      -> human approval for each order that failed its limits -> number check -> end.
 """
 
 import json
@@ -39,7 +39,6 @@ MAX_FAILED_CHECKS = 3  # failed limit checks since the last review before a huma
 
 
 class State(MessagesState):
-    failed_checks: int
     retries: int
     approval: str  # the latest planner decision: "approved" or "rejected"
     reviewed: int  # compute_order results already put to a planner
@@ -62,9 +61,18 @@ def _orders(state: State) -> list[dict]:
     return [r for r in results if isinstance(r, dict) and "within_limits" in r]
 
 
+def _failed(state: State) -> list[int]:
+    """Positions of the compute_order results since the last review that failed their limits."""
+    orders, start = _orders(state), state.get("reviewed", 0)
+    return [i for i in range(start, len(orders)) if not orders[i]["within_limits"]]
+
+
 def sources(messages: list) -> list[str]:
-    """What an answer's numbers may come from: the rules, tool outputs and the user's words."""
-    return [SYSTEM] + [
+    """What an answer's numbers may come from: tool outputs and the user's (or planner's) words.
+
+    Not the rules: their 9, 50 or 90 must not pass as an order quantity.
+    """
+    return [
         m.text for m in messages
         if isinstance(m, ToolMessage) or (isinstance(m, HumanMessage) and m.name != "checker")
     ]
@@ -81,14 +89,15 @@ def make_tools(toolbox: Toolbox) -> list[StructuredTool]:
     ) -> dict:
         """Save the order, its reason and this conversation's tool outputs."""
         # Checked here, not from earlier messages: a call in the same step can't see them.
-        check = toolbox.compute_order(store_id, product_id, date, units=order)
-        if "error" in check:
-            return check
-        approved = _key(store_id, product_id, date, order) in state.get("approved", [])
-        if not check["within_limits"] and not approved:
-            return {"error": "this order is outside the limits: a planner must approve it first"}
-        outputs = [_payload(m) for m in state["messages"] if isinstance(m, ToolMessage)]
-        return toolbox.write_decision_record(store_id, product_id, date, order, reason, outputs)
+        with toolbox.lock:  # parallel calls run in threads: check and save as one step
+            check = toolbox.compute_order(store_id, product_id, date, units=order)
+            if "error" in check:
+                return check
+            approved = _key(store_id, product_id, date, order) in state.get("approved", [])
+            if not check["within_limits"] and not approved:
+                return {"error": "this order is outside the limits: a planner must approve it"}
+            outputs = [_payload(m) for m in state["messages"] if isinstance(m, ToolMessage)]
+            return toolbox.write_decision_record(store_id, product_id, date, order, reason, outputs)
 
     methods = (toolbox.get_forecast, toolbox.compute_order, toolbox.what_if)
     return [StructuredTool.from_function(f) for f in (*methods, write_decision_record)]
@@ -104,30 +113,28 @@ def build_agent(model, toolbox: Toolbox):
     def after_agent(state: State) -> str:
         if state["messages"][-1].tool_calls:
             return "tools"
-        orders = _orders(state)
-        unreviewed = len(orders) > state.get("reviewed", 0)
-        return "approval" if unreviewed and not orders[-1]["within_limits"] else "check"
+        return "approval" if _failed(state) else "check"
 
     def limits(state: State) -> Command:
-        recent = _orders(state)[state.get("reviewed", 0):]
-        failed = sum(not o["within_limits"] for o in recent)
-        return Command(
-            goto="approval" if failed >= MAX_FAILED_CHECKS else "agent",
-            update={"failed_checks": failed},
-        )
+        return Command(goto="approval" if len(_failed(state)) >= MAX_FAILED_CHECKS else "agent")
 
     def approval(state: State) -> dict:
-        orders = _orders(state)
-        decision = interrupt({"order": orders[-1], "failed_checks": state["failed_checks"]})
+        orders, failed = _orders(state), _failed(state)
+        # After 3 failed checks a planner takes over all of them; otherwise each one in turn.
+        index = failed[-1] if len(failed) >= MAX_FAILED_CHECKS else failed[0]
+        line = orders[index]
+        decision = interrupt({"order": line, "failed_checks": len(failed)})
         verdict = "approved" if decision.get("approved") else "rejected"
-        line = orders[-1]
         approved = state.get("approved", []) + (
             [_key(line["store_id"], line["product_id"], line["date"], line["order"])]
             if verdict == "approved" else []
         )
-        note = HumanMessage(f"A planner {verdict} this order. {decision.get('note', '')}".strip())
+        order = (f"{line['order']} units of product {line['product_id']} for store "
+                 f"{line['store_id']} on {line['date']}")
+        note = HumanMessage(f"A planner {verdict} the order of {order}. "
+                            f"{decision.get('note', '')}".strip())
         return {
-            "approval": verdict, "reviewed": len(orders), "approved": approved,
+            "approval": verdict, "reviewed": index + 1, "approved": approved,
             "messages": [note],
         }
 
@@ -137,7 +144,12 @@ def build_agent(model, toolbox: Toolbox):
             return Command(goto=END)
         retries = state.get("retries", 0)
         if retries >= MAX_RETRIES:
-            return Command(goto=END, update={"messages": [AIMessage(REFUSAL)]})
+            saved = any(
+                m.name == "write_decision_record" and _payload(m) == {"saved": True}
+                for m in state["messages"] if isinstance(m, ToolMessage)
+            )
+            note = " An order from this conversation was already saved." if saved else ""
+            return Command(goto=END, update={"messages": [AIMessage(REFUSAL + note)]})
         retry = HumanMessage(
             f"The number checker rejected {', '.join(bad)}: these are not in any tool output. "
             "Answer again using only numbers from the tool outputs.", name="checker",

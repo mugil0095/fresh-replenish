@@ -5,6 +5,11 @@ from fresh_replenish.agent import evaluate
 from fresh_replenish.agent.graph import build_agent
 
 
+def test_ollama_cloud_requests_time_out(monkeypatch):
+    monkeypatch.setenv("OLLAMA_API_KEY", "test-key")
+    assert evaluate.chat_model("ollama:gpt-oss:120b")._client._client.timeout.read == 120
+
+
 def test_fifty_questions_of_every_type_from_the_orders(orders):
     questions = evaluate.make_questions(orders)
     assert len(questions) == 50 and questions == evaluate.make_questions(orders)  # seeded

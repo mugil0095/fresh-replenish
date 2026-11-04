@@ -32,8 +32,22 @@ def test_a_quantity_over_the_line_limit_fails_the_check(toolbox):
 
 
 def test_store_capacity_counts_the_other_lines(orders, tmp_path):
-    order = Toolbox(orders, capacity=15).compute_order(1, 10, "2024-06-26")
+    toolbox = Toolbox(orders, records=tmp_path / "records.jsonl", capacity=15)
+    order = toolbox.compute_order(1, 10, "2024-06-26")
     assert order["store_day_total"] == 18.0 and order["within_limits"] is False
+
+
+def test_saved_orders_count_toward_store_capacity(orders, tmp_path):
+    records = tmp_path / "records.jsonl"
+    toolbox = Toolbox(orders, records=records, capacity=20)  # store 1 plans 9 + 9 on 06-26
+    toolbox.write_decision_record(1, 10, "2024-06-26", 10.0, "more", [])
+    assert toolbox.compute_order(1, 11, "2024-06-26", units=11)["store_day_total"] == 21.0
+    later = Toolbox(orders, records=records, capacity=20)  # a new session reads the saved order
+    assert later.compute_order(1, 11, "2024-06-26", units=11)["within_limits"] is False
+
+
+def test_a_negative_quantity_is_refused(toolbox):
+    assert "units" in toolbox.compute_order(1, 10, "2024-06-26", units=-40).get("error", "")
 
 
 def test_bad_ratio_is_refused(toolbox):

@@ -1,4 +1,4 @@
-# `docker compose up`: the reorder API on :8000 and the MLflow UI on :5000.
+# `docker compose up`: the reorder API on :8000, the dashboard on :8501 and MLflow on :5000.
 # Run the nightly batch on the host first: it writes data/processed/orders.parquet and mlruns/.
 services:
   api:
@@ -7,6 +7,16 @@ services:
       - "8000:8000"
     volumes:
       - ./data/processed:/app/data/processed:ro
+  dashboard:
+    build: .
+    command: streamlit run src/fresh_replenish/dashboard/app.py --server.port 8501 --server.address 0.0.0.0 --server.headless true
+    ports:
+      - "8501:8501"
+    healthcheck:  # the image's own check calls the API on :8000, which this container doesn't run
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8501/_stcore/health')"]
+    volumes:
+      - ./data:/app/data:ro
+      - ./reports:/app/reports:ro
   mlflow:
     image: ghcr.io/mlflow/mlflow:v3.17.2
     command: mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri sqlite:////mlruns/mlflow.db

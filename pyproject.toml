@@ -27,6 +27,8 @@ ml = [
 ]
 # The API only: the Docker image installs this group and nothing heavy.
 serve = ["fastapi", "uvicorn"]
+# The Streamlit dashboard (Altair charts come with Streamlit).
+dashboard = ["streamlit"]
 # The replenishment agent, with the chosen LLM providers: Gemini and Ollama Cloud.
 agent = [
     "langchain>=1.4",
@@ -38,7 +40,7 @@ agent = [
 ]
 
 [tool.uv]
-default-groups = ["dev", "ml", "serve", "agent"]
+default-groups = ["dev", "ml", "serve", "agent", "dashboard"]
 # pypots caps transformers at 4.57.6; without a floor uv backtracks to 4.12, which needs Rust to build.
 constraint-dependencies = ["transformers>=4.40"]
 

@@ -1,3 +1,6 @@
+import os
+import time
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -25,9 +28,19 @@ def test_health_reports_loaded_orders(orders_path, tmp_path):
     assert TestClient(create_app(orders_path)).get("/health").json() == {
         "status": "ok", "orders_loaded": True, "as_of": "2024-06-25"
     }
-    assert TestClient(create_app(tmp_path / "none.parquet")).get("/health").json()[
-        "orders_loaded"
-    ] is False
+    missing = TestClient(create_app(tmp_path / "none.parquet")).get("/health")
+    assert missing.status_code == 503 and missing.json()["orders_loaded"] is False
+
+
+def test_each_new_batch_is_served_without_a_restart(orders_path, tmp_path):
+    path = tmp_path / "served.parquet"
+    client = TestClient(create_app(path))
+    assert client.get("/reorder", params={"store_id": 1}).status_code == 503
+    path.write_bytes(orders_path.read_bytes())
+    assert client.get("/health").json()["as_of"] == "2024-06-25"
+    pd.read_parquet(path).assign(as_of="2024-07-02").to_parquet(path)
+    os.utime(path, (time.time() + 60,) * 2)  # a later batch, even on a coarse file clock
+    assert client.get("/reorder", params={"store_id": 1}).json()["as_of"] == "2024-07-02"
 
 
 def test_reorder_returns_the_store_lines(orders_path):

@@ -1,7 +1,7 @@
 import json
 
 from fakes import Scripted
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage, HumanMessage
 
 from fresh_replenish.agent.graph import REFUSAL, ask, build_agent
 
@@ -32,6 +32,15 @@ def test_checker_gives_up_with_a_refusal(toolbox):
     assert out["answer"] == REFUSAL
 
 
+def test_the_refusal_mentions_an_order_already_saved(toolbox):
+    script = [
+        call("compute_order"), call("write_decision_record", order=9.0, reason="90% service"),
+        AIMessage("Order 12.5."), AIMessage("Order 14.5."), AIMessage("Order 16.5."),
+    ]
+    out = run(toolbox, script)
+    assert out["answer"].startswith(REFUSAL) and "saved" in out["answer"]
+
+
 def test_over_limit_order_pauses_for_a_human_and_resumes(toolbox):
     script = [
         call("compute_order", units=20), AIMessage("20 units is over the 13.5 limit."),
@@ -58,6 +67,12 @@ def test_decision_record_gets_the_tool_outputs(toolbox):
     assert record["tool_outputs"][0]["order"] == 9.0
 
 
+def test_numbers_in_the_rules_are_not_a_source(toolbox):
+    script = [call("get_forecast"), AIMessage("Order 50 units."), AIMessage("Order 9.0 units.")]
+    out = run(toolbox, script)
+    assert out["retries"] == 1 and out["answer"] == "Order 9.0 units."
+
+
 def test_percentile_words_from_the_rules_pass_the_checker(toolbox):
     answer = "The 10th to 90th percentile range is 1.0 to 9.0."
     assert run(toolbox, [call("get_forecast"), AIMessage(answer)])["answer"] == answer
@@ -78,3 +93,23 @@ def test_every_over_limit_order_gets_its_own_hand_off(toolbox):
         call("compute_order", units=30), AIMessage("30 needs approval."), AIMessage("Done."),
     ]
     assert run(toolbox, script)["handoffs"] == 2
+
+
+def test_a_failed_order_is_handed_off_even_when_a_later_one_passes(toolbox):
+    script = [
+        call("compute_order", units=20), call("compute_order"),
+        AIMessage("20 is over the limit; the cost-based order is 9.0."),
+        AIMessage("A planner rejected 20; order 9.0."),
+    ]
+    assert run(toolbox, script)["handoffs"] == 1
+
+
+def test_the_planner_is_shown_a_failed_order(toolbox):
+    calls = [
+        {"name": "compute_order", "args": {**DAY, "units": u}, "id": str(u)} for u in (20, 18, 15)
+    ]
+    calls.append({"name": "compute_order", "args": DAY, "id": "ok"})
+    app = build_agent(Scripted(responses=[AIMessage("", tool_calls=calls)]), toolbox)
+    result = app.invoke({"messages": [HumanMessage("Order product 10.")]},
+                        {"configurable": {"thread_id": "t"}})
+    assert result["__interrupt__"][0].value["order"]["within_limits"] is False

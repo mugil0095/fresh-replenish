@@ -5,6 +5,7 @@ The limits are assumed values: the data has no prices or store capacities.
 """
 
 import json
+import threading
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
@@ -40,8 +41,23 @@ class Toolbox:
         capacity: float = STORE_DAY_CAPACITY,
     ):
         self.orders = orders.set_index(["store_id", "product_id", "dt"]).sort_index()
-        self.store_day = orders.groupby(["store_id", "dt"])["order"].sum()
+        self.store_day = orders.groupby(["store_id", "dt"])["order"].sum().to_dict()
         self.scenario, self.records, self.capacity = scenario, records, capacity
+        self.saved: dict[tuple, float] = {}  # (store_id, product_id, date) -> latest saved order
+        self.lock = threading.Lock()
+        if records.exists():  # orders saved in earlier sessions count toward capacity too
+            for text in records.read_text(encoding="utf-8").splitlines():
+                if text.strip():  # a broken line still stops here: saved orders must not vanish
+                    row = json.loads(text)
+                    self._count(row["store_id"], row["product_id"], row["date"], row["order"])
+
+    def _count(self, store_id: int, product_id: int, date: str, order: float) -> None:
+        """Put a saved order in its store-day total, in place of the line's earlier order."""
+        line = self._line(store_id, product_id, date)
+        if line is not None:
+            key = (store_id, product_id, date)
+            self.store_day[store_id, date] += order - self.saved.get(key, line.order)
+            self.saved[key] = order
 
     def _line(self, store_id: int, product_id: int, date: str) -> pd.Series | None:
         key = (store_id, product_id, date)
@@ -70,12 +86,15 @@ class Toolbox:
         if line is None:
             return self._missing(store_id, product_id, date)
         if not 1 / 9 <= ratio <= 9:
-            return {"error": "ratio (lost-sale cost / waste cost) must be between 0.11 and 9"}
+            return {"error": "ratio (lost-sale cost / waste cost) must be between 1/9 and 9"}
+        if units is not None and not units >= 0:  # also refuses NaN
+            return {"error": "units must be zero or more"}
         level = critical_ratio(ratio)
         cost_based = float(order_at(line[DECILE_COLUMNS].to_numpy(dtype=float), level))
         order = cost_based if units is None else float(units)
         line_limit = LINE_FACTOR * line.q90
-        store_total = self.store_day[(store_id, date)] - line.order + order
+        current = self.saved.get((store_id, product_id, date), line.order)
+        store_total = self.store_day[store_id, date] - current + order
         return {
             "store_id": store_id, "product_id": product_id, "date": date,
             "ratio": ratio, "critical_ratio": _r(level), "cost_based_order": _r(cost_based),
@@ -119,6 +138,7 @@ class Toolbox:
         self.records.parent.mkdir(parents=True, exist_ok=True)
         with self.records.open("a", encoding="utf-8") as file:
             file.write(json.dumps(record) + "\n")
+        self._count(store_id, product_id, date, order)
         return {"saved": True}
 
 

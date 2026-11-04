@@ -11,6 +11,11 @@ CALIBRATED = [f"cal_{c}" for c in DECILE_COLUMNS]
 
 def test_critical_ratio_is_the_cost_share_of_a_lost_sale():
     assert critical_ratio(9) == pytest.approx(0.9)
+
+
+def test_the_lowest_ratio_never_orders_below_the_lowest_decile():
+    q = np.array([[0.0, 5, 6, 7, 8, 9, 10, 11, 12]])  # critical_ratio(1/9) is 0.0999...
+    assert order_at(q, critical_ratio(1 / 9))[0] == 0.0
     assert critical_ratio(1) == 0.5
 
 
