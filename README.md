@@ -9,7 +9,7 @@
 | Forecast ranges that hold | 80% of demand inside the calibrated 10–90% range (target 80%) |
 | Cost of orders, against the most accurate forecast's median | −56% (−55% against reordering last week's demand) |
 | Nightly batch / API | 50,000 series in 11.5 min; p95 7.3 ms per store request |
-| AI agent (50 questions × 3 runs) | 97% right tools; every final answer passed the number checker; every over-limit order went to a human |
+| AI agent (50 questions × 3 runs) | 100% right tools; every final answer passed the number checker; every over-limit order went to a human |
 
 The project:
 
@@ -116,11 +116,11 @@ A LangGraph agent turns the forecasts into explained orders.
 - **Hand-off:** orders over the limits pause for a planner's approval.
 - **Evaluation:** 50 scripted questions, each run three times, score tool choice, numbers, hand-offs, refusals and latency (and cost, when `FRESH_LLM_PRICE` is set).
 - **Results** ([agent evaluation](reports/agent_gpt-oss-120b.md)): on Ollama Cloud `gpt-oss:120b`, re-run after the audit fixes (misses are in [negative results](docs/negative_results.md)):
-  - correct tool choice 97%;
+  - correct tool choice 100%;
   - every final answer passed the number checker;
   - every over-limit order was handed to a planner;
   - every out-of-scope and missing-data question was handled correctly;
-  - p50 latency 3.3 s.
+  - p50 latency 3.5 s.
 
 ## Data
 

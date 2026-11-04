@@ -29,7 +29,7 @@
 | Ordering by cost vs ordering the most accurate forecast | −56% cost; served 96% of demand vs 77% |
 | Ordering by cost vs reordering last week's demand | −55% cost |
 | Forecast ranges that hold on a new week | 80% of demand fell inside the stated 80% range |
-| AI agent, 50 scripted questions run 3 times | right tools 97%; every answer passed the number check; every risky order sent to a human |
+| AI agent, 50 scripted questions run 3 times | right tools 100%; every answer passed the number check; every risky order sent to a human |
 
 - **The most accurate forecast is not the best order.** At 9×, ordering the "most likely" amount runs out on 56% of days and costs more than simply reordering last week's demand. Ordering by cost is the cheapest choice at every cost ratio tested.
 - **A trained LightGBM beat the AI foundation models,** but only narrowly (1–2 points of error). The foundation models need no training, which makes them a fast start for new stores.

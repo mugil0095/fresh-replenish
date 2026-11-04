@@ -6,6 +6,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 from fresh_replenish.agent.graph import REFUSAL, ask, build_agent
 
 DAY = {"store_id": 1, "product_id": 10, "date": "2024-06-26"}
+RECORD = "Record the cost-based order for product 10 at store 1 on 2024-06-26."
 
 
 def call(name, **args):
@@ -32,12 +33,18 @@ def test_checker_gives_up_with_a_refusal(toolbox):
     assert out["answer"] == REFUSAL
 
 
+def test_orders_are_saved_only_when_the_question_asks(toolbox):
+    script = [call("write_decision_record", order=9.0, reason="x"), AIMessage("Done.")]
+    run(toolbox, script, "Why is the order for product 10 at store 1 on 2024-06-26 what it is?")
+    assert not toolbox.records.exists()
+
+
 def test_the_refusal_mentions_an_order_already_saved(toolbox):
     script = [
         call("compute_order"), call("write_decision_record", order=9.0, reason="90% service"),
         AIMessage("Order 12.5."), AIMessage("Order 14.5."), AIMessage("Order 16.5."),
     ]
-    out = run(toolbox, script)
+    out = run(toolbox, script, RECORD)
     assert out["answer"].startswith(REFUSAL) and "saved" in out["answer"]
 
 
@@ -62,7 +69,7 @@ def test_decision_record_gets_the_tool_outputs(toolbox):
         call("compute_order"), call("write_decision_record", order=9.0, reason="90% service"),
         AIMessage("Recorded 9.0 units."),
     ]
-    run(toolbox, script)
+    run(toolbox, script, RECORD)
     record = json.loads(toolbox.records.read_text(encoding="utf-8"))
     assert record["tool_outputs"][0]["order"] == 9.0
 
