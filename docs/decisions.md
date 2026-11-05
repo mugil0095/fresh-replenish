@@ -393,6 +393,19 @@ A full re-check (tests on a clean copy, re-runs of Phases 1, 2 and 5, the API, t
 - **Dashboard:** the orders file is read with the other pipeline files, so a missing batch shows the "run the pipeline" message instead of a traceback.
 - **Negative results:** the wrong-sign what-if example now points to a saved run (evaluation question 30).
 
+## 2026-11-05: A second delivery
+
+- **Why:** orders so far commit the whole day before opening, and stockouts climb to 41% by 9 pm. The hourly data can show what a midday top-up is worth.
+- **Policy:** the morning carries a share of the one-delivery order. At the decision hour the store counts its shelf and orders up to a rest-of-day target, delivered 2 hours later.
+- **Target:** the day's calibrated deciles, scaled to each line's usual share of demand still to come, then calibrated again with Phase 5's shifts on the past folds. Shares use only days before the scored days.
+- **Choosing the plan:** the decision hour and morning share are picked on the 28 fold days. The held-out week only scores them.
+- **A shelf count, not a forecast update:** a throwaway run on the folds also updated the forecast from the morning's pace. At 9× it moved the cost only from 0.721 to 0.689, and part of that is circular: on stockout days, the recovered afternoon is computed from that same morning. It was left out, which removes a parameter and any modelling of sold-out mornings.
+- **Night sales** (4.6% of sales) count as the last hour's, so a midday count can't see them. That is the cautious choice for the top-up.
+- **Result at 9×:** order at 13:00 for 15:00, with 80% sent in the morning: 0.646 per unit of demand against 0.947, a 32% saving (paired 95% CI 31–33%). On days with no stockout the saving is 23%.
+- **Left out on purpose:**
+  - the delivery's own cost, which the data can't give, so the report states a break-even of 24.3 wasted units per store per day;
+  - a live top-up endpoint, which would need real stock counts.
+
 ## Known issues
 
 - **Hugging Face downloads on this laptop:** the antivirus intercepts HTTPS, so Hugging Face requests fail certificate checks. The forecasting run therefore used `HF_HUB_OFFLINE=1`, with the pinned weights already in the local cache.

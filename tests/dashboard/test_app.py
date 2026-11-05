@@ -15,3 +15,4 @@ def test_dashboard_opens_with_the_headline(real_paths):
     assert not app.exception
     assert "Cost-based orders cut" in app.markdown[0].value
     assert len(app.metric) == 4 and len(app.tabs) == 5
+    assert [s.value for s in app.subheader] == ["A second delivery"]

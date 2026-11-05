@@ -19,6 +19,11 @@ What didn't work, or didn't hold, and is reported rather than hidden. The eviden
 - **Calibrated deciles still run 1–5 points low** on the held-out week, whose demand was higher than the weeks the calibration learned from.
 - **Availability costs waste:** at the 9× headline ratio, about a third of the units ordered are wasted.
 
+## Second delivery
+- **Updating the forecast from the morning's sales barely helped.** On the past folds at 9× it moved the cost from 0.721 to 0.689, and part of that is circular, so it was dropped. Nearly all the gain comes from counting the shelf.
+- **The saving shrinks on observed days:** 32% overall, 23% on days with no stockout. Part of the headline rests on recovered afternoon demand.
+- **Waste stays high:** even with a top-up, 0.418 units are wasted per unit of demand at 9×.
+
 ## Service (Phase 6)
 - **The Docker image is unverified.** It was checked in CI only, not built locally, and CI runs once the repo is pushed.
 - **Category alerts are noisy:** monitoring flags bias, coverage or stockout drift in several categories even in a normal week.
