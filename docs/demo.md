@@ -12,7 +12,7 @@ Open `docs/summary.md`. Read the headline: ordering by cost cut waste + lost-sal
 `uv run streamlit run src/fresh_replenish/dashboard/app.py`
 1. **Headline cards:** −56%, −55%, 80% of demand inside the range, 100% of the agent's answers passing the number check.
 2. **Where money is lost:** move the slider from 9 to 1, and show the cost moving from waste to lost sales. Point at the stockouts-by-hour chart (evenings).
-3. **Ordering policies:** the cost-based order is the cheapest line at every ratio. The "most accurate forecast" line climbs fastest and ends above "reorder last week's demand" at 9×. Below it, a second delivery cuts the cost by a further 32%, before the delivery's own cost.
+3. **Ordering policies:** the cost-based order is the cheapest line at every ratio. The "most accurate forecast" line climbs fastest and ends above "reorder last week's demand" at 9×. Below it, a second delivery cuts the cost by a further 32%, before the delivery's own cost. If asked: a fixed 1.7× the median gets within 6.5%, so most of the gain is ordering more, and the second delivery is worth far less if stock keeps.
 4. **Forecasts:** pick a store and product. Show the history, the forecast range and the actual demand.
 
 ## 2:30 The agent (1.5 min)

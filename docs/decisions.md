@@ -430,9 +430,14 @@ A full re-check (tests on a clean copy, re-runs of Phases 1, 2 and 5, the API, t
 - **A clean start:** a shelf that starts empty and ends full would flatter stock that keeps, so the week runs twice and the second pass is scored. Day 7 leads into day 1, which keeps the weekdays in order.
 - **Assumed:** 1, 2 and 3 days, the same for every product, at 9×.
 - **Result:**
-  - Cost-based orders beat the most accurate forecast by 56%, 78% and 80%, at their one-day order level.
-  - The second delivery saves 32%, 25% and 15% against a re-tuned one delivery, worth 24.3, 6.4 and 2.0 wasted units per store per day.
-- **The first comparison was wrong:** it re-chose the top-up's plan for each shelf life but left one delivery at the newsvendor level, which is no longer the best one when overstock is cheap. That showed 50–57% savings at 2–3 days. Now past weeks choose the level for one delivery too (1.3× and 1.5×), and the morning share may go above 100%.
+  - Cost-based orders cost 0.947, 0.311 and 0.158 per unit of demand at 1, 2 and 3 days.
+  - They beat a fixed multiple of the median, chosen on past weeks, by 6.5%, 11% and 8.5% (95% CIs 5–8%, 9–13%, 6–11%).
+  - The second delivery saves 32%, 25% and 15%, worth 24.3, 6.4 and 2.0 wasted units per store per day.
+- **Two comparisons were wrong at first, for the same reason:** a policy with re-tuned levels was judged against one left untuned.
+  - The top-up's plan was re-chosen but one delivery stayed at the newsvendor level, which showed 50–57% savings at 2–3 days. Past weeks now choose its level too (1.3× and 1.5×), and the morning share may go above 100%.
+  - The code review caught the same flaw in the median: "78–80% better at 2–3 days" compared two untuned policies. The tuned median needs up to 2.7×, so the search now runs to 4×.
+- **What this means for the headline:** the 56% is measured against ordering the median itself, and that stays true. But a fixed 1.7× the median gets within 6.5% even at one day, so most of the gain is ordering more. The README, summary and dashboard now say so next to the 56%.
+- **Left alone:** cost-based orders stay at the newsvendor level at one day, where the rule holds, so their numbers match `reports/orders.md`.
 - **Still not re-tuned:** the top-up's rest-of-day target stays at the critical ratio, which may understate it a little at 2–3 days.
 
 ## Known issues

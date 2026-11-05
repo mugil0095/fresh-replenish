@@ -267,8 +267,8 @@ def _forecasts(held_out):
 
 
 def test_past_weeks_retune_one_delivery_when_stock_keeps():
-    short = np.array([[10.0]])  # 31 are wanted: at 9x the highest level is the cheapest
-    assert topup._best_level(_one_day(), short, 9.0, 2) == max(topup.MORNING_SHARES)
+    short = np.array([[10.0]])  # 31 are wanted
+    assert topup._best_level(_one_day(), short, 9.0, 2) == 3.1
     plenty = np.array([[62.0]])
     assert topup._best_level(_one_day(), plenty, 9.0, 2) == 0.5
 
@@ -307,6 +307,18 @@ def test_shelf_life_compares_each_policy_on_the_same_resamples():
     assert row.saving_vs_last_week == pytest.approx(1 - row.cost_based_cost / row.last_week_cost)
 
 
+def test_the_median_gets_the_same_retuning_as_cost_based_orders():
+    h, past, held_out = _scenario()
+    table = topup.shelf_life(h, past, _forecasts(held_out), r=9.0, lives=(1, 2))
+    day, two = table.iloc[0], table.iloc[1]
+    assert day.retuned_median_level != 1  # a fixed multiple pays even at one day
+    assert day.retuned_median_cost < day.median_cost
+    assert two.retuned_saving_vs_median == pytest.approx(
+        1 - two.retuned_cost / two.retuned_median_cost
+    )
+    assert two.retuned_saving_low <= two.retuned_saving_vs_median <= two.retuned_saving_high
+
+
 def test_the_saved_one_day_shelf_life_matches_the_orders_report():
     table = pd.read_csv(REPORTS_DIR / "tables" / "topup_shelf_life.csv")
     orders = pd.read_csv(REPORTS_DIR / "tables" / "orders_policies.csv")
@@ -325,6 +337,7 @@ def test_report_states_the_saving_and_what_it_leaves_out():
     best = results["plans"].query("chosen and ratio == 9").iloc[0]
     report = topup.render_report(results)
     assert "## If stock keeps longer" in report
+    assert "most of the saving comes from ordering more than the median" in report
     assert f"{best.saving:.0%} less than one delivery" in report
     assert "does not count what the second delivery itself costs" in report
     assert f"{int(best.decision_hour)}:00" in report

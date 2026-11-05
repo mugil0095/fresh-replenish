@@ -80,7 +80,9 @@ st.caption(
     f"Held-out week ({week.dt.min()} to {week.dt.max()}), {len(week) // week.dt.nunique():,} "
     f"store-product series in {week.store_id.nunique()} dark stores. Assumes a lost sale "
     f"costs {h['ratio']:g}x a wasted unit, because the data has no prices; "
-    "the Ordering policies tab shows other ratios."
+    "the Ordering policies tab shows other ratios. Most of the gain is ordering more than the "
+    f"forecast: a fixed {d['shelf_life'].retuned_median_level[1]:.1f}x the median, tuned on past "
+    f"weeks, gets within {d['shelf_life'].retuned_saving_vs_median[1]:.1%}."
 )
 cols = st.columns(4)
 cols[0].metric("vs most accurate forecast", f"-{h['vs_median']:.0%}")

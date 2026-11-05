@@ -17,6 +17,7 @@ What didn't work, or didn't hold, and is reported rather than hidden. The eviden
 ## Calibration and orders (Phase 5)
 - **The spec's claim fails across models.** "The most accurate model is not the cheapest" didn't hold: LightGBM's cost-based orders were the cheapest at every cost ratio. It holds only for the decision rule (ordering the median vs ordering by cost), and in 27 of 90 stores, which is too few days per store to test.
 - **Calibrated deciles still run 1–5 points low** on the held-out week, whose demand was higher than the weeks the calibration learned from.
+- **Most of the headline is ordering more.** Against a fixed multiple of the median tuned on past weeks (1.7×), cost-based orders save 6.5% (95% CI 5–8%), not 56%. That is what per-line calibrated ranges are worth at 9×.
 - **Availability costs waste:** at the 9× headline ratio, about a third of the units ordered are wasted.
 
 ## Second delivery
@@ -24,7 +25,7 @@ What didn't work, or didn't hold, and is reported rather than hidden. The eviden
 - **The saving shrinks on observed days:** 32% overall, 23% on days with no stockout. Part of the headline may rest on recovered afternoon demand, and those days are also quieter, so the two effects can't be separated.
 - **Waste stays high:** with a one-day shelf life, even a top-up wastes 0.418 units per unit of demand at 9×.
 - **It is worth far less if stock keeps:** 24.3 wasted units per store per day at a 1-day shelf life, 6.4 at 2 days and 2.0 at 3 days.
-- **A first comparison flattered it:** against one delivery left at the newsvendor level, the top-up showed 50–57% savings at 2–3 days. Re-tuning one delivery as well gave 25% and 15%.
+- **First comparisons flattered it, and cost-based orders:** a re-tuned policy was judged against an untuned one. The top-up showed 50–57% savings at 2–3 days instead of 25% and 15%, and cost-based orders showed 78–80% over the median instead of 11% and 8.5% over a tuned multiple.
 
 ## Service (Phase 6)
 - **The Docker image is unverified.** It was checked in CI only, not built locally, and CI runs once the repo is pushed.

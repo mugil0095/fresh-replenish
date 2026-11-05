@@ -42,19 +42,21 @@ One delivery commits the whole day's order before opening. Here the morning carr
 
 Everything above throws unsold stock away the same night. The data has no shelf lives, so this lets unsold units keep for up to 3 days at r = 9, oldest sold first. Each policy counts the stock it carries. The week runs twice and the second pass is scored, so the shelf starts with normal stock.
 
-- **Cost-based orders against the most accurate forecast:** the saving is 56% at 1 day, 78% at 2 days, 80% at 3 days.
+- **Cost-based orders against the most accurate forecast, both at their one-day levels:** 56% at 1 day, 78% at 2 days, 80% at 3 days.
 
 - **Cost-based orders against last week's demand:** 55% at 1 day, 75% at 2 days, 77% at 3 days.
 
-- **What a second delivery is worth:** 24.3 wasted units per store per day at 1 day, 6.4 wasted units per store per day at 2 days, 2.0 wasted units per store per day at 3 days.
+- **Against a fixed multiple of the median, chosen on past weeks:** 6% at 1 day, 11% at 2 days, 8% at 3 days. The multiples are 1.7 at 1 day, 2.2 at 2 days, 2.7 at 3 days. So most of the saving comes from ordering more than the median, and per-line calibrated ranges add the rest.
+
+- **What a second delivery is worth, in wasted units per store per day:** 24.3 at 1 day, 6.4 at 2 days, 2.0 at 3 days.
 
 - **A second delivery against one:** 32% at 1 day, 25% at 2 days, 15% at 3 days. Stock that keeps makes overstock cheaper, so the newsvendor level is no longer the best one: for this comparison, past weeks choose the level of the one delivery again, as well as the top-up's hour and share.
 
-| life_days | last_week_cost | median_cost | cost_based_cost | saving_vs_median | saving_vs_median_low | saving_vs_median_high | saving_vs_last_week | retuned_cost | retuned_level | retuned_waste | retuned_fill_rate | decision_hour | morning_share | top_up_cost | top_up_waste | top_up_fill_rate | top_up_saving | top_up_saving_low | top_up_saving_high | top_up_saving_no_stockout | saved_per_store_day |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 2.1115 | 2.1664 | 0.9472 | 0.5628 | 0.5521 | 0.5727 | 0.5514 | 0.9472 | 1.0 | 0.5558 | 0.9565 | 13 | 0.8 | 0.6458 | 0.4181 | 0.9747 | 0.3183 | 0.3116 | 0.3254 | 0.2291 | 24.348 |
-| 2 | 1.8505 | 2.0739 | 0.4623 | 0.7771 | 0.7689 | 0.785 | 0.7502 | 0.3105 | 1.3 | 0.1713 | 0.9845 | 14 | 1.0 | 0.2314 | 0.0724 | 0.9823 | 0.2549 | 0.2389 | 0.2703 | 0.4027 | 6.3928 |
-| 3 | 1.8054 | 2.0693 | 0.4073 | 0.8032 | 0.7951 | 0.811 | 0.7744 | 0.1581 | 1.5 | 0.0785 | 0.9912 | 16 | 1.3 | 0.1337 | 0.0466 | 0.9903 | 0.1543 | 0.1378 | 0.1706 | 0.3427 | 1.9699 |
+| life_days | last_week_cost | median_cost | cost_based_cost | saving_vs_median | saving_vs_median_low | saving_vs_median_high | saving_vs_last_week | retuned_cost | retuned_level | retuned_waste | retuned_fill_rate | retuned_median_cost | retuned_median_level | retuned_saving_vs_median | retuned_saving_low | retuned_saving_high | decision_hour | morning_share | top_up_cost | top_up_waste | top_up_fill_rate | top_up_saving | top_up_saving_low | top_up_saving_high | saved_per_store_day |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | 2.1115 | 2.1664 | 0.9472 | 0.5628 | 0.5521 | 0.5727 | 0.5514 | 0.9472 | 1.0 | 0.5558 | 0.9565 | 1.0126 | 1.7 | 0.0645 | 0.0511 | 0.0779 | 13 | 0.8 | 0.6458 | 0.4181 | 0.9747 | 0.3183 | 0.3116 | 0.3254 | 24.348 |
+| 2 | 1.8505 | 2.0739 | 0.4623 | 0.7771 | 0.7689 | 0.785 | 0.7502 | 0.3105 | 1.3 | 0.1713 | 0.9845 | 0.3491 | 2.2 | 0.1105 | 0.0885 | 0.1308 | 14 | 1.0 | 0.2314 | 0.0724 | 0.9823 | 0.2549 | 0.2389 | 0.2703 | 6.3928 |
+| 3 | 1.8054 | 2.0693 | 0.4073 | 0.8032 | 0.7951 | 0.811 | 0.7744 | 0.1581 | 1.5 | 0.0785 | 0.9912 | 0.1727 | 2.7 | 0.0849 | 0.0565 | 0.1134 | 16 | 1.3 | 0.1337 | 0.0466 | 0.9903 | 0.1543 | 0.1378 | 0.1706 | 1.9699 |
 
 ## Sample
 
