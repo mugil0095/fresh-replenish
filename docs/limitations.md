@@ -13,4 +13,4 @@ What this project can and can't claim. Results that failed or didn't hold are in
 - **What-ifs aren't causal.** Discounts and promotions weren't assigned at random, so Chronos-2 scenario answers are model estimates.
 - **Agent scores are in-sample.** The prompt and the save rule were tuned on the same 50 questions they're scored on, with one model (`gpt-oss:120b`). The save tool is offered only when the question says place, record or save.
 - **One dataset, one retailer.** All results come from FreshRetailNet-50K (Dingdong, 18 Chinese cities, spring 2024).
-- **Not production-hardened.** No authentication on the API, one process, and the orders file is the only store. Docker Compose has not been run end to end; CI builds and smoke-tests the image.
+- **Not production-hardened.** No authentication on the API, one process, and the orders file is the only store. CI runs Docker Compose on tiny smoke data, but the stack has not been run on the real outputs.
