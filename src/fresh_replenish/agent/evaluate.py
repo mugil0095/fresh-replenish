@@ -193,7 +193,7 @@ def render_report(summary: pd.DataFrame, model: str) -> str:
         f"- **Correct tool choice:** {total.tool_choice:.0%} (target: at least 90%).",
         f"- **Numbers matching tool outputs:** {total.numbers_match:.0%} of final answers "
         f"(target 100%); {total.first_try:.0%} passed the checker on the first try and "
-        f"{total.gave_up:.0%} gave up, which says to ask a planner instead of answering.",
+        f"{total.gave_up:.0%} gave up and told the user to ask a planner.",
         f"- **Hand-off on limit violations:** {limit:.0%} (target 100%); correct hand-off "
         f"decisions overall {total.handoff_correct:.0%}.",
         f"- **Refusals and missing data handled:** {total.refusal_correct:.0%}.",

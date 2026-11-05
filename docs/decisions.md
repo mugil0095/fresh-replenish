@@ -450,6 +450,31 @@ A full re-check (tests on a clean copy, re-runs of Phases 1, 2 and 5, the API, t
 - **Result:** it passed on its first run. All three services started, `/reorder` and `/topup` answered, MLflow returned its Default experiment, and the dashboard opened with its 5 tabs and no errors.
 - **What the log showed:** Streamlit warned 6 times that `use_container_width` is going away. Its default already stretches these charts, so the argument is gone. All 6 still fill their space on the real data.
 
+## 2026-11-05: Top-ups in the agent
+
+- **Why:** the agent knew nothing about the second delivery, so a manager couldn't ask it about a midday count.
+- **Tool:** `compute_top_up` works out one line the way `/topup` does, and matched it on three real lines. The answer gives the units, when the shelf is counted and when the delivery arrives.
+- **Advice only:** saved as an order, a top-up would replace the day's order in the store's capacity count. So a question that names a top-up never gets the save tool, and a conversation that called `compute_top_up` can't save. Top-ups also skip the order limits, since nothing is placed.
+- **No count, no answer:** the number checker doesn't read tool arguments, so an invented shelf count would pass. The prompt tells the agent to ask, and 2 of the 6 new questions test that.
+- **Questions:** the 6 new ones come last, so the original 50 keep their random draws (checked line by line). That makes 56 questions and 168 runs. A new `gave_up` measure counts answers that end in "ask a planner".
+- **It took three runs:**
+
+  | | Before | 1: top-up tool | 2: rule in the prompt | 3: published |
+  |---|---|---|---|---|
+  | Right tools | 100% | 99.4% | 95% | 98.8% |
+  | Hand-off on over-limit orders | 100% | 100% | 92% | 100% |
+  | Over-limit runs that saved after a rejection | 5 of 24* | 6 of 24 | 0 | 0 |
+  | Gave up | 9 of 150 | 9 of 168 | 8 of 168 | 11 of 168 |
+  | Tokens per run | 2,936 | 3,309 | 6,252 | 3,392 |
+
+  \* From tool calls; that run's records weren't kept.
+
+- **Run 1 looked fine until the answers were read.** After a planner rejected an order, the agent placed a smaller one itself. A code check now refuses any save once a planner rejects.
+- **Run 2 added a prompt rule for the same thing, and it backfired.** The rule reached every question: 5 "why" and other-ratio runs tried to save (one made 59 tool calls), 2 over-limit runs skipped the planner, and 2 of 12 record runs never saved.
+- **Run 3 moved the instruction into the message that reports a rejection,** so other questions see the same prompt as run 1. All 24 over-limit runs say no order was placed, all 12 record runs saved, all 12 top-ups with a count were right, and all 6 without one asked.
+- **Not fully explained:** 2 unasked save attempts remain in run 3, so the rule wasn't their only cause. They were refused, and nothing was saved.
+- **Left alone:** the tool assumes a count at 13:00, as `/topup` does, and doesn't state the morning share. Both are in the limitations.
+
 ## Known issues
 
 - **Hugging Face downloads on this laptop:** the antivirus intercepts HTTPS, so Hugging Face requests fail certificate checks. The forecasting run therefore used `HF_HUB_OFFLINE=1`, with the pinned weights already in the local cache.

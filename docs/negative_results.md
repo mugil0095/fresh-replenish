@@ -28,13 +28,18 @@ What didn't work, or didn't hold, and is reported rather than hidden. The eviden
 - **First comparisons flattered it, and cost-based orders:** a re-tuned policy was judged against an untuned one. The top-up showed 50–57% savings at 2–3 days instead of 25% and 15%, and cost-based orders showed 78–80% over the median instead of 11% and 8.5% over a tuned multiple.
 
 ## Service (Phase 6)
-- **The Docker image is unverified.** It was checked in CI only, not built locally, and CI runs once the repo is pushed.
+- **Docker is only checked in CI.** The stack runs there on tiny smoke data. It has never been built on this laptop or run on the real outputs.
 - **Category alerts are noisy:** monitoring flags bias, coverage or stockout drift in several categories even in a normal week.
 
 ## Agent (Phase 7)
 - **Record misses, fixed:** after the audit fixes, 5 of 12 "record this order" runs computed the order but never saved it. Stronger wording alone overshot (14 unasked saves), so the save tool is now offered only when the question asks to place, record or save an order; the next run scored 100% on tool choice.
-- **The stricter checker costs retries:** 79% of answers pass the number checker on the first try (96% under the old, looser checker); after retries, all 150 pass.
+- **Orders placed after a rejection, fixed:** in 6 of 24 over-limit runs, a planner rejected the order and the agent then placed a smaller one on its own, sometimes without mentioning the rejection. Tool calls from the earlier run show the same pattern in 5 of 24. The hand-off score stayed at 100% because the hand-off itself happened; only reading the answers found this. Saving is now blocked once a planner rejects.
+- **A fix that made things worse:** the first fix was a rule in the prompt, which every question sees. That run fell to 95% right tools and 92% hand-offs and nearly doubled the tokens, and 2 of 12 record runs never saved (at least one still said "Order recorded"). Moved into the one message that reports a rejection, the scores came back.
+- **Unasked saves still happen:** in 2 of 42 "why" and other-ratio runs, the model called the save tool it wasn't offered, up to 18 times in one run. Every call was refused and nothing was saved. These are the 2 tool-choice misses.
+- **The stricter checker costs retries, and some answers:** 80% of answers pass the number checker on the first try (96% under the old, looser checker). After retries all 168 pass, but 11 of those (7%) are the agent giving up and telling the user to ask a planner: 7 of 24 "why" runs and 4 of 18 other-ratio runs. The earlier 100% hid 9 such runs out of 150; the evaluation now counts them.
+- **Answers after a rejection are short:** all 24 say no order was placed, but only 11 say why.
+- **The new tool costs tokens:** 3,392 per run, up from 2,936 (24% more on the same 50 questions), because every call carries one more tool and more rules.
 - **What-ifs are not causal.** Chronos-2's covariate effects can have the "wrong" sign: in evaluation question 30, a promotion lowered product 766's median at store 343 from 1.27 to 1.15 units (`reports/tables/agent_runs_gpt-oss-120b.csv`).
 - **Gemini was not evaluated.** The free tier allows 20 requests a day per model, and the run needs about 375. A Google AI Plus subscription doesn't cover API keys.
 - **The first evaluation run had a scoring bug:** the scorer rejected rule words like "90th percentile", which made "numbers matching" 52%. The fix counted the rules as a source; the reported run is the second.
-- **The scores are in-sample.** After the first run, the prompt, the scorer and one question were changed, and the same 50 questions were run again. There is no fresh question set.
+- **The scores are in-sample.** After the first run, the prompt, the scorer and one question were changed, and the same 50 questions were run again. The same questions were run three more times while adding top-ups. There is no fresh question set.

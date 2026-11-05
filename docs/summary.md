@@ -20,7 +20,7 @@
 4. **Serve and explain:**
    - a nightly job writes orders for all 50,000 store-product lines in 13.3 minutes;
    - an API serves them in about 15 ms, and turns a store's midday shelf count into a top-up order;
-   - an AI agent explains orders, answers "what if we discount this?", and sends unusual orders to a human.
+   - an AI agent explains orders, advises top-ups, answers "what if we discount this?", and sends unusual orders to a human.
 
 ## What we found
 
@@ -33,7 +33,7 @@
 | Ordering by cost vs a tuned 1.7× the forecast | −6.5% cost (95% CI 5–8%) |
 | If unsold stock keeps 2–3 days instead of 1 | cost falls by two-thirds or more; ordering by cost keeps an 8–11% edge |
 | Forecast ranges that hold on a new week | 80% of demand fell inside the stated 80% range |
-| AI agent, 50 scripted questions run 3 times | right tools 100%; every answer passed the number check; every risky order sent to a human |
+| AI agent, 56 scripted questions run 3 times | right tools 99%; every answer passed the number check, though 7% gave up and told the user to ask a planner; every risky order sent to a human |
 
 - **The most accurate forecast is not the best order.** At 9×, ordering the "most likely" amount runs out on 56% of days and costs more than simply reordering last week's demand. Ordering by cost is the cheapest choice at every cost ratio tested.
 - **A trained LightGBM beat the AI foundation models,** but only narrowly (1–2 points of error). The foundation models need no training, which makes them a fast start for new stores.

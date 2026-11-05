@@ -10,7 +10,7 @@ Open `docs/summary.md`. Read the headline: ordering by cost cut waste + lost-sal
 
 ## 0:30 The dashboard (2 min)
 `uv run streamlit run src/fresh_replenish/dashboard/app.py`
-1. **Headline cards:** −56%, −55%, 80% of demand inside the range, 100% of the agent's answers passing the number check.
+1. **Headline cards:** −56%, −55%, 80% of demand inside the range, 100% of the agent's answers passing the number check (7% of them by giving up).
 2. **Where money is lost:** move the slider from 9 to 1, and show the cost moving from waste to lost sales. Point at the stockouts-by-hour chart (evenings).
 3. **Ordering policies:** the cost-based order is the cheapest line at every ratio. The "most accurate forecast" line climbs fastest and ends above "reorder last week's demand" at 9×. Below it, a second delivery cuts the cost by a further 32%, before the delivery's own cost. If asked: a fixed 1.7× the median gets within 6.5%, so most of the gain is ordering more, and the second delivery is worth far less if stock keeps.
 4. **Forecasts:** pick a store and product. Show the history, the forecast range and the actual demand.
@@ -22,6 +22,9 @@ Open `docs/summary.md`. Read the headline: ordering by cost cut waste + lost-sal
 2. A risky order:
    `uv run python -m fresh_replenish.agent.chat "Place an order of 6 units of product 4 for store 57 on 2024-07-02."`
    The agent pauses for you, the planner. Answer `n`, and it doesn't record the order.
+3. A top-up:
+   `uv run python -m fresh_replenish.agent.chat "Store 609 counted 0.5 units of product 515 on the shelf on 2024-06-30. How much should it top up?"`
+   It gives the units and when the delivery arrives.
 
 ## 4:00 Production (30 s)
 `docker compose up`. Show the API with `curl "localhost:8000/reorder?store_id=0"`, a midday count posted to `/topup`, the dashboard on :8501 and MLflow runs on :5000. Close on the test count and CI.
