@@ -3,7 +3,8 @@
 One delivery (`newsvendor.py`) commits the whole day's order before opening. Here the morning
 carries a share of that order; at the decision hour the store counts what is left and orders up
 to a calibrated target for the rest of the day, delivered LEAD hours later. Days end as before:
-unsold units are wasted and missed sales are not made up.
+unsold units are wasted and missed sales are not made up. `shelf_life` then asks what changes if
+unsold units keep for more than one day.
 """
 
 import sys
@@ -24,7 +25,7 @@ from fresh_replenish.decisions.newsvendor import (
     top_up,
 )
 from fresh_replenish.forecasting import evaluate
-from fresh_replenish.forecasting.data import CLASSICAL
+from fresh_replenish.forecasting.data import BASELINE, CLASSICAL
 from fresh_replenish.imputation.data import Hours, load_hours
 from fresh_replenish.imputation.statistical import profile_recover
 from fresh_replenish.metrics import (
@@ -40,7 +41,9 @@ from fresh_replenish.uncertainty.conformal import KEYS, calibrate, shifts
 OPENING, CLOSING = 6, 22  # the hourly arrays cover 6:00 to 22:00
 LEAD = 2  # hours from order to delivery: an assumption, the data has no delivery times
 DECISION_HOURS = range(8, CLOSING - LEAD - 1)  # the last top-up lands an hour before closing
-MORNING_SHARES = np.round(np.arange(4, 11) / 10, 1)  # of the one-delivery order
+MORNING_SHARES = np.round(np.arange(4, 21) / 10, 1)  # of the one-delivery order
+LEVELS = np.round(np.arange(4, 41) / 10, 1)  # multiples of an order to try
+LIVES = (1, 2, 3)  # days unsold stock keeps: an assumption, the data has no shelf lives
 
 
 def hourly_demand(h: Hours, stop: int | None = None) -> np.ndarray:
@@ -61,10 +64,35 @@ def still_to_come(past: np.ndarray) -> np.ndarray:
     return 1 - share.cumsum(axis=1)
 
 
-def serve(morning, extra, early, late):
-    """Waste and lost sales of a day: `early` demand comes before the top-up lands, `late` after."""
-    stock = np.maximum(morning - early, 0) + extra
-    return np.maximum(stock - late, 0), np.maximum(early - morning, 0) + np.maximum(late - stock, 0)
+def _sell(stock: np.ndarray, demand: np.ndarray) -> np.ndarray:
+    """Sell from `stock` (series, days left), oldest first; returns the demand left unmet."""
+    for age in range(stock.shape[1]):
+        sold = np.minimum(stock[:, age], demand)
+        stock[:, age] -= sold
+        demand = demand - sold
+    return demand
+
+
+def serve(up_to, target, seen, early, demand, life: int = 1) -> tuple:
+    """Units delivered in the morning, topped up, wasted and lost, each as (series, days).
+
+    Each morning the shelf is filled up to `up_to`. After `seen` demand the store counts it and
+    orders up to `target`, which lands after `early` demand. The oldest units sell first, and
+    units are thrown away after `life` days. Stock that keeps needs a shelf that isn't empty on
+    the first day, so the days run twice and the second pass is what comes back.
+    """
+    stock = np.zeros((len(demand), life))  # column 0 is thrown away tonight
+    morning, extra, waste, lost = (np.zeros(demand.shape) for _ in range(4))
+    for d in [*range(demand.shape[1])] * min(life, 2):
+        morning[:, d] = np.maximum(up_to[:, d] - stock.sum(axis=1), 0)
+        stock[:, -1] += morning[:, d]
+        extra[:, d] = top_up(target[:, d], np.maximum(stock.sum(axis=1) - seen[:, d], 0))
+        unmet = _sell(stock, early[:, d])
+        stock[:, -1] += extra[:, d]
+        lost[:, d] = unmet + _sell(stock, demand[:, d] - early[:, d])
+        waste[:, d] = stock[:, 0]
+        stock = np.column_stack([stock[:, 1:], np.zeros(len(demand))])
+    return morning, extra, waste, lost
 
 
 @dataclass
@@ -107,17 +135,16 @@ def _rest_of_day(week: Week, hour: int) -> pd.DataFrame:
     return frame
 
 
-def _plan(week: Week, order, target, hour: int, share: float) -> tuple:
+def _plan(week: Week, order, target, hour: int, share: float, life: int = 1) -> tuple:
     """Units delivered, topped up, wasted and lost on every line-day under one plan."""
     t = hour - OPENING
-    morning = share * order
-    extra = top_up(target, np.maximum(morning - week.by_hour[..., t - 1], 0))
-    early = week.by_hour[..., t + LEAD - 1]
-    return morning + extra, extra, *serve(morning, extra, early, week.demand - early)
+    seen, early = week.by_hour[..., t - 1], week.by_hour[..., t + LEAD - 1]
+    morning, extra, waste, lost = serve(share * order, target, seen, early, week.demand, life)
+    return morning + extra, extra, waste, lost
 
 
-def _cost(week: Week, order, target, hour: int, share: float, r: float) -> float:
-    *_, waste, lost = _plan(week, order, target, hour, share)
+def _cost(week: Week, order, target, hour: int, share: float, r: float, life: int) -> float:
+    *_, waste, lost = _plan(week, order, target, hour, share, life)
     return (waste + r * lost).sum() / week.demand.sum()
 
 
@@ -127,16 +154,25 @@ def _draws(cost: np.ndarray, week: Week) -> np.ndarray:
     return bootstrap((sums, sums, week.demand.sum(axis=1)))[1]
 
 
-def _one_delivery(week: Week, order, r: float) -> tuple:
+def _one_delivery(week: Week, order, r: float, life: int = 1) -> tuple:
     """One delivery's waste, lost sales and draws, on all days and on days with no stockout."""
-    waste, lost = serve(order, 0, week.demand, 0)
+    none = np.zeros_like(week.demand)
+    *_, waste, lost = serve(order, none, none, week.demand, week.demand, life)
     cost = waste + r * lost
     return waste, lost, _draws(cost, week), _draws(cost * week.no_stockout, week)
 
 
-def _row(week: Week, one: tuple, order, target, hour: int, share: float, r: float) -> dict:
+def _best_level(past: Week, order, r: float, life: int) -> float:
+    """The multiple of the order that cost least on past weeks, with one delivery."""
+    none = np.zeros_like(order)
+    return min(LEVELS, key=lambda s: _cost(past, order, none, DECISION_HOURS[0], s, r, life))
+
+
+def _row(
+    week: Week, one: tuple, order, target, hour: int, share: float, r: float, life: int = 1
+) -> dict:
     """One plan's held-out results next to one delivery's, with paired intervals."""
-    delivered, extra, waste, lost = _plan(week, order, target, hour, share)
+    delivered, extra, waste, lost = _plan(week, order, target, hour, share, life)
     one_waste, one_lost, one_draws, one_clear = one
     cost, one_cost, clear = waste + r * lost, one_waste + r * one_lost, week.no_stockout
     draws, clear_draws = _draws(cost, week), _draws(cost * clear, week)
@@ -167,7 +203,12 @@ def _row(week: Week, one: tuple, order, target, hour: int, share: float, r: floa
 
 
 def run(
-    h: Hours, folds: pd.DataFrame, held_out: pd.DataFrame, ratios=RATIOS, headline=HEADLINE
+    h: Hours,
+    folds: pd.DataFrame,
+    held_out: pd.DataFrame,
+    ratios=RATIOS,
+    headline=HEADLINE,
+    life: int = 1,
 ) -> dict[str, pd.DataFrame]:
     """Score a top-up at every decision hour and cost ratio; only past weeks pick the plan."""
     if headline not in ratios:
@@ -176,12 +217,17 @@ def run(
     past = _week(calibrate(folds, shifts(folds, groups), groups), h)
     week = _week(held_out, h)
     orders = {r: order_at(week.deciles, critical_ratio(r)) for r in ratios}
-    one = {r: _one_delivery(week, orders[r], r) for r in ratios}
+    levels = {}
+    for r in ratios:  # stock that keeps makes overstock cheaper than the newsvendor rule assumes
+        past_order = order_at(past.deciles, critical_ratio(r))
+        levels[r] = 1.0 if life == 1 else _best_level(past, past_order, r, life)
+    one = {r: _one_delivery(week, levels[r] * orders[r], r, life) for r in ratios}
 
     def targets(rest: pd.DataFrame, table: pd.DataFrame, like: Week) -> np.ndarray:
         calibrated = calibrate(rest, table, groups)[CALIBRATED_COLUMNS]
         return calibrated.to_numpy(dtype=float).reshape(like.deciles.shape)
 
+    shares = MORNING_SHARES if life > 1 else MORNING_SHARES[MORNING_SHARES <= 1]
     rows, tables = [], {}
     for hour in DECISION_HOURS:
         past_rest = _rest_of_day(past, hour)
@@ -191,11 +237,11 @@ def run(
         for r in ratios:
             ratio = critical_ratio(r)
             on_past = order_at(past.deciles, ratio), order_at(past_targets, ratio)
-            costs = {s: _cost(past, *on_past, hour, s, r) for s in MORNING_SHARES}
+            costs = {s: _cost(past, *on_past, hour, s, r, life) for s in shares}
             share = min(costs, key=costs.get)
             target = order_at(week_targets, ratio)
-            row = _row(week, one[r], orders[r], target, hour, share, r)
-            rows.append(row | {"past_cost": costs[share]})
+            row = _row(week, one[r], orders[r], target, hour, share, r, life)
+            rows.append(row | {"past_cost": costs[share], "one_delivery_level": levels[r]})
 
     plans = pd.DataFrame(rows)
     plans["chosen"] = plans.index.isin(plans.groupby("ratio").past_cost.idxmin())
@@ -211,6 +257,74 @@ def run(
         morning_share=best.morning_share,
     )
     return {"plans": plans, "shifts": served, "sample": sample}
+
+
+def shelf_life(
+    h: Hours, folds: pd.DataFrame, forecasts: pd.DataFrame, r: float = HEADLINE, lives=LIVES
+) -> pd.DataFrame:
+    """The headlines if unsold stock keeps longer, one row per shelf life.
+
+    The fixed policies keep their order levels and count the stock carried over. Past weeks then
+    choose a fixed multiple of the median, at every shelf life, and the levels of cost-based
+    orders and the top-up where stock keeps, so no policy is judged against an untuned one.
+    """
+    held_out = forecasts[forecasts.model == CLASSICAL]
+    groups = held_out[[*KEYS, "group"]].drop_duplicates()
+    past = _week(calibrate(folds, shifts(folds, groups), groups), h)
+    past_median = past.frame.q50.to_numpy(dtype=float).reshape(past.demand.shape)
+    week = _week(held_out, h)
+
+    def median(model: str) -> np.ndarray:
+        rows = forecasts[forecasts.model == model].sort_values([*KEYS, "dt"])
+        return rows.q50.to_numpy(dtype=float).reshape(week.demand.shape)
+
+    policies = {
+        "last_week": median(BASELINE),
+        "median": median(CLASSICAL),
+        "cost_based": order_at(week.deciles, critical_ratio(r)),
+    }
+    rows = []
+    for life in lives:
+        plans = run(h, folds, held_out, ratios=(r,), headline=r, life=life)["plans"]
+        best = plans[plans.chosen].iloc[0]
+        one = {name: _one_delivery(week, q, r, life) for name, q in policies.items()}
+        costs = {n: (w + r * lost).sum() / week.demand.sum() for n, (w, lost, *_) in one.items()}
+        draws = {name: results[2] for name, results in one.items()}
+        versus = 1 - draws["cost_based"] / draws["median"]
+        level = _best_level(past, past_median, r, life)
+        tuned = _one_delivery(week, level * policies["median"], r, life)
+        tuned_median = (tuned[0] + r * tuned[1]).sum() / week.demand.sum()
+        retuned = _one_delivery(week, best.one_delivery_level * policies["cost_based"], r, life)
+        over_tuned = 1 - retuned[2] / tuned[2]
+        rows.append({
+            "life_days": life,
+            "last_week_cost": costs["last_week"],
+            "median_cost": costs["median"],
+            "cost_based_cost": costs["cost_based"],
+            "saving_vs_median": 1 - costs["cost_based"] / costs["median"],
+            "saving_vs_median_low": np.percentile(versus, 2.5),
+            "saving_vs_median_high": np.percentile(versus, 97.5),
+            "saving_vs_last_week": 1 - costs["cost_based"] / costs["last_week"],
+            "retuned_cost": best.one_delivery_cost,
+            "retuned_level": best.one_delivery_level,
+            "retuned_waste": best.one_delivery_waste,
+            "retuned_fill_rate": best.one_delivery_fill_rate,
+            "retuned_median_cost": tuned_median,
+            "retuned_median_level": level,
+            "retuned_saving_vs_median": 1 - best.one_delivery_cost / tuned_median,
+            "retuned_saving_low": np.percentile(over_tuned, 2.5),
+            "retuned_saving_high": np.percentile(over_tuned, 97.5),
+            "decision_hour": best.decision_hour,
+            "morning_share": best.morning_share,
+            "top_up_cost": best.cost,
+            "top_up_waste": best.waste,
+            "top_up_fill_rate": best.fill_rate,
+            "top_up_saving": best.saving,
+            "top_up_saving_low": best.saving_low,
+            "top_up_saving_high": best.saving_high,
+            "saved_per_store_day": best.saved_per_store_day,
+        })
+    return pd.DataFrame(rows)
 
 
 def replay(
@@ -235,6 +349,12 @@ def render_report(results: dict[str, pd.DataFrame]) -> str:
     r0 = s.headline_ratio
     best = p[p.chosen & (p.ratio == r0)].iloc[0]
     shown = ["decision_hour", "arrival_hour", "morning_share", "past_cost", "cost", "saving"]
+    life = results["shelf_life"]
+
+    def by_life(column: str, spec: str = ".0%") -> str:
+        values = zip(life.life_days, life[column], strict=True)
+        return ", ".join(f"{v:{spec}} at {d} day{'s' if d > 1 else ''}" for d, v in values)
+
     parts = [
         "# A second delivery",
         "One delivery commits the whole day's order before opening. Here the morning carries a "
@@ -269,6 +389,26 @@ def render_report(results: dict[str, pd.DataFrame]) -> str:
         md_table(p[p.chosen].drop(columns="chosen")),
         f"## Every decision hour at r = {r0:g}",
         md_table(p.loc[p.ratio == r0, shown]),
+        "## If stock keeps longer",
+        "Everything above throws unsold stock away the same night. The data has no shelf lives, "
+        f"so this lets unsold units keep for up to {int(life.life_days.max())} days at "
+        f"r = {r0:g}, oldest sold first. Each policy counts the stock it carries. The week runs "
+        "twice and the second pass is scored, so the shelf starts with normal stock.",
+        "- **Cost-based orders against the most accurate forecast, both at their one-day "
+        f"levels:** {by_life('saving_vs_median')}.",
+        f"- **Cost-based orders against last week's demand:** "
+        f"{by_life('saving_vs_last_week')}.",
+        f"- **Against a fixed multiple of the median, chosen on past weeks:** "
+        f"{by_life('retuned_saving_vs_median')}. The multiples are "
+        f"{by_life('retuned_median_level', '.1f')}. So most of the saving comes from ordering "
+        "more than the median, and per-line calibrated ranges add the rest.",
+        "- **What a second delivery is worth, in wasted units per store per day:** "
+        f"{by_life('saved_per_store_day', '.1f')}.",
+        "- **A second delivery against one:** "
+        f"{by_life('top_up_saving')}. Stock that keeps makes overstock cheaper, so the newsvendor "
+        "level is no longer the best one: for this comparison, past weeks choose the level of "
+        "the one delivery again, as well as the top-up's hour and share.",
+        md_table(life),
         "## Sample",
         md_table(results["sample"]),
     ]
@@ -292,11 +432,14 @@ def main(
     con = connect(*paths)
     stores = sample_stores(con, evaluate.SAMPLE_SHARE, np.random.default_rng(SEED))
     hours = load_hours(con, stores=stores, splits=("train", "eval"))
-    folds, held_out = (
-        pd.read_parquet(processed_dir / f"{name}.parquet", filters=[("model", "==", CLASSICAL)])
-        for name in steps
+    folds = pd.read_parquet(
+        processed_dir / "forecast_folds.parquet", filters=[("model", "==", CLASSICAL)]
     )
-    results = run(hours, folds, held_out)
+    forecasts = pd.read_parquet(
+        processed_dir / "forecast_eval.parquet", filters=[("model", "in", [CLASSICAL, BASELINE])]
+    )
+    results = run(hours, folds, forecasts[forecasts.model == CLASSICAL])
+    results["shelf_life"] = shelf_life(hours, folds, forecasts)
     (out_dir / "tables").mkdir(parents=True, exist_ok=True)
     for name, table in results.items():
         table.to_csv(out_dir / "tables" / f"topup_{name}.csv", index=False)

@@ -1,6 +1,6 @@
 # fresh-replenish
 
-**Ordering fresh food by cost instead of by the most accurate forecast cut simulated waste + lost-sales cost by 56%** on a held-out week: 4,928 store-product lines (538 products) in 90 quick-commerce dark stores, with a lost sale assumed to cost 9× a wasted unit. The [one-page summary](docs/summary.md) gives the business view.
+**Ordering fresh food by cost instead of by the most accurate forecast cut simulated waste + lost-sales cost by 56%** on a held-out week: 4,928 store-product lines (538 products) in 90 quick-commerce dark stores, with a lost sale assumed to cost 9× a wasted unit. Most of that comes from ordering more than the forecast: a fixed 1.7× the median, tuned on past weeks, gets within 6.5%. The [one-page summary](docs/summary.md) gives the business view.
 
 | What | Result |
 |---|---|
@@ -8,7 +8,9 @@
 | Forecast error (WAPE), held-out week | LightGBM 32.5%; Chronos-2 33.3% zero-shot; reorder last week 41.7% |
 | Forecast ranges that hold | 80% of demand inside the calibrated 10–90% range (target 80%) |
 | Cost of orders, against the most accurate forecast's median | −56% (−55% against reordering last week's demand) |
+| Cost of orders, against a fixed 1.7× that median, tuned on past weeks | −6.5% (95% CI 5–8%) |
 | A second delivery, ordered at 13:00 | a further −32% on the 90-store sample, −31% on all 50,000 lines (−23% on days with fully observed demand), before the delivery's own cost |
+| If unsold stock keeps 2–3 days | cost falls by two-thirds or more; ordering by cost keeps an 8–11% edge over a tuned multiple; a second delivery is worth far less |
 | Nightly batch / API | 50,000 series in 13.3 min; p95 14.7 ms per store request |
 | AI agent (50 questions × 3 runs) | 100% right tools; every final answer passed the number checker; every over-limit order went to a human |
 
@@ -45,7 +47,7 @@ uv run python -m fresh_replenish.imputation.recovery  # writes reports/demand_re
 uv run python -m fresh_replenish.forecasting.evaluate  # writes reports/forecasting.md (~10 min; ~2.5 GB of model weights the first time)
 uv run python -m fresh_replenish.uncertainty.conformal  # writes reports/calibration.md (~4 min)
 uv run python -m fresh_replenish.decisions.newsvendor   # writes reports/orders.md (seconds)
-uv run python -m fresh_replenish.decisions.topup        # writes reports/topup.md (~2 min)
+uv run python -m fresh_replenish.decisions.topup        # writes reports/topup.md (~3 min)
 uv run python -m fresh_replenish.serving.batch          # nightly orders for all 50,000 series (~13 min)
 uv run uvicorn --factory fresh_replenish.serving.api:create_app  # GET /reorder?store_id=0, POST /topup
 uv run python -m fresh_replenish.serving.latency        # writes reports/service.md
@@ -101,6 +103,7 @@ The checks use a held-out week (Jun 26–Jul 2) that no model saw.
 - **Costs are assumed:** with no prices in the data, a lost sale costs 0.5× to 9× a wasted unit. The headline is 9×, because quick commerce runs availability-first.
 - **Cost-based orders win:** at 9×, LightGBM's cost-based orders cost 55% less than reordering last week's demand (recovered, so its stockout gaps are filled in).
 - **The most accurate number is a poor order:** ordering LightGBM's median costs 2.3× as much as its cost-based order, and more than reordering last week's demand.
+- **Most of the gain is ordering more:** a fixed multiple of the median, chosen on past weeks (1.7×), costs 1.013 per unit of demand. Cost-based orders are 6.5% cheaper than that (95% CI 5–8%), so per-line calibrated ranges add that last part, not the whole 56%.
 - **LightGBM is cheapest overall,** at every cost ratio. A foundation model is cheapest in 27 of the 90 stores.
 
 ## A second delivery
@@ -114,6 +117,23 @@ The orders above commit the whole day before opening. The hourly data shows what
 - **At full scale:** replaying the served plan on all 50,000 lines in 898 stores saves 31% (0.953 to 0.654 per unit of demand), and 23% on days with no stockout. The plan was chosen on 90 stores, so about 90% of these lines played no part in it.
 - **Observed days:** on days with no stockout, where hourly demand is fully observed, the saving is 23%. On other days the afternoon is recovered, not seen. Days with no stockout are also quieter (average demand 1.25 against 1.79), so the gap is not all down to recovery.
 - **Not counted:** the delivery's own cost. At 9× the saving is worth 24.3 wasted units per store per day, so a second delivery pays only below that.
+
+## If stock keeps longer
+
+Everything above throws unsold stock away the same night. The data has no shelf lives, so this check lets unsold units keep for up to 3 days at 9×, oldest sold first.
+
+| Shelf life | Median as is | Tuned multiple of the median | Cost-based orders | With a second delivery | Second delivery's saving | Its worth (wasted units per store per day) |
+|---|---|---|---|---|---|---|
+| 1 day | 2.166 | 1.013 (1.7×) | 0.947 | 0.646 | 32% | 24.3 |
+| 2 days | 2.074 | 0.349 (2.2×) | 0.311 (1.3×) | 0.231 | 25% | 6.4 |
+| 3 days | 2.069 | 0.173 (2.7×) | 0.158 (1.5×) | 0.134 | 15% | 2.0 |
+
+Costs are per unit of demand. Multiples are chosen on past weeks for each shelf life.
+
+- **Shelf life matters most:** one extra day cuts the cost of cost-based orders by two-thirds.
+- **Ordering by cost keeps a small edge:** 6.5%, 11% and 8.5% over the tuned multiple, with 95% intervals above 0.
+- **The second delivery pays mainly for stock that lasts a day:** its worth falls by three-quarters at 2 days and by over 90% at 3 days.
+- **Why everything is re-tuned:** stock that keeps makes overstock cheap, so the newsvendor level stops being the best one. A first pass that left some policies untuned showed far bigger gaps; see [negative results](docs/negative_results.md).
 
 ## Service
 

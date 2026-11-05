@@ -29,6 +29,7 @@ def load() -> dict:
     return {
         "policies": pd.read_csv(TABLES / "orders_policies.csv"),
         "topup": pd.read_csv(TABLES / "topup_plans.csv"),
+        "shelf_life": pd.read_csv(TABLES / "topup_shelf_life.csv").set_index("life_days"),
         "forecasts": pd.read_parquet(PROCESSED_DIR / "forecast_eval.parquet"),
         "categories": data.categories(RAW_DIR / "data" / "train.parquet"),
         "stockouts": pd.read_csv(TABLES / "stockout_by_hour.csv"),
@@ -79,7 +80,9 @@ st.caption(
     f"Held-out week ({week.dt.min()} to {week.dt.max()}), {len(week) // week.dt.nunique():,} "
     f"store-product series in {week.store_id.nunique()} dark stores. Assumes a lost sale "
     f"costs {h['ratio']:g}x a wasted unit, because the data has no prices; "
-    "the Ordering policies tab shows other ratios."
+    "the Ordering policies tab shows other ratios. Most of the gain is ordering more than the "
+    f"forecast: a fixed {d['shelf_life'].retuned_median_level[1]:.1f}x the median, tuned on past "
+    f"weeks, gets within {d['shelf_life'].retuned_saving_vs_median[1]:.1%}."
 )
 cols = st.columns(4)
 cols[0].metric("vs most accurate forecast", f"-{h['vs_median']:.0%}")
@@ -178,7 +181,9 @@ with policy_tab:
         f"cost falls {best.saving:.0%} ({best.saving_no_stockout:.0%} on days with no stockout, "
         f"where hourly demand is fully observed). At {HEADLINE:g}x that is worth "
         f"{best.saved_per_store_day:.1f} wasted units per store per day, before the delivery's "
-        "own cost."
+        "own cost. That assumes unsold stock is thrown away the same night: if it keeps 2 or 3 "
+        f"days, the worth falls to {d['shelf_life'].saved_per_store_day[2]:.1f} and "
+        f"{d['shelf_life'].saved_per_store_day[3]:.1f}."
     )
 
 with forecast_tab:
