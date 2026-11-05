@@ -55,7 +55,8 @@ def test_percentile_labels_are_ranks_however_they_are_typed(label):
 
 @pytest.mark.parametrize("answer", [
     "Order 90 units.", "Order 10-90 units.", "Demand rises 50 %.", "Demand rises 50%.",
-    "Sales fall 90 % next week.", "The 90 percent level.",
+    "Sales fall 90 % next week.", "The 90 percent level.", "Demand is high (75 %).",
+    "Sales rise from 10 to 90 %.",
 ])
 def test_a_quantity_that_looks_like_a_percentile_is_still_rejected(answer):
     assert unsupported(answer, ['{"median": 5.0372, "ratio": 1.0}'])

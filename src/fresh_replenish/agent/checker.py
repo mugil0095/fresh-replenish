@@ -1,6 +1,7 @@
 """Numbers only from tools (spec section 11): every number in an answer must come from a tool
 output or the question. Rounding is allowed, and so are a fraction stated as a percentage (with
-a % sign), small whole counts (0-10, as in "3 days" or a numbered list) and ranks ("90th")."""
+a % sign), small whole counts (0-10, as in "3 days" or a numbered list) and ranks ("90th", or
+a percentile label however it is typed, like "90 % percentile" or "Median (50 %)")."""
 
 import re
 
@@ -12,8 +13,8 @@ RANK = ("st", "nd", "rd", "th")
 TYPED = [(re.compile(pattern, re.IGNORECASE), plain) for pattern, plain in (
     (r"(?<=\d)[ -](?=(?:st|nd|rd|th)\b)", ""),  # 90-th, 90 th
     (r"(\d) *%?[ -]*percentile", r"\1th percentile"),  # 90 percentile, 90 % percentile
-    (r"\b(low|median|high) *\((\d+) *%\)", r"\1 (\2th)"),  # Median (50 %)
-    (r"\b10 *%? *(?:-|to) *90 *%", "10th-90th"),  # 10 %-90 %, the forecast range
+    (r"\b(low *\(10|median *\(50|high *\(90) *%\)", r"\1th)"),  # Median (50 %)
+    (r"(?<!from )\b10 *%? *(?:-|to) *90 *%", "10th-90th"),  # 10 %-90 %, the forecast range
     (r"(?<=\d)(?:[ -]?percent\b| +%)", "%"),  # 90 percent, 90 %
 )]
 # Numbers written as words above ten; ten and below are counts, like the digits 0-10.
