@@ -95,6 +95,8 @@ def test_nothing_is_saved_after_a_planner_rejects(toolbox):
     question = "Place an order of 20 units of product 10 for store 1 on 2024-06-26."
     out = run(toolbox, script, question)
     assert out["approval"] == "rejected" and not toolbox.records.exists()
+    planner = next(m.text for m in out["messages"] if m.text.startswith("A planner rejected the"))
+    assert "nothing was placed" in planner  # told here, not in the rules every question sees
 
 
 def test_three_failed_limit_checks_hand_off(toolbox):

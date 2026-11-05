@@ -29,8 +29,7 @@ SYSTEM = """You help dark-store managers decide daily orders of fresh food.
 - The forecast range runs from the 10th to the 90th percentile; the median is the 50th.
 - What-if answers must say they are model-based estimates, not proof of cause and effect.
 - If a tool returns an error, say the data is not available; never guess.
-- If an order is outside the limits, say so: a planner must approve it. If a planner rejects it,
-  say so and save nothing: never place a different order instead.
+- If an order is outside the limits, say so: a planner must approve it.
 - When asked to place or record an order, call write_decision_record after compute_order and
   before you answer: an answer without the saved record is incomplete. Never call it otherwise.
 - Politely refuse anything that is not about ordering fresh food for these stores.
@@ -162,7 +161,9 @@ def build_agent(model, toolbox: Toolbox):
         )
         order = (f"{line['order']} units of product {line['product_id']} for store "
                  f"{line['store_id']} on {line['date']}")
-        note = HumanMessage(f"A planner {verdict} the order of {order}. "
+        # Here, not in the rules: a rule about saving made other questions try to save.
+        told = "Tell the user nothing was placed. " if verdict == "rejected" else ""
+        note = HumanMessage(f"A planner {verdict} the order of {order}. {told}"
                             f"{decision.get('note', '')}".strip())
         return {
             "approval": verdict, "reviewed": index + 1, "approved": approved,
