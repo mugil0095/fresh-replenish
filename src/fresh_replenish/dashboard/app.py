@@ -28,6 +28,7 @@ st.set_page_config(page_title="Fresh replenishment", layout="wide")
 def load() -> dict:
     return {
         "policies": pd.read_csv(TABLES / "orders_policies.csv"),
+        "topup": pd.read_csv(TABLES / "topup_plans.csv"),
         "forecasts": pd.read_parquet(PROCESSED_DIR / "forecast_eval.parquet"),
         "categories": data.categories(RAW_DIR / "data" / "train.parquet"),
         "stockouts": pd.read_csv(TABLES / "stockout_by_hour.csv"),
@@ -150,6 +151,34 @@ with policy_tab:
             ["policy", "cost", "cost_low", "cost_high", "fill_rate", "waste_share"]
         ].round(3),
         hide_index=True,
+    )
+
+    plans = d["topup"][d["topup"].ratio == HEADLINE]
+    best = plans[plans.chosen].iloc[0]
+    st.subheader("A second delivery")
+    by_hour = alt.Chart(plans, title="Cost per unit of demand, by top-up arrival hour").mark_line(
+        color=BLUE, point=alt.OverlayMarkDef(size=64, color=BLUE), strokeWidth=2
+    ).encode(
+        x=alt.X("arrival_hour:O", title="Top-up arrives at this hour", axis=alt.Axis(labelAngle=0)),
+        y=alt.Y("cost:Q", title="Cost per unit of demand", scale=alt.Scale(domainMin=0)),
+        tooltip=[alt.Tooltip("decision_hour:O", title="Ordered at"),
+                 alt.Tooltip("morning_share:Q", format=".0%", title="Sent in the morning"),
+                 alt.Tooltip("cost:Q", format=".3f"),
+                 alt.Tooltip("saving:Q", format=".0%", title="Saving")],
+    )
+    one = alt.Chart(plans.head(1)).encode(y="one_delivery_cost:Q")
+    label = one.mark_text(align="left", dy=-8, color=GRAY, text="One delivery").encode(
+        x=alt.value(6)
+    )
+    st.altair_chart(by_hour + one.mark_rule(color=GRAY, strokeDash=[4, 4]) + label,
+                    use_container_width=True)
+    st.caption(
+        f"Send {best.morning_share:.0%} of the order in the morning, count the shelf at "
+        f"{int(best.decision_hour)}:00 and top up for a {int(best.arrival_hour)}:00 delivery: "
+        f"cost falls {best.saving:.0%} ({best.saving_no_stockout:.0%} on days with no stockout, "
+        f"where hourly demand is fully observed). At {HEADLINE:g}x that is worth "
+        f"{best.saved_per_store_day:.1f} wasted units per store per day, before the delivery's "
+        "own cost."
     )
 
 with forecast_tab:

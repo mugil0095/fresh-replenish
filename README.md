@@ -8,6 +8,7 @@
 | Forecast error (WAPE), held-out week | LightGBM 32.5%; Chronos-2 33.3% zero-shot; reorder last week 41.7% |
 | Forecast ranges that hold | 80% of demand inside the calibrated 10–90% range (target 80%) |
 | Cost of orders, against the most accurate forecast's median | −56% (−55% against reordering last week's demand) |
+| A second delivery, ordered at 13:00 | a further −32% (−23% on days with fully observed demand), before the delivery's own cost |
 | Nightly batch / API | 50,000 series in 11.5 min; p95 7.3 ms per store request |
 | AI agent (50 questions × 3 runs) | 100% right tools; every final answer passed the number checker; every over-limit order went to a human |
 
@@ -24,6 +25,7 @@ The project:
 - **Hidden demand:** see [recovering hidden demand](reports/demand_recovery.md).
 - **Forecasting:** see [forecasting daily demand](reports/forecasting.md).
 - **Uncertainty and orders:** see [calibrated forecast ranges](reports/calibration.md) and [cost-based orders](reports/orders.md).
+- **Second delivery:** see [a second delivery](reports/topup.md).
 - **Service:** see [batch and API](reports/service.md) and [monitoring](reports/monitoring.md).
 - **Agent:** see the [agent evaluation](reports/agent_gpt-oss-120b.md).
 - **Communication:** a Streamlit dashboard (`uv run streamlit run src/fresh_replenish/dashboard/app.py`) and a [demo script](docs/demo.md).
@@ -43,6 +45,7 @@ uv run python -m fresh_replenish.imputation.recovery  # writes reports/demand_re
 uv run python -m fresh_replenish.forecasting.evaluate  # writes reports/forecasting.md (~10 min; ~2.5 GB of model weights the first time)
 uv run python -m fresh_replenish.uncertainty.conformal  # writes reports/calibration.md (~4 min)
 uv run python -m fresh_replenish.decisions.newsvendor   # writes reports/orders.md (seconds)
+uv run python -m fresh_replenish.decisions.topup        # writes reports/topup.md (~2 min)
 uv run python -m fresh_replenish.serving.batch          # nightly orders for all 50,000 series (~12 min)
 uv run uvicorn --factory fresh_replenish.serving.api:create_app  # GET /reorder?store_id=0
 uv run python -m fresh_replenish.serving.latency        # writes reports/service.md
@@ -99,6 +102,17 @@ The checks use a held-out week (Jun 26–Jul 2) that no model saw.
 - **Cost-based orders win:** at 9×, LightGBM's cost-based orders cost 55% less than reordering last week's demand (recovered, so its stockout gaps are filled in).
 - **The most accurate number is a poor order:** ordering LightGBM's median costs 2.3× as much as its cost-based order, and more than reordering last week's demand.
 - **LightGBM is cheapest overall,** at every cost ratio. A foundation model is cheapest in 27 of the 90 stores.
+
+## A second delivery
+
+The orders above commit the whole day before opening. The hourly data shows what a midday top-up would be worth.
+
+- **The plan:** send 80% of the order in the morning, count the shelf at 13:00, and order up to a rest-of-day target for a 15:00 delivery. The 2-hour lead time is assumed. The hour and share were chosen on four past weeks, and the held-out week only scores them.
+- **Result at 9×:** cost falls 32%, from 0.947 to 0.646 per unit of demand (paired 95% CI 31–33%). Waste drops by a quarter and the fill rate rises from 95.7% to 97.5%.
+- **Every cost ratio gains:** from 20% at 0.5× to 32% at 9×.
+- **Timing:** sales peak around 9:00 and 16:00, and the best delivery lands just before the second peak.
+- **Observed days:** on days with no stockout, where hourly demand is fully observed, the saving is 23%. On other days the afternoon is recovered, not seen. Days with no stockout are also quieter (average demand 1.25 against 1.79), so the gap is not all down to recovery.
+- **Not counted:** the delivery's own cost. At 9× the saving is worth 24.3 wasted units per store per day, so a second delivery pays only below that.
 
 ## Service
 

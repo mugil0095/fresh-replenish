@@ -28,6 +28,7 @@
 | Real demand hidden by stockouts | +28% overall, +62% on days with a stockout |
 | Ordering by cost vs ordering the most accurate forecast | −56% cost; served 96% of demand vs 77% |
 | Ordering by cost vs reordering last week's demand | −55% cost |
+| Adding a midday top-up delivery | a further −32% cost (−23% on days with fully observed demand), before the delivery's own cost |
 | Forecast ranges that hold on a new week | 80% of demand fell inside the stated 80% range |
 | AI agent, 50 scripted questions run 3 times | right tools 100%; every answer passed the number check; every risky order sent to a human |
 
@@ -38,6 +39,7 @@
 
 - **Set the service level from costs.** Each product's order should come from its forecast range at the level its waste and lost-sale costs justify, not from the single best guess.
 - **Recover hidden demand before forecasting.** Otherwise every stockout makes the next order smaller.
+- **Price a second delivery.** At the assumed 9×, counting the shelf at 13:00 and topping up by 15:00 pays if a delivery costs less than about 24 wasted units per store per day.
 - **Keep a human on unusual orders.** The agent explains the routine ones and routes the exceptions.
 
 ## Caveats
