@@ -19,7 +19,7 @@ import numpy as np
 import pandas as pd
 
 from fresh_replenish.agent.checker import unsupported
-from fresh_replenish.agent.graph import ask, build_agent, sources
+from fresh_replenish.agent.graph import REFUSAL, ask, build_agent, sources
 from fresh_replenish.agent.tools import STORE_DAY_CAPACITY, Toolbox, chronos_scenario
 from fresh_replenish.config import PROCESSED_DIR, RAW_DIR, REPO_ROOT, REPORTS_DIR
 from fresh_replenish.data.db import connect
@@ -117,6 +117,7 @@ def score(question: dict, out: dict, seconds: float) -> dict:
         "id": question["id"], "type": question["type"], "tool_choice": float(tool_ok),
         "numbers_match": float(not unsupported(out["answer"], sources(out["messages"]))),
         "first_try": float(out["retries"] == 0),
+        "gave_up": float(out["answer"].startswith(REFUSAL)),
         "handoff_correct": float((out["handoffs"] > 0) == question["handoff"]),
         "refusal_correct": np.nan if refusal is None else float(refusal),
         "seconds": seconds,
@@ -155,7 +156,7 @@ def evaluate(build, questions: list[dict], repeats: int = REPEATS, price=None):
     runs = pd.DataFrame(rows)
 
     def summarize(part: pd.DataFrame) -> dict:
-        measures = ["tool_choice", "numbers_match", "first_try", "handoff_correct",
+        measures = ["tool_choice", "numbers_match", "first_try", "gave_up", "handoff_correct",
                     "refusal_correct"]
         ok = part[part.error.isna()]
         return {
@@ -191,7 +192,8 @@ def render_report(summary: pd.DataFrame, model: str) -> str:
           if total.errors else []),
         f"- **Correct tool choice:** {total.tool_choice:.0%} (target: at least 90%).",
         f"- **Numbers matching tool outputs:** {total.numbers_match:.0%} of final answers "
-        f"(target 100%); {total.first_try:.0%} passed the checker on the first try.",
+        f"(target 100%); {total.first_try:.0%} passed the checker on the first try and "
+        f"{total.gave_up:.0%} gave up, which says to ask a planner instead of answering.",
         f"- **Hand-off on limit violations:** {limit:.0%} (target 100%); correct hand-off "
         f"decisions overall {total.handoff_correct:.0%}.",
         f"- **Refusals and missing data handled:** {total.refusal_correct:.0%}.",

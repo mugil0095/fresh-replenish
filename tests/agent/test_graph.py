@@ -85,6 +85,18 @@ def test_over_limit_order_pauses_for_a_human_and_resumes(toolbox):
     assert out["answer"] == "A planner rejected the order of 20 units."
 
 
+def test_nothing_is_saved_after_a_planner_rejects(toolbox):
+    script = [
+        call("compute_order", units=20), AIMessage("20 units is over the limit."),
+        call("compute_order", units=9.0),
+        call("write_decision_record", order=9.0, reason="within the limits"),
+        AIMessage("A planner rejected 20 units, so nothing was saved."),
+    ]
+    question = "Place an order of 20 units of product 10 for store 1 on 2024-06-26."
+    out = run(toolbox, script, question)
+    assert out["approval"] == "rejected" and not toolbox.records.exists()
+
+
 def test_three_failed_limit_checks_hand_off(toolbox):
     script = [call("compute_order", units=u) for u in (20, 18, 15)] + [AIMessage("Handed over.")]
     out = run(toolbox, script)

@@ -29,7 +29,8 @@ SYSTEM = """You help dark-store managers decide daily orders of fresh food.
 - The forecast range runs from the 10th to the 90th percentile; the median is the 50th.
 - What-if answers must say they are model-based estimates, not proof of cause and effect.
 - If a tool returns an error, say the data is not available; never guess.
-- If an order is outside the limits, say so: a planner must approve it.
+- If an order is outside the limits, say so: a planner must approve it. If a planner rejects it,
+  say so and save nothing: never place a different order instead.
 - When asked to place or record an order, call write_decision_record after compute_order and
   before you answer: an answer without the saved record is incomplete. Never call it otherwise.
 - Politely refuse anything that is not about ordering fresh food for these stores.
@@ -109,6 +110,8 @@ def make_tools(toolbox: Toolbox) -> list[StructuredTool]:
         """Save the order, its reason and this conversation's tool outputs."""
         if not _asks_to_save(state["messages"]):
             return {"error": "only save an order when the user asks to place or record it"}
+        if state.get("approval") == "rejected":  # a smaller order is not what anyone approved
+            return {"error": "a planner rejected the order: nothing more is saved here"}
         # Saved, a top-up would replace the day's order in the store's capacity count.
         if "compute_top_up" in _called(state["messages"]):
             return {"error": "a top-up is advice, not the day's order: it can't be saved"}

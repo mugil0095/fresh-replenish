@@ -2,7 +2,7 @@ from fakes import Scripted
 from langchain_core.messages import AIMessage
 
 from fresh_replenish.agent import evaluate
-from fresh_replenish.agent.graph import build_agent
+from fresh_replenish.agent.graph import REFUSAL, build_agent
 
 
 def test_ollama_cloud_requests_time_out(monkeypatch):
@@ -58,6 +58,13 @@ def test_report_lists_the_headline_measures(toolbox, orders):
     runs, summary = evaluate.evaluate(_factory(toolbox), questions, repeats=1)
     report = evaluate.render_report(summary, "scripted")
     assert report.startswith("# Agent evaluation") and "tool choice" in report
+    assert "0% gave up" in report
+
+
+def test_an_answer_that_gives_up_is_counted():
+    question = {"id": 1, "type": "why", "tools": [], "optional": [], "handoff": False}
+    out = {"tools": [], "answer": REFUSAL, "messages": [], "retries": 2, "handoffs": 0}
+    assert evaluate.score(question, out, 1.0)["gave_up"] == 1.0
 
 
 def test_main_without_a_model_names_the_setting(tmp_path, capsys, monkeypatch):
