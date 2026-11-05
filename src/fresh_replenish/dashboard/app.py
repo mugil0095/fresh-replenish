@@ -237,7 +237,7 @@ with agent_tab:
         f"**{agent.loc['all', 'tool_choice']:.0%}** of the time, every final answer passed the "
         f"number checker (**{agent.loc['all', 'numbers_match']:.0%}**), though "
         f"**{agent.loc['all', 'gave_up']:.0%}** gave up and told the user to ask a planner, and "
-        f"every over-limit order went to a planner "
+        "every over-limit order went to a planner "
         f"(**{agent.loc['limit', 'handoff_correct']:.0%}**). "
         "Misses are listed in the negative results."
     )

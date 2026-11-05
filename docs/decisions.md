@@ -469,7 +469,7 @@ A full re-check (tests on a clean copy, re-runs of Phases 1, 2 and 5, the API, t
 
   \* From tool calls; that run's records weren't kept.
 
-- **Run 1 looked fine until the answers were read.** After a planner rejected an order, the agent placed a smaller one itself. A code check now refuses any save once a planner rejects.
+- **Run 1 looked fine until the answers were read.** After a planner rejected an order, the agent placed a smaller one itself. A code check now refuses any save once a planner rejects, except an order a planner approved.
 - **Run 2 added a prompt rule for the same thing, and it backfired.** The rule reached every question: 5 "why" and other-ratio runs tried to save (one made 59 tool calls), 2 over-limit runs skipped the planner, and 2 of 12 record runs never saved.
 - **Run 3 moved the instruction into the message that reports a rejection,** so other questions see the same prompt as run 1. All 24 over-limit runs say no order was placed, all 12 record runs saved, all 12 top-ups with a count were right, and all 6 without one asked.
 - **Not fully explained:** 2 unasked save attempts remain in run 3, so the rule wasn't their only cause. They were refused, and nothing was saved.

@@ -149,7 +149,7 @@ A LangGraph agent turns the forecasts into explained orders.
 
 - **Tools:** five plain-code tools: forecast lookup, cost-based order within limits, top-up advice from a shelf count, Chronos-2 what-if, and decision record.
 - **Numbers:** a checker rejects an answer with a number that isn't in a tool output or the question; small counts and ranks like "90th" are allowed.
-- **Hand-off:** orders over the limits pause for a planner's approval. After a rejection, nothing more can be saved in that conversation.
+- **Hand-off:** orders over the limits pause for a planner's approval. After a rejection, only an order a planner approved can be saved in that conversation.
 - **Evaluation:** 56 scripted questions, each run three times, score tool choice, numbers, hand-offs, refusals and latency (and cost, when `FRESH_LLM_PRICE` is set).
 - **Results** ([agent evaluation](reports/agent_gpt-oss-120b.md)): on Ollama Cloud `gpt-oss:120b`, re-run with the top-up tool (misses are in [negative results](docs/negative_results.md)):
   - correct tool choice 99%;

@@ -47,6 +47,7 @@ class State(MessagesState):
     approval: str  # the latest planner decision: "approved" or "rejected"
     reviewed: int  # compute_order results already put to a planner
     approved: list  # [store_id, product_id, date, order] lines a planner approved
+    rejected: bool  # whether a planner has rejected any order in this conversation
 
 
 def _payload(message: ToolMessage):
@@ -109,7 +110,8 @@ def make_tools(toolbox: Toolbox) -> list[StructuredTool]:
         """Save the order, its reason and this conversation's tool outputs."""
         if not _asks_to_save(state["messages"]):
             return {"error": "only save an order when the user asks to place or record it"}
-        if state.get("approval") == "rejected":  # a smaller order is not what anyone approved
+        approved = _key(store_id, product_id, date, order) in state.get("approved", [])
+        if state.get("rejected") and not approved:  # a smaller order isn't what anyone approved
             return {"error": "a planner rejected the order: nothing more is saved here"}
         # Saved, a top-up would replace the day's order in the store's capacity count.
         if "compute_top_up" in _called(state["messages"]):
@@ -119,7 +121,6 @@ def make_tools(toolbox: Toolbox) -> list[StructuredTool]:
             check = toolbox.compute_order(store_id, product_id, date, units=order)
             if "error" in check:
                 return check
-            approved = _key(store_id, product_id, date, order) in state.get("approved", [])
             if not check["within_limits"] and not approved:
                 return {"error": "this order is outside the limits: a planner must approve it"}
             outputs = [_payload(m) for m in state["messages"] if isinstance(m, ToolMessage)]
@@ -167,6 +168,7 @@ def build_agent(model, toolbox: Toolbox):
                             f"{decision.get('note', '')}".strip())
         return {
             "approval": verdict, "reviewed": index + 1, "approved": approved,
+            "rejected": state.get("rejected", False) or verdict == "rejected",
             "messages": [note],
         }
 

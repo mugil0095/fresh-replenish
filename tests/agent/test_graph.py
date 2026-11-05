@@ -3,6 +3,7 @@ import json
 import pytest
 from fakes import Scripted
 from langchain_core.messages import AIMessage, HumanMessage
+from langgraph.types import Command
 
 from fresh_replenish.agent.graph import REFUSAL, ask, build_agent
 
@@ -97,6 +98,29 @@ def test_nothing_is_saved_after_a_planner_rejects(toolbox):
     assert out["approval"] == "rejected" and not toolbox.records.exists()
     planner = next(m.text for m in out["messages"] if m.text.startswith("A planner rejected the"))
     assert "nothing was placed" in planner  # told here, not in the rules every question sees
+
+
+@pytest.mark.parametrize(("decisions", "saved"), [((True, False), [10]), ((False, True), [11])])
+def test_only_the_approved_order_is_saved_after_mixed_decisions(toolbox, decisions, saved):
+    checks = [
+        {"name": "compute_order", "args": {**DAY, "product_id": p, "units": 20}, "id": str(p)}
+        for p in (10, 11)
+    ]
+    saves = [
+        {"name": "write_decision_record", "id": f"save {p}",
+         "args": {**DAY, "product_id": p, "order": order, "reason": "asked"}}
+        for p, order in ((10, 20.0 if decisions[0] else 9.0), (11, 20.0 if decisions[1] else 9.0))
+    ]
+    script = [AIMessage("", tool_calls=checks), AIMessage("Over the limit."), AIMessage("Next."),
+              AIMessage("", tool_calls=saves), AIMessage("Done.")]
+    app = build_agent(Scripted(responses=script), toolbox)
+    config = {"configurable": {"thread_id": "t"}}
+    question = "Place 20 units each of products 10 and 11 for store 1 on 2024-06-26."
+    app.invoke({"messages": [HumanMessage(question)]}, config)
+    for approved in decisions:
+        app.invoke(Command(resume={"approved": approved}), config)
+    lines = toolbox.records.read_text(encoding="utf-8").splitlines()
+    assert [json.loads(line)["product_id"] for line in lines] == saved
 
 
 def test_three_failed_limit_checks_hand_off(toolbox):
