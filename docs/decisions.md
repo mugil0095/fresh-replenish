@@ -440,6 +440,14 @@ A full re-check (tests on a clean copy, re-runs of Phases 1, 2 and 5, the API, t
 - **Left alone:** cost-based orders stay at the newsvendor level at one day, where the rule holds, so their numbers match `reports/orders.md`.
 - **Still not re-tuned:** the top-up's rest-of-day target stays at the critical ratio, which may understate it a little at 2–3 days.
 
+## 2026-11-05: Compose in CI
+
+- **Why:** `docker compose up` had never been run, because this laptop has no Docker. CI only tested the API's image. The dashboard had never run in CI at all: its test needs the dataset, so it skips there.
+- **Change:** a `compose` job replaces the `image` job, since it covers the same checks. It writes tiny stand-ins for the batch's outputs, starts all three services, and checks `/reorder`, `/topup`, MLflow's `/health` and the dashboard.
+- **Dashboard check:** Streamlit's health endpoint doesn't run the page, so the job opens it inside the container with Streamlit's test runner. That is not a browser.
+- **Same data in the test job:** the stand-ins come from `tests/dashboard/smoke_data.py`. Tests open the dashboard and call the API on them, so a broken stand-in fails before Docker does, and the dashboard now runs in CI's test job too.
+- **Guard:** the writer stops if the folder exists, so it can't replace real pipeline outputs.
+
 ## Known issues
 
 - **Hugging Face downloads on this laptop:** the antivirus intercepts HTTPS, so Hugging Face requests fail certificate checks. The forecasting run therefore used `HF_HUB_OFFLINE=1`, with the pinned weights already in the local cache.
