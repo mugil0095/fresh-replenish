@@ -32,7 +32,6 @@ def test_dashboard_opens_on_the_smoke_data(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "RAW_DIR", tmp_path / "raw")
     st.cache_data.clear()  # load() is cached by its code, not by these paths
     app = AppTest.from_file(str(APP), default_timeout=60).run()
-    st.cache_data.clear()
     _opens_with_the_headline(app)
     assert "1 store-product series in 1 dark stores" in app.caption[0].value
 

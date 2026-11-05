@@ -16,11 +16,12 @@ jobs:
 
   compose:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
       # Tiny stand-ins for the batch's outputs, which need the dataset.
-      - run: uv run --no-default-groups python tests/dashboard/smoke_data.py data
+      - run: uv run --locked --no-default-groups python tests/dashboard/smoke_data.py data
       - run: docker compose up --wait --wait-timeout 300
       - run: curl -fsS http://localhost:8000/health
       - run: curl -fsS "http://localhost:8000/reorder?store_id=1"
@@ -29,6 +30,10 @@ jobs:
           -d '{"store_id": 1, "date": "2024-06-26", "shelf": {"10": 2}}'
       # MLflow has no health check for Compose to wait on: a refused or reset connection means not up yet.
       - run: curl --retry 30 --retry-all-errors --retry-delay 2 -fsS http://localhost:5000/health
+      # /health doesn't touch the store, so ask it for an experiment too.
+      - run: >-
+          curl -fsS -X POST http://localhost:5000/api/2.0/mlflow/experiments/search
+          -H "content-type: application/json" -d '{"max_results": 1}'
       - run: curl -fsS http://localhost:8501/_stcore/health
       # That health check doesn't run the page, so open it with Streamlit's test runner.
       - run: >-
