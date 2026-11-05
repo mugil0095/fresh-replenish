@@ -112,9 +112,8 @@ with money:
     by_category = data.losses(d["forecasts"], d["categories"], ratio)
     by_store = data.losses(d["forecasts"], d["categories"], ratio, by="store_id")
     left.altair_chart(stacked(by_category.head(12), "first_category_id",
-                              "Costliest product categories"), use_container_width=True)
-    right.altair_chart(stacked(by_store.head(12), "store_id", "Costliest stores"),
-                       use_container_width=True)
+                              "Costliest product categories"))
+    right.altair_chart(stacked(by_store.head(12), "store_id", "Costliest stores"))
     hours = alt.Chart(d["stockouts"], title="Share of hours out of stock, by hour of day").mark_bar(
         color=BLUE, cornerRadiusEnd=4
     ).encode(
@@ -122,7 +121,7 @@ with money:
         y=alt.Y("stockout_share:Q", title="Out of stock", axis=alt.Axis(format="%")),
         tooltip=[alt.Tooltip("hour:O"), alt.Tooltip("stockout_share:Q", format=".1%")],
     )
-    st.altair_chart(hours, use_container_width=True)
+    st.altair_chart(hours)
     st.caption("Evening demand is the most hidden: stockouts climb through the day.")
 
 with policy_tab:
@@ -146,7 +145,7 @@ with policy_tab:
                  alt.Tooltip("cost:Q", format=".3f"),
                  alt.Tooltip("fill_rate:Q", format=".1%", title="Fill rate")],
     )
-    st.altair_chart(line, use_container_width=True)
+    st.altair_chart(line)
     st.caption("When lost sales cost more than waste, ordering the most accurate number is "
                "the wrong decision: the cost-based order is cheaper at every ratio above 1.")
     st.dataframe(
@@ -173,8 +172,7 @@ with policy_tab:
     label = one.mark_text(align="left", dy=-8, color=GRAY, text="One delivery").encode(
         x=alt.value(6)
     )
-    st.altair_chart(by_hour + one.mark_rule(color=GRAY, strokeDash=[4, 4]) + label,
-                    use_container_width=True)
+    st.altair_chart(by_hour + one.mark_rule(color=GRAY, strokeDash=[4, 4]) + label)
     st.caption(
         f"Send {best.morning_share:.0%} of the order in the morning, count the shelf at "
         f"{int(best.decision_hour)}:00 and top up for a {int(best.arrival_hour)}:00 delivery: "
@@ -212,7 +210,7 @@ with forecast_tab:
     )
     st.altair_chart((band + before + median + actual).properties(
         title="Recovered demand (gray), forecast range (blue band), median (blue), actual (orange)"
-    ), use_container_width=True)
+    ))
 
 with order_tab:
     orders = d["orders"]

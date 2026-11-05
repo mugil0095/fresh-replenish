@@ -447,6 +447,8 @@ A full re-check (tests on a clean copy, re-runs of Phases 1, 2 and 5, the API, t
 - **Dashboard check:** Streamlit's health endpoint doesn't run the page, so the job opens it inside the container with Streamlit's test runner. That is not a browser.
 - **Same data in the test job:** the stand-ins come from `tests/dashboard/smoke_data.py`. Tests open the dashboard and call the API on them, so a broken stand-in fails before Docker does, and the dashboard now runs in CI's test job too.
 - **Guard:** the writer stops if the folder exists, so it can't replace real pipeline outputs.
+- **Result:** it passed on its first run. All three services started, `/reorder` and `/topup` answered, MLflow returned its Default experiment, and the dashboard opened with its 5 tabs and no errors.
+- **What the log showed:** Streamlit warned 6 times that `use_container_width` is going away. Its default already stretches these charts, so the argument is gone. All 6 still fill their space on the real data.
 
 ## Known issues
 
