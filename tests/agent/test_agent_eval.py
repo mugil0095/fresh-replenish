@@ -10,14 +10,18 @@ def test_ollama_cloud_requests_time_out(monkeypatch):
     assert evaluate.chat_model("ollama:gpt-oss:120b")._client._client.timeout.read == 120
 
 
-def test_fifty_questions_of_every_type_from_the_orders(orders):
+def test_every_type_of_question_comes_from_the_orders(orders):
     questions = evaluate.make_questions(orders)
-    assert len(questions) == 50 and questions == evaluate.make_questions(orders)  # seeded
+    assert len(questions) == 56 and questions == evaluate.make_questions(orders)  # seeded
     counts = {t: sum(q["type"] == t for q in questions) for t in evaluate.TYPES}
     assert counts == evaluate.TYPES
     limit = next(q for q in questions if q["type"] == "limit")
     assert limit["handoff"] and limit["tools"] == ["compute_order"]
     assert "write_decision_record" in limit["optional"]  # "place an order" may try to record it
+    top_ups = [q for q in questions if q["type"] == "top_up"]
+    assert all(q["tools"] == ["compute_top_up"] for q in top_ups)
+    assert "counted 2.5 units" in top_ups[0]["question"]  # below the 4.5 target
+    assert "counted 5.5 units" in top_ups[1]["question"]  # no top-up needed
 
 
 def _factory(toolbox):

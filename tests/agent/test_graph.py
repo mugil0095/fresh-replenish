@@ -23,6 +23,25 @@ def test_tool_loop_answers_with_tool_numbers(toolbox):
     assert out["tools"] == ["get_forecast"] and not out["handoffs"]
 
 
+def test_a_shelf_count_is_answered_from_the_top_up_tool(toolbox):
+    question = "Store 1 counted 1.5 units of product 10 on 2024-06-26. How much should it top up?"
+    script = [call("compute_top_up", shelf=1.5), AIMessage("Top up 3.0 units, here by 15:00.")]
+    out = run(toolbox, script, question)
+    assert out["tools"] == ["compute_top_up"] and out["retries"] == 0 and not out["handoffs"]
+
+
+def test_a_top_up_is_never_saved_as_the_days_order(toolbox):
+    both = AIMessage("", tool_calls=[
+        {"name": "compute_top_up", "args": {**DAY, "shelf": 1.5}, "id": "1"},
+        {"name": "write_decision_record", "args": {**DAY, "order": 3.0, "reason": "top-up"},
+         "id": "2"},
+    ])
+    question = "Place a top-up of product 10 for store 1 on 2024-06-26: 1.5 are on the shelf."
+    out = run(toolbox, [both, AIMessage("Top up 3.0 units. Nothing was saved.")], question)
+    assert not toolbox.records.exists()
+    assert "advice" in out["messages"][3].text  # the save call's result
+
+
 def test_checker_rejects_an_invented_number_then_accepts_a_retry(toolbox):
     out = run(toolbox, [call("compute_order"), AIMessage("Order 12.5."), AIMessage("Order 9.0.")])
     assert out["answer"] == "Order 9.0." and out["retries"] == 1

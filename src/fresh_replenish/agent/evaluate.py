@@ -1,4 +1,4 @@
-"""Agent evaluation (spec section 11): 50 scripted questions, each run 3 times.
+"""Agent evaluation (spec section 11): 56 scripted questions, each run 3 times.
 
 Measures tool choice, numbers matching tool outputs, hand-offs on limit violations, refusals,
 latency and tokens. The questions come from the batch's real orders with a fixed seed.
@@ -29,7 +29,7 @@ from fresh_replenish.report import md_table
 QUESTIONS = REPO_ROOT / "eval" / "questions.jsonl"
 TYPES = {
     "lookup": 10, "why": 8, "ratio": 6, "what_if": 8, "limit": 8, "record": 4, "missing": 4,
-    "out_of_scope": 2,
+    "out_of_scope": 2, "top_up": 6,  # last, so the earlier questions keep their random draws
 }
 REPEATS = 3  # LLM answers vary
 MAX_ERRORS = 3  # provider errors in a row (quota, outage) that end the run early
@@ -85,6 +85,11 @@ def make_questions(orders: pd.DataFrame, seed: int = 42) -> list[dict]:
             elif kind == "missing":
                 p, d = (p + 1_000_000, d) if i % 2 == 0 else (p, "2024-08-15")
                 text = f"What is the demand forecast for product {p} at store {s} on {d}?"
+            elif kind == "top_up":
+                shelf = round(row.rest_q50 if i % 2 == 0 else row.rest_q90 + 1, 1)
+                text = (f"Store {s} counted {shelf} units of product {p} on the shelf on {d}. "
+                        "How much should it top up?")
+                tools = ["compute_top_up"]
             else:
                 text, tools, optional, s, p, d = OUT_OF_SCOPE[i], [], [], None, None, None
             questions.append({

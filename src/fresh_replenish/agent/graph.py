@@ -1,4 +1,4 @@
-"""The replenishment agent (spec section 11): one LangGraph agent with four plain-code tools.
+"""The replenishment agent (spec section 11): one LangGraph agent with five plain-code tools.
 
 agent -> tools -> limit check (a human takes over after 3 failed checks) -> agent
       -> human approval for each order that failed its limits -> number check -> end.
@@ -23,6 +23,8 @@ SYSTEM = """You help dark-store managers decide daily orders of fresh food.
 - Every number you state must come from a tool output: quote it as given, never compute one.
 - For an order, call compute_order and explain it with the get_forecast range and the cost ratio
   (lost-sale cost / waste cost; 9 by default, which orders at the 90th percentile).
+- For a shelf count, call compute_top_up and say how much to top up, when the shelf is counted and
+  when the delivery arrives. A top-up is advice: never save it, and say nothing was ordered.
 - The forecast range runs from the 10th to the 90th percentile; the median is the 50th.
 - What-if answers must say they are model-based estimates, not proof of cause and effect.
 - If a tool returns an error, say the data is not available; never guess.
@@ -79,6 +81,11 @@ def sources(messages: list) -> list[str]:
     ]
 
 
+def _called(messages: list) -> list[str]:
+    """The tools the model has called so far, in order."""
+    return [c["name"] for m in messages if isinstance(m, AIMessage) for c in m.tool_calls]
+
+
 def _key(store_id, product_id, date, order) -> list:
     return [int(store_id), int(product_id), str(date), round(float(order), 2)]
 
@@ -100,6 +107,9 @@ def make_tools(toolbox: Toolbox) -> list[StructuredTool]:
         """Save the order, its reason and this conversation's tool outputs."""
         if not _asks_to_save(state["messages"]):
             return {"error": "only save an order when the user asks to place or record it"}
+        # Saved, a top-up would replace the day's order in the store's capacity count.
+        if "compute_top_up" in _called(state["messages"]):
+            return {"error": "a top-up is advice, not the day's order: it can't be saved"}
         # Checked here, not from earlier messages: a call in the same step can't see them.
         with toolbox.lock:  # parallel calls run in threads: check and save as one step
             check = toolbox.compute_order(store_id, product_id, date, units=order)
@@ -111,7 +121,9 @@ def make_tools(toolbox: Toolbox) -> list[StructuredTool]:
             outputs = [_payload(m) for m in state["messages"] if isinstance(m, ToolMessage)]
             return toolbox.write_decision_record(store_id, product_id, date, order, reason, outputs)
 
-    methods = (toolbox.get_forecast, toolbox.compute_order, toolbox.what_if)
+    methods = (
+        toolbox.get_forecast, toolbox.compute_order, toolbox.compute_top_up, toolbox.what_if,
+    )
     return [StructuredTool.from_function(f) for f in (*methods, write_decision_record)]
 
 
@@ -194,7 +206,7 @@ def ask(app, question: str, approve: bool = False) -> dict:
     messages = result["messages"]
     return {
         "answer": messages[-1].text,
-        "tools": [c["name"] for m in messages if isinstance(m, AIMessage) for c in m.tool_calls],
+        "tools": _called(messages),
         "handoffs": handoffs,
         "approval": result.get("approval"),
         "retries": result.get("retries", 0),
