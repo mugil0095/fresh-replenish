@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
 
-from fresh_replenish.metrics import DECILE_COLUMNS
+from fresh_replenish.metrics import DECILE_COLUMNS, REST_COLUMNS
 from fresh_replenish.serving import latency
 from fresh_replenish.serving.api import create_app
 
@@ -22,6 +22,75 @@ def orders_path(tmp_path):
     path = tmp_path / "orders.parquet"
     rows.assign(order=9.0, as_of="2024-06-25", ratio=9.0).to_parquet(path, index=False)
     return path
+
+
+@pytest.fixture
+def client(orders_path):
+    """Orders with rest-of-day targets 0.5 ... 4.5, as the batch writes them."""
+    rows = pd.read_parquet(orders_path)
+    rows[REST_COLUMNS] = np.linspace(0.5, 4.5, 9)
+    rows.assign(decision_hour=13, arrival_hour=15, morning_share=0.8).to_parquet(orders_path)
+    return TestClient(create_app(orders_path))
+
+
+COUNT = {"store_id": 1, "date": "2024-06-26", "shelf": {"10": 1.5, "11": 6.0}}
+
+
+def test_a_shelf_count_is_topped_up_to_the_target(client):
+    body = client.post("/topup", json=COUNT).json()
+    assert body["critical_ratio"] == pytest.approx(0.9) and body["as_of"] == "2024-06-25"
+    assert (body["decision_hour"], body["arrival_hour"]) == (13, 15)
+    assert body["lines"] == [
+        {"product_id": 10, "shelf": 1.5, "target": 4.5, "top_up": 3.0},
+        {"product_id": 11, "shelf": 6.0, "target": 4.5, "top_up": 0.0},
+    ]
+
+
+def test_a_lower_ratio_tops_up_less(client):
+    body = client.post("/topup", json=COUNT | {"ratio": 1}).json()
+    assert [line["target"] for line in body["lines"]] == [2.5, 2.5]  # the median
+
+
+def test_only_the_counted_lines_come_back(client):
+    body = client.post("/topup", json=COUNT | {"shelf": {"11": 0}}).json()
+    assert [line["product_id"] for line in body["lines"]] == [11]
+
+
+@pytest.mark.parametrize(("change", "status", "message"), [
+    ({"store_id": 99}, 404, "no orders for store 99"),
+    ({"date": "2024-07-09"}, 404, "on 2024-07-09"),
+    ({"shelf": {"10": 1, "77": 2, "78": 1}}, 422, "[77, 78]"),
+    ({"shelf": {"10": -1}}, 422, "greater than or equal to 0"),
+    ({"shelf": {}}, 422, "at least 1 item"),
+    ({"ratio": 20}, 422, "less than or equal to 9"),
+])
+def test_bad_shelf_counts(client, change, status, message):
+    response = client.post("/topup", json=COUNT | change)
+    assert response.status_code == status and message in response.text
+
+
+def test_a_count_that_is_not_a_number_is_refused(client):
+    body = '{"store_id": 1, "date": "2024-06-26", "shelf": {"10": NaN}}'
+    response = client.post("/topup", content=body, headers={"content-type": "application/json"})
+    assert response.status_code == 422
+
+
+def test_orders_without_targets_ask_for_a_new_batch(orders_path):
+    response = TestClient(create_app(orders_path)).post("/topup", json=COUNT)
+    assert response.status_code == 503 and "run the batch job" in response.text
+
+
+def test_no_orders_file_means_no_top_up(tmp_path):
+    response = TestClient(create_app(tmp_path / "none.parquet")).post("/topup", json=COUNT)
+    assert response.status_code == 503
+
+
+def test_reorder_says_how_much_to_send_in_the_morning(client, orders_path):
+    assert client.get("/reorder", params={"store_id": 1}).json()["morning_share"] == 0.8
+    old = pd.read_parquet(orders_path).drop(columns="morning_share")
+    old.to_parquet(orders_path)
+    os.utime(orders_path, (time.time() + 60,) * 2)
+    assert client.get("/reorder", params={"store_id": 1}).json()["morning_share"] is None
 
 
 def test_health_reports_loaded_orders(orders_path, tmp_path):
@@ -82,6 +151,17 @@ def test_latency_gives_up_when_the_server_cannot_start(orders_path, monkeypatch)
     monkeypatch.setattr(latency.uvicorn.Server, "run", lambda self: None)  # never starts
     with pytest.raises(RuntimeError, match="did not start"):
         latency.measure(create_app(orders_path), [1], requests=1, start_timeout=0.2)
+
+
+def test_latency_can_measure_another_call(client):
+    calls = []
+
+    def call(http, store):
+        calls.append(store)
+        return http.post("/topup", json=COUNT)
+
+    result = latency.measure(client.app, [1], requests=3, call=call)
+    assert calls == [1, 1, 1] and result["requests"] == 3
 
 
 def test_latency_is_measured_over_http(orders_path):

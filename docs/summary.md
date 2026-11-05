@@ -17,8 +17,8 @@
 2. **Forecast** each product's demand a week ahead as a range, not a single number. LightGBM was compared with Amazon's, Google's and Datadog's AI forecasting models.
 3. **Order by cost:** each store orders the amount that minimises waste plus lost sales, given what each one costs.
 4. **Serve and explain:**
-   - a nightly job writes orders for all 50,000 store-product lines in 11.5 minutes;
-   - an API serves them in 7 ms;
+   - a nightly job writes orders for all 50,000 store-product lines in 13.3 minutes;
+   - an API serves them in about 15 ms, and turns a store's midday shelf count into a top-up order;
    - an AI agent explains orders, answers "what if we discount this?", and sends unusual orders to a human.
 
 ## What we found
@@ -28,7 +28,7 @@
 | Real demand hidden by stockouts | +28% overall, +62% on days with a stockout |
 | Ordering by cost vs ordering the most accurate forecast | −56% cost; served 96% of demand vs 77% |
 | Ordering by cost vs reordering last week's demand | −55% cost |
-| Adding a midday top-up delivery | a further −32% cost (−23% on days with fully observed demand), before the delivery's own cost |
+| Adding a midday top-up delivery | a further −31% cost across all 50,000 lines (−23% on days with fully observed demand), before the delivery's own cost |
 | Forecast ranges that hold on a new week | 80% of demand fell inside the stated 80% range |
 | AI agent, 50 scripted questions run 3 times | right tools 100%; every answer passed the number check; every risky order sent to a human |
 

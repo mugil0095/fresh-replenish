@@ -16,12 +16,24 @@ import pandas as pd
 from fresh_replenish.config import PROCESSED_DIR, RAW_DIR, REPORTS_DIR
 from fresh_replenish.data.db import connect, sample_stores
 from fresh_replenish.data.download import local_paths
-from fresh_replenish.decisions.newsvendor import HEADLINE, RATIOS, critical_ratio, order_at
+from fresh_replenish.decisions.newsvendor import (
+    HEADLINE,
+    RATIOS,
+    critical_ratio,
+    order_at,
+    top_up,
+)
 from fresh_replenish.forecasting import evaluate
 from fresh_replenish.forecasting.data import CLASSICAL
 from fresh_replenish.imputation.data import Hours, load_hours
 from fresh_replenish.imputation.statistical import profile_recover
-from fresh_replenish.metrics import CALIBRATED_COLUMNS, DECILE_COLUMNS, SEED, bootstrap
+from fresh_replenish.metrics import (
+    CALIBRATED_COLUMNS,
+    DECILE_COLUMNS,
+    REST_COLUMNS,
+    SEED,
+    bootstrap,
+)
 from fresh_replenish.report import md_table
 from fresh_replenish.uncertainty.conformal import KEYS, calibrate, shifts
 
@@ -47,11 +59,6 @@ def still_to_come(past: np.ndarray) -> np.ndarray:
     total = usual.sum(axis=1, keepdims=True)
     share = np.where(total > 0, usual / np.maximum(total, 1e-9), usual.sum(axis=0) / usual.sum())
     return 1 - share.cumsum(axis=1)
-
-
-def top_up(target, morning, seen):
-    """Units to order up to the target, counting what is left on the shelf at the decision hour."""
-    return np.maximum(target - np.maximum(morning - seen, 0), 0)
 
 
 def serve(morning, extra, early, late):
@@ -104,7 +111,7 @@ def _plan(week: Week, order, target, hour: int, share: float) -> tuple:
     """Units delivered, topped up, wasted and lost on every line-day under one plan."""
     t = hour - OPENING
     morning = share * order
-    extra = top_up(target, morning, week.by_hour[..., t - 1])
+    extra = top_up(target, np.maximum(morning - week.by_hour[..., t - 1], 0))
     early = week.by_hour[..., t + LEAD - 1]
     return morning + extra, extra, *serve(morning, extra, early, week.demand - early)
 
@@ -134,6 +141,7 @@ def _row(week: Week, one: tuple, order, target, hour: int, share: float, r: floa
     cost, one_cost, clear = waste + r * lost, one_waste + r * one_lost, week.no_stockout
     draws, clear_draws = _draws(cost, week), _draws(cost * clear, week)
     demand = week.demand.sum()
+    store_days = week.frame.store_id.nunique() * week.demand.shape[1]
     return {
         "ratio": r,
         "decision_hour": hour,
@@ -149,7 +157,7 @@ def _row(week: Week, one: tuple, order, target, hour: int, share: float, r: floa
         "saving_no_stockout": 1 - cost[clear].sum() / one_cost[clear].sum(),
         "saving_no_stockout_low": np.percentile(1 - clear_draws / one_clear, 2.5),
         "saving_no_stockout_high": np.percentile(1 - clear_draws / one_clear, 97.5),
-        "saved_per_line_day": (one_cost - cost).mean(),
+        "saved_per_store_day": (one_cost - cost).sum() / store_days,
         "waste": waste.sum() / demand,
         "one_delivery_waste": one_waste.sum() / demand,
         "fill_rate": 1 - lost.sum() / demand,
@@ -174,10 +182,10 @@ def run(
         calibrated = calibrate(rest, table, groups)[CALIBRATED_COLUMNS]
         return calibrated.to_numpy(dtype=float).reshape(like.deciles.shape)
 
-    rows = []
+    rows, tables = [], {}
     for hour in DECISION_HOURS:
         past_rest = _rest_of_day(past, hour)
-        table = shifts(past_rest, groups)
+        table = tables[hour] = shifts(past_rest, groups)
         past_targets = targets(past_rest, table, past)
         week_targets = targets(_rest_of_day(week, hour), table, week)
         for r in ratios:
@@ -190,15 +198,36 @@ def run(
             rows.append(row | {"past_cost": costs[share]})
 
     plans = pd.DataFrame(rows)
-    lines_per_store = len(h.ids) / h.ids.store_id.nunique()
-    plans["saved_per_store_day"] = plans.pop("saved_per_line_day") * lines_per_store
     plans["chosen"] = plans.index.isin(plans.groupby("ratio").past_cost.idxmin())
     sample = pd.DataFrame([{
         "stores": h.ids.store_id.nunique(), "series": len(h.ids),
         "past_days": past.demand.shape[1], "held_out_days": week.demand.shape[1],
         "lead_hours": LEAD, "headline_ratio": headline,
     }])
-    return {"plans": plans, "sample": sample}
+    best = plans[plans.chosen & (plans.ratio == headline)].iloc[0]
+    served = tables[int(best.decision_hour)].assign(
+        decision_hour=int(best.decision_hour),
+        arrival_hour=int(best.arrival_hour),
+        morning_share=best.morning_share,
+    )
+    return {"plans": plans, "shifts": served, "sample": sample}
+
+
+def replay(
+    h: Hours, orders: pd.DataFrame, actual: pd.DataFrame, r: float = HEADLINE
+) -> pd.DataFrame:
+    """Score the batch's served plan on the week's demand: one row, as in `run`."""
+    calibrated = dict(zip(DECILE_COLUMNS, CALIBRATED_COLUMNS, strict=True))
+    frame = orders.merge(actual, on=[*KEYS, "dt"]).rename(columns=calibrated)
+    week = _week(
+        frame.assign(actual=frame.recovered_demand, in_stock=frame.stockout_hours == 0), h
+    )
+    level = critical_ratio(r)
+    order = order_at(week.deciles, level)
+    rest = week.frame[REST_COLUMNS].to_numpy(dtype=float).reshape(week.deciles.shape)
+    hour, share = int(orders.decision_hour.iloc[0]), float(orders.morning_share.iloc[0])
+    row = _row(week, _one_delivery(week, order, r), order, order_at(rest, level), hour, share, r)
+    return pd.DataFrame([row | {"series": len(h.ids), "stores": h.ids.store_id.nunique()}])
 
 
 def render_report(results: dict[str, pd.DataFrame]) -> str:

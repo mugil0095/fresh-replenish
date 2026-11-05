@@ -7,7 +7,7 @@ What this project can and can't claim. Results that failed or didn't hold are in
 - **Costs are assumed.** The data has no prices, so a lost sale is assumed to cost 0.5× to 9× a wasted unit. The −56% headline is at 9×; at equal costs, ordering by cost and ordering the forecast cost about the same.
 - **Relative units.** Sales are normalised, so results are percentages and ratios, not money or units.
 - **Daily orders only.** No lead times, shelf life beyond one day, pack sizes, minimum order quantities or supplier constraints.
-- **The second delivery is simulated too.** Its −32% leaves out the delivery's own cost, assumes a 2-hour lead time and an exact shelf count, and partly rests on recovered afternoon demand (−23% on days with no stockout). The API doesn't serve top-ups.
+- **The second delivery is simulated too.** Its −32% leaves out the delivery's own cost, assumes a 2-hour lead time and an exact shelf count, and partly rests on recovered afternoon demand (−23% on days with no stockout). `/topup` trusts the count and the clock: its targets assume one 13:00 count a day. A later count over-orders, and a second count before the delivery lands orders the same units again, because the API keeps no record of what was ordered.
 - **Limits are made up.** The agent's line limit (1.5 × the 90th percentile) and the 400-unit store-day capacity are assumptions, not store rules.
 - **What-ifs aren't causal.** Discounts and promotions weren't assigned at random, so Chronos-2 scenario answers are model estimates.
 - **Agent scores are in-sample.** The prompt and the save rule were tuned on the same 50 questions they're scored on, with one model (`gpt-oss:120b`). The save tool is offered only when the question says place, record or save.

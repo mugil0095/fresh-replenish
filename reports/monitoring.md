@@ -12,6 +12,8 @@ The batch run as of 2024-06-25 forecast the next week; this report checks it aga
 
 - **Categories with a stockout alert:** 3, 4, 7, 11, 12, 13, 14, 31.
 
+- **Second delivery, as served:** across 50,000 series, ordering at 13:00 for 15:00 costs 0.654 per unit of demand, 31% less than one delivery (0.953; 95% CI of the saving 31% to 32%), or 23% on days with no stockout. The delivery's own cost is not counted.
+
 ## Checks
 
 | category | series_days | bias | coverage | stockout_rate | stockout_rate_before | bias_alert | coverage_alert | stockout_alert |

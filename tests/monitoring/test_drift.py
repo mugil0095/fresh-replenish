@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from fresh_replenish.metrics import DECILE_COLUMNS, REST_COLUMNS
 from fresh_replenish.monitoring import drift
 
 ALERTS = ["bias_alert", "coverage_alert", "stockout_alert"]
@@ -48,6 +49,39 @@ def test_a_healthy_week_raises_no_alert():
 def test_each_problem_raises_its_alert(week, alert):
     flagged = _alerts(drift.monitor(week, _before())).loc["all"]
     assert flagged[alert] and flagged.sum() == 1
+
+
+def test_report_shows_the_served_second_delivery():
+    table = drift.monitor(_week(), _before())
+    second = pd.DataFrame([{
+        "series": 50000, "decision_hour": 13, "arrival_hour": 15, "cost": 0.6,
+        "one_delivery_cost": 0.9, "saving": 1 / 3, "saving_low": 0.3, "saving_high": 0.35,
+        "saving_no_stockout": 0.2,
+    }])
+    report = drift.render_report(table, "2024-06-25", second)
+    assert "50,000 series" in report and "33% less than one delivery" in report
+    assert "second delivery" not in drift.render_report(table, "2024-06-25").lower()
+
+
+def test_main_replays_the_served_plan(tiny_dataset, tmp_path, monkeypatch):
+    raw = tmp_path / "raw" / "data"
+    raw.mkdir(parents=True)
+    for path in tiny_dataset:
+        shutil.copy(path, raw / path.name)
+    orders = pd.DataFrame({
+        "store_id": [1, 1, 2, 2], "product_id": [10, 11, 10, 11], "dt": "2024-01-04",
+        "as_of": "2024-01-03", "decision_hour": 13, "arrival_hour": 15, "morning_share": 0.8,
+    })
+    orders[DECILE_COLUMNS] = np.linspace(0.1, 0.9, 9)
+    orders[REST_COLUMNS] = np.linspace(0.1, 0.9, 9)
+    orders.to_parquet(tmp_path / "orders.parquet")
+    logged = {}
+    monkeypatch.setattr(drift, "log_run", lambda *args: logged.update(args[3]))
+    assert drift.main(raw_dir=raw.parent, processed_dir=tmp_path, out_dir=tmp_path) == 0
+    saved = pd.read_csv(tmp_path / "tables" / "monitoring_second_delivery.csv").iloc[0]
+    assert saved.series == 4 and saved.decision_hour == 13
+    assert "Second delivery, as served" in (tmp_path / "monitoring.md").read_text(encoding="utf-8")
+    assert logged["second_delivery_saving"] == saved.saving
 
 
 def test_main_without_data_returns_2(tmp_path):

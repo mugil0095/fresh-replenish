@@ -17,11 +17,13 @@ from fresh_replenish.config import PROCESSED_DIR, RAW_DIR, REPO_ROOT, REPORTS_DI
 from fresh_replenish.data.db import check_grid, connect
 from fresh_replenish.data.download import local_paths
 from fresh_replenish.decisions.newsvendor import HEADLINE, critical_ratio, order_at
+from fresh_replenish.decisions.topup import OPENING, hourly_demand, still_to_come
 from fresh_replenish.forecasting import models
 from fresh_replenish.forecasting.data import CLASSICAL, HORIZON, INPUTS, Series, load_series
 from fresh_replenish.forecasting.evaluate import forecast_frame
-from fresh_replenish.metrics import CALIBRATED_COLUMNS, DECILE_COLUMNS
-from fresh_replenish.uncertainty.conformal import POOLED, calibrate
+from fresh_replenish.imputation.data import load_hours
+from fresh_replenish.metrics import CALIBRATED_COLUMNS, DECILE_COLUMNS, REST_COLUMNS
+from fresh_replenish.uncertainty.conformal import KEYS, POOLED, calibrate
 
 TRACKING_DIR = REPO_ROOT / "mlruns"  # git-ignored local MLflow store
 
@@ -49,20 +51,50 @@ def with_future(con: duckdb.DuckDBPyConnection, series: Series) -> Series:
     )
 
 
+def _groups(ids: pd.DataFrame, shifts: pd.DataFrame) -> pd.DataFrame:
+    """Calibration group per series: its category, or the pooled group if calibration lacks it."""
+    category = ids.first_category_id
+    known = category.isin(shifts.loc[shifts.model == CLASSICAL, "group"])
+    return ids[KEYS].assign(group=category.where(known, POOLED))
+
+
 def forecast_orders(
     series: Series, origin: int, shifts: pd.DataFrame, forecaster, ratio: float = HEADLINE
 ) -> pd.DataFrame:
     """Calibrated deciles (q10 ... q90) and the order at the cost ratio for the week from origin."""
     days = np.arange(origin, origin + HORIZON)
     frame = forecast_frame(CLASSICAL, series, forecaster(series, origin, HORIZON), days)
-    category = series.ids.first_category_id
-    known = category.isin(shifts.loc[shifts.model == CLASSICAL, "group"])
-    group_of = series.ids[["store_id", "product_id"]].assign(group=category.where(known, POOLED))
-    frame = calibrate(frame, shifts, group_of)
+    frame = calibrate(frame, shifts, _groups(series.ids, shifts))
     frame["order"] = order_at(frame[CALIBRATED_COLUMNS].to_numpy(), critical_ratio(ratio))
     frame = frame.assign(as_of=series.dates[origin - 1], ratio=ratio)
     out = frame[["store_id", "product_id", "dt", *CALIBRATED_COLUMNS, "order", "as_of", "ratio"]]
     return out.rename(columns=dict(zip(CALIBRATED_COLUMNS, DECILE_COLUMNS, strict=True)))
+
+
+def usual_left(con: duckdb.DuckDBPyConnection, hour: int) -> pd.DataFrame:
+    """Each series' usual share of daily demand still to come at the decision hour."""
+    h = load_hours(con)
+    return h.ids.assign(left=still_to_come(hourly_demand(h))[:, hour - OPENING - 1])
+
+
+def with_top_up(
+    orders: pd.DataFrame, left: pd.DataFrame, ids: pd.DataFrame, shifts: pd.DataFrame
+) -> pd.DataFrame:
+    """Orders plus the calibrated rest-of-day deciles a midday shelf count is topped up to."""
+    share = orders[KEYS].merge(left, on=KEYS, how="left").left.to_numpy()[:, None]
+    if np.isnan(share).any():
+        raise ValueError("every order needs a usual share of demand left")
+    rest = orders[KEYS].assign(model=CLASSICAL)
+    rest[DECILE_COLUMNS] = orders[DECILE_COLUMNS].to_numpy() * share
+    rest = calibrate(rest, shifts, _groups(ids, shifts))
+    plan = shifts.iloc[0]
+    served = orders.assign(
+        decision_hour=int(plan.decision_hour),
+        arrival_hour=int(plan.arrival_hour),
+        morning_share=plan.morning_share,
+    )
+    served[REST_COLUMNS] = rest[CALIBRATED_COLUMNS].to_numpy()
+    return served
 
 
 def log_run(tracking_dir: Path, name: str, params: dict, metrics: dict) -> None:
@@ -88,7 +120,13 @@ def main(
         return 2
     recovered = processed_dir / "recovered_demand.parquet"
     shifts = out_dir / "tables" / "calibration_shifts.csv"
-    for path, module in ((recovered, "imputation.recovery"), (shifts, "uncertainty.conformal")):
+    plan = out_dir / "tables" / "topup_shifts.csv"
+    steps = (
+        (recovered, "imputation.recovery"),
+        (shifts, "uncertainty.conformal"),
+        (plan, "decisions.topup"),
+    )
+    for path, module in steps:
         if not path.exists():
             print(
                 f"{path.name} not found. Run: uv run python -m fresh_replenish.{module}",
@@ -101,6 +139,9 @@ def main(
     orders = forecast_orders(
         with_future(con, series), len(series.dates), pd.read_csv(shifts), models.lightgbm_quantiles
     )
+    top_up_shifts = pd.read_csv(plan)
+    left = usual_left(con, int(top_up_shifts.decision_hour.iloc[0]))
+    orders = with_top_up(orders, left, series.ids, top_up_shifts)
     runtime = round(time.perf_counter() - start, 1)
     # Written aside, then swapped in: the API re-reads the file on change and must not see half.
     partial = processed_dir / "orders.parquet.tmp"

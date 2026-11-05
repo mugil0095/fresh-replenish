@@ -34,6 +34,11 @@ def order_at(q: np.ndarray, ratio: float) -> np.ndarray:
     return q[..., k] * (1 - w) + q[..., k + 1] * w
 
 
+def top_up(target, shelf):
+    """Units to order up to the target, counting what is already on the shelf."""
+    return np.maximum(target - shelf, 0)
+
+
 def simulate(order, demand, r: float) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Per-series sums of cost (waste + r x lost sales), order minus demand, and demand."""
     waste, lost = np.maximum(order - demand, 0), np.maximum(demand - order, 0)

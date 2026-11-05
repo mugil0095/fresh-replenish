@@ -4,6 +4,8 @@ Three checks, overall and per category, each with an alert:
 - bias of the median forecast: it normally runs 10-14% low on this skewed demand;
 - coverage of the 10-90% range: calibrated to 80%;
 - stockout drift: the share of series-days with a stockout against the 4 weeks before.
+
+It also replays the served second-delivery plan on the week, for every series.
 """
 
 import sys
@@ -14,7 +16,10 @@ import pandas as pd
 from fresh_replenish.config import PROCESSED_DIR, RAW_DIR, REPORTS_DIR
 from fresh_replenish.data.db import connect
 from fresh_replenish.data.download import local_paths
+from fresh_replenish.decisions.topup import replay
+from fresh_replenish.imputation.data import load_hours
 from fresh_replenish.imputation.recovery import recover_eval
+from fresh_replenish.metrics import REST_COLUMNS
 from fresh_replenish.report import md_table
 from fresh_replenish.serving.batch import TRACKING_DIR, log_run
 
@@ -51,7 +56,7 @@ def monitor(week: pd.DataFrame, before: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def render_report(table: pd.DataFrame, as_of: str) -> str:
+def render_report(table: pd.DataFrame, as_of: str, second: pd.DataFrame | None = None) -> str:
     overall = table.iloc[0]
     flagged = table.iloc[1:].set_index("category")
     alerts = {a: ", ".join(flagged.index[flagged[a]]) or "none" for a in
@@ -73,9 +78,18 @@ def render_report(table: pd.DataFrame, as_of: str) -> str:
         f"- **Categories with a bias alert:** {alerts['bias_alert']}.",
         f"- **Categories with a coverage alert:** {alerts['coverage_alert']}.",
         f"- **Categories with a stockout alert:** {alerts['stockout_alert']}.",
-        "## Checks",
-        md_table(table),
     ]
+    if second is not None:
+        s = second.iloc[0]
+        parts.append(
+            f"- **Second delivery, as served:** across {int(s.series):,} series, ordering at "
+            f"{int(s.decision_hour)}:00 for {int(s.arrival_hour)}:00 costs {s.cost:.3f} per unit "
+            f"of demand, {s.saving:.0%} less than one delivery ({s.one_delivery_cost:.3f}; 95% CI "
+            f"of the saving {s.saving_low:.0%} to {s.saving_high:.0%}), or "
+            f"{s.saving_no_stockout:.0%} on days with no stockout. The delivery's own cost is not "
+            "counted."
+        )
+    parts += ["## Checks", md_table(table)]
     return "\n\n".join(parts) + "\n"
 
 
@@ -101,9 +115,9 @@ def main(
     categories = con.execute(
         "SELECT DISTINCT store_id, product_id, first_category_id FROM train"
     ).df()
+    orders = pd.read_parquet(orders_path)
     week = (
-        pd.read_parquet(orders_path)
-        .merge(actual, on=KEYS)
+        orders.merge(actual, on=KEYS)
         .merge(categories, on=["store_id", "product_id"])
         .rename(columns={"recovered_demand": "actual", "stockout_hours": "stockout"})
     )
@@ -117,18 +131,22 @@ def main(
     table = monitor(week, before)
     (out_dir / "tables").mkdir(parents=True, exist_ok=True)
     table.to_csv(out_dir / "tables" / "monitoring_checks.csv", index=False)
+    second = None
+    if REST_COLUMNS[0] in orders:  # older orders files have no top-up targets
+        second = replay(load_hours(con, splits=("train", "eval")), orders, actual)
+        second.to_csv(out_dir / "tables" / "monitoring_second_delivery.csv", index=False)
     as_of = str(week.as_of.iloc[0])
     report = out_dir / "monitoring.md"
-    report.write_text(render_report(table, as_of), encoding="utf-8")
+    report.write_text(render_report(table, as_of, second), encoding="utf-8")
     overall = table.iloc[0]
-    log_run(
-        tracking_dir, "monitoring", {"as_of": as_of},
-        {
-            "bias": overall.bias, "coverage": overall.coverage,
-            "stockout_change": overall.stockout_rate - overall.stockout_rate_before,
-            "alerts": int(table[["bias_alert", "coverage_alert", "stockout_alert"]].sum().sum()),
-        },
-    )
+    metrics = {
+        "bias": overall.bias, "coverage": overall.coverage,
+        "stockout_change": overall.stockout_rate - overall.stockout_rate_before,
+        "alerts": int(table[["bias_alert", "coverage_alert", "stockout_alert"]].sum().sum()),
+    }
+    if second is not None:
+        metrics["second_delivery_saving"] = second.saving.iloc[0]
+    log_run(tracking_dir, "monitoring", {"as_of": as_of}, metrics)
     print(f"Report written to {report}.")
     return 0
 
