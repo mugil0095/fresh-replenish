@@ -90,6 +90,8 @@ def make_questions(orders: pd.DataFrame, seed: int = 42) -> list[dict]:
                 text = (f"Store {s} counted {shelf} units of product {p} on the shelf on {d}. "
                         "How much should it top up?")
                 tools = ["compute_top_up"]
+                if i >= 4:  # no count: the agent must ask, not assume an empty shelf
+                    text, tools = f"How much should store {s} top up of product {p} on {d}?", []
             else:
                 text, tools, optional, s, p, d = OUT_OF_SCOPE[i], [], [], None, None, None
             questions.append({

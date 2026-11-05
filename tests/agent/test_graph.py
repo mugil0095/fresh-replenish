@@ -1,5 +1,6 @@
 import json
 
+import pytest
 from fakes import Scripted
 from langchain_core.messages import AIMessage, HumanMessage
 
@@ -36,10 +37,17 @@ def test_a_top_up_is_never_saved_as_the_days_order(toolbox):
         {"name": "write_decision_record", "args": {**DAY, "order": 3.0, "reason": "top-up"},
          "id": "2"},
     ])
-    question = "Place a top-up of product 10 for store 1 on 2024-06-26: 1.5 are on the shelf."
+    question = "Store 1 has 1.5 of product 10 on the shelf on 2024-06-26. Place what it needs."
     out = run(toolbox, [both, AIMessage("Top up 3.0 units. Nothing was saved.")], question)
     assert not toolbox.records.exists()
     assert "advice" in out["messages"][3].text  # the save call's result
+
+
+@pytest.mark.parametrize("words", ["a top-up", "a top up", "the second delivery"])
+def test_a_request_to_place_a_top_up_cannot_save(toolbox, words):
+    script = [call("write_decision_record", order=3.0, reason="top-up"), AIMessage("Not saved.")]
+    run(toolbox, script, f"Place {words} of 3 units of product 10 for store 1 on 2024-06-26.")
+    assert not toolbox.records.exists()
 
 
 def test_checker_rejects_an_invented_number_then_accepts_a_retry(toolbox):

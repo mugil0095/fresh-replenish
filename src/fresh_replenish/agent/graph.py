@@ -25,6 +25,7 @@ SYSTEM = """You help dark-store managers decide daily orders of fresh food.
   (lost-sale cost / waste cost; 9 by default, which orders at the 90th percentile).
 - For a shelf count, call compute_top_up and say how much to top up, when the shelf is counted and
   when the delivery arrives. A top-up is advice: never save it, and say nothing was ordered.
+  Without a count, ask for one: never assume it, and don't call compute_top_up.
 - The forecast range runs from the 10th to the 90th percentile; the median is the 50th.
 - What-if answers must say they are model-based estimates, not proof of cause and effect.
 - If a tool returns an error, say the data is not available; never guess.
@@ -91,12 +92,13 @@ def _key(store_id, product_id, date, order) -> list:
 
 
 SAVE = re.compile(r"\b(place|record|save)\b", re.IGNORECASE)
+TOP_UP = re.compile(r"\btop(?:ping)?[- ]?up\b|\bsecond delivery\b", re.IGNORECASE)
 
 
 def _asks_to_save(messages: list) -> bool:
-    """Whether the user's question asks to place, record or save an order."""
+    """Whether the user's question asks to place, record or save an order, not a top-up."""
     return any(isinstance(m, HumanMessage) and m.name is None and SAVE.search(m.text)
-               for m in messages[:1])
+               and not TOP_UP.search(m.text) for m in messages[:1])
 
 
 def make_tools(toolbox: Toolbox) -> list[StructuredTool]:

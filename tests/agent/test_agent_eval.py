@@ -19,7 +19,8 @@ def test_every_type_of_question_comes_from_the_orders(orders):
     assert limit["handoff"] and limit["tools"] == ["compute_order"]
     assert "write_decision_record" in limit["optional"]  # "place an order" may try to record it
     top_ups = [q for q in questions if q["type"] == "top_up"]
-    assert all(q["tools"] == ["compute_top_up"] for q in top_ups)
+    assert all(q["tools"] == ["compute_top_up"] for q in top_ups[:4])
+    assert top_ups[-1]["tools"] == [] and "counted" not in top_ups[-1]["question"]  # must ask
     assert "counted 2.5 units" in top_ups[0]["question"]  # below the 4.5 target
     assert "counted 5.5 units" in top_ups[1]["question"]  # no top-up needed
 
