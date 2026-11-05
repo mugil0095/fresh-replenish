@@ -40,6 +40,35 @@ def test_top_up_orders_up_to_the_target(target, morning, seen, units):
     assert top_up(np.array(target), np.array(morning), np.array(seen)) == units
 
 
+def _one_day():
+    """Hours 6:00 to 10:00 sell 1, 2, 4, 8 and 16, so any slice's total names its hours."""
+    by_hour = np.cumsum([1.0, 2, 4, 8, 16] + [0.0] * 11)
+    frame = pd.DataFrame({"model": [CLASSICAL], "store_id": [0], "product_id": [0]})
+    return topup.Week(
+        frame, np.ones((1, 1, 9)), np.array([[31.0]]), by_hour[None, None],
+        np.full((1, 16), 0.5), np.array([[True]]),
+    )
+
+
+def test_a_plan_sees_the_hours_before_it_decides_and_serves_those_before_it_lands():
+    target, order = np.array([[20.0]]), np.array([[10.0]])
+    delivered, extra, waste, lost = topup._plan(_one_day(), order, target, 8, 0.5)
+    assert extra[0, 0] == 18.0  # 3 sold by 8:00, so 2 of the 5 are left against a target of 20
+    assert lost[0, 0] == 10.0  # 15 wanted before the 10:00 delivery, 5 on hand
+    assert waste[0, 0] == 2.0  # 18 delivered against the last 16
+    assert delivered[0, 0] == 23.0
+
+
+def test_the_rest_of_the_day_starts_at_the_decision_hour():
+    rest = topup._rest_of_day(_one_day(), 8)
+    assert rest.actual.tolist() == [28.0]  # 31 less the 3 sold before 8:00
+    assert rest[DECILE_COLUMNS].to_numpy().tolist() == [[0.5] * 9]
+
+
+def test_every_top_up_lands_before_closing():
+    assert max(topup.DECISION_HOURS) + topup.LEAD < topup.CLOSING
+
+
 def _hours(sales, night=None) -> Hours:
     n, days, _ = sales.shape
     night = np.zeros((n, days)) if night is None else night

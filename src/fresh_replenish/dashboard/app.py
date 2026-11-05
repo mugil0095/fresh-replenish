@@ -176,7 +176,7 @@ with policy_tab:
         f"Send {best.morning_share:.0%} of the order in the morning, count the shelf at "
         f"{int(best.decision_hour)}:00 and top up for a {int(best.arrival_hour)}:00 delivery: "
         f"cost falls {best.saving:.0%} ({best.saving_no_stockout:.0%} on days with no stockout, "
-        f"where hourly demand is fully observed). That is worth "
+        f"where hourly demand is fully observed). At {HEADLINE:g}x that is worth "
         f"{best.saved_per_store_day:.1f} wasted units per store per day, before the delivery's "
         "own cost."
     )

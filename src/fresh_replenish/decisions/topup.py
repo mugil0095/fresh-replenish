@@ -16,13 +16,7 @@ import pandas as pd
 from fresh_replenish.config import PROCESSED_DIR, RAW_DIR, REPORTS_DIR
 from fresh_replenish.data.db import connect, sample_stores
 from fresh_replenish.data.download import local_paths
-from fresh_replenish.decisions.newsvendor import (
-    HEADLINE,
-    RATIOS,
-    critical_ratio,
-    order_at,
-    simulate,
-)
+from fresh_replenish.decisions.newsvendor import HEADLINE, RATIOS, critical_ratio, order_at
 from fresh_replenish.forecasting import evaluate
 from fresh_replenish.forecasting.data import CLASSICAL
 from fresh_replenish.imputation.data import Hours, load_hours
@@ -31,9 +25,9 @@ from fresh_replenish.metrics import CALIBRATED_COLUMNS, DECILE_COLUMNS, SEED, bo
 from fresh_replenish.report import md_table
 from fresh_replenish.uncertainty.conformal import KEYS, calibrate, shifts
 
-OPENING = 6  # the hourly arrays start at 6:00
+OPENING, CLOSING = 6, 22  # the hourly arrays cover 6:00 to 22:00
 LEAD = 2  # hours from order to delivery: an assumption, the data has no delivery times
-DECISION_HOURS = range(8, 19)
+DECISION_HOURS = range(8, CLOSING - LEAD - 1)  # the last top-up lands an hour before closing
 MORNING_SHARES = np.round(np.arange(4, 11) / 10, 1)  # of the one-delivery order
 
 
@@ -71,8 +65,9 @@ class Week:
     frame: pd.DataFrame  # one row per series and day, sorted by series, then day
     deciles: np.ndarray  # (series, days, 9): the calibrated daily forecast
     demand: np.ndarray  # (series, days)
-    hourly: np.ndarray  # (series, days, hours): the demand, hour by hour
+    by_hour: np.ndarray  # (series, days, hours): demand so far at the end of each hour
     left: np.ndarray  # (series, hours): usual share of demand left after each hour
+    no_stockout: np.ndarray  # (series, days): hourly demand fully observed
 
 
 def _week(frame: pd.DataFrame, h: Hours) -> Week:
@@ -89,15 +84,17 @@ def _week(frame: pd.DataFrame, h: Hours) -> Week:
         frame=frame,
         deciles=frame[CALIBRATED_COLUMNS].to_numpy(dtype=float).reshape(n, demand.shape[1], -1),
         demand=demand,
-        hourly=spread * demand[..., None],  # the same daily totals as the one-delivery simulation
+        by_hour=(spread * demand[..., None]).cumsum(axis=-1),  # ends at the day's demand
         left=still_to_come(hourly_demand(h, int(days.argmax()))),
+        no_stockout=frame.in_stock.to_numpy().reshape(demand.shape),
     )
 
 
 def _rest_of_day(week: Week, hour: int) -> pd.DataFrame:
     """A forecast frame for the demand left at the decision hour: the day's deciles, scaled."""
     t = hour - OPENING
-    frame = week.frame[["model", *KEYS]].assign(actual=week.hourly[..., t:].sum(axis=-1).ravel())
+    rest = week.demand - week.by_hour[..., t - 1]
+    frame = week.frame[["model", *KEYS]].assign(actual=rest.ravel())
     scaled = week.deciles * week.left[:, None, t - 1, None]
     frame[DECILE_COLUMNS] = scaled.reshape(-1, len(DECILE_COLUMNS))
     return frame
@@ -107,8 +104,8 @@ def _plan(week: Week, order, target, hour: int, share: float) -> tuple:
     """Units delivered, topped up, wasted and lost on every line-day under one plan."""
     t = hour - OPENING
     morning = share * order
-    extra = top_up(target, morning, week.hourly[..., :t].sum(axis=-1))
-    early = week.hourly[..., : t + LEAD].sum(axis=-1)
+    extra = top_up(target, morning, week.by_hour[..., t - 1])
+    early = week.by_hour[..., t + LEAD - 1]
     return morning + extra, extra, *serve(morning, extra, early, week.demand - early)
 
 
@@ -117,37 +114,47 @@ def _cost(week: Week, order, target, hour: int, share: float, r: float) -> float
     return (waste + r * lost).sum() / week.demand.sum()
 
 
-def _row(week: Week, order, target, hour: int, share: float, r: float, store_days: int) -> dict:
+def _draws(cost: np.ndarray, week: Week) -> np.ndarray:
+    """Bootstrap draws of cost per unit of demand; the seed is fixed, so policies are paired."""
+    sums = cost.sum(axis=1)
+    return bootstrap((sums, sums, week.demand.sum(axis=1)))[1]
+
+
+def _one_delivery(week: Week, order, r: float) -> tuple:
+    """One delivery's waste, lost sales and draws, on all days and on days with no stockout."""
+    waste, lost = serve(order, 0, week.demand, 0)
+    cost = waste + r * lost
+    return waste, lost, _draws(cost, week), _draws(cost * week.no_stockout, week)
+
+
+def _row(week: Week, one: tuple, order, target, hour: int, share: float, r: float) -> dict:
     """One plan's held-out results next to one delivery's, with paired intervals."""
     delivered, extra, waste, lost = _plan(week, order, target, hour, share)
-    demand = week.demand
-    no_stockout = week.frame.in_stock.to_numpy().reshape(demand.shape)
-    cost_two = waste + r * lost
-    cost_one = np.maximum(order - demand, 0) + r * np.maximum(demand - order, 0)
-    one, one_draws = bootstrap(simulate(order, demand, r))
-    two, two_draws = bootstrap(
-        (cost_two.sum(axis=1), (delivered - demand).sum(axis=1), demand.sum(axis=1))
-    )
-    saving_draws = 1 - two_draws / one_draws  # the same resamples, so the saving is paired
+    one_waste, one_lost, one_draws, one_clear = one
+    cost, one_cost, clear = waste + r * lost, one_waste + r * one_lost, week.no_stockout
+    draws, clear_draws = _draws(cost, week), _draws(cost * clear, week)
+    demand = week.demand.sum()
     return {
         "ratio": r,
         "decision_hour": hour,
         "arrival_hour": hour + LEAD,
         "morning_share": share,
-        "cost": two["wape"],
-        "cost_low": two["wape_low"],
-        "cost_high": two["wape_high"],
-        "one_delivery_cost": one["wape"],
-        "saving": 1 - two["wape"] / one["wape"],
-        "saving_low": np.percentile(saving_draws, 2.5),
-        "saving_high": np.percentile(saving_draws, 97.5),
-        "saving_no_stockout": 1 - cost_two[no_stockout].sum() / cost_one[no_stockout].sum(),
-        "saved_per_store_day": (cost_one.sum() - cost_two.sum()) / store_days,
-        "waste": waste.sum() / demand.sum(),
-        "one_delivery_waste": np.maximum(order - demand, 0).sum() / demand.sum(),
-        "fill_rate": 1 - lost.sum() / demand.sum(),
-        "one_delivery_fill_rate": np.minimum(order, demand).sum() / demand.sum(),
-        "topped_up": float((extra > 0).mean()),
+        "cost": cost.sum() / demand,
+        "cost_low": np.percentile(draws, 2.5),
+        "cost_high": np.percentile(draws, 97.5),
+        "one_delivery_cost": one_cost.sum() / demand,
+        "saving": 1 - cost.sum() / one_cost.sum(),
+        "saving_low": np.percentile(1 - draws / one_draws, 2.5),
+        "saving_high": np.percentile(1 - draws / one_draws, 97.5),
+        "saving_no_stockout": 1 - cost[clear].sum() / one_cost[clear].sum(),
+        "saving_no_stockout_low": np.percentile(1 - clear_draws / one_clear, 2.5),
+        "saving_no_stockout_high": np.percentile(1 - clear_draws / one_clear, 97.5),
+        "saved_per_line_day": (one_cost - cost).mean(),
+        "waste": waste.sum() / demand,
+        "one_delivery_waste": one_waste.sum() / demand,
+        "fill_rate": 1 - lost.sum() / demand,
+        "one_delivery_fill_rate": 1 - one_lost.sum() / demand,
+        "top_up_share": extra.sum() / delivered.sum(),
     }
 
 
@@ -160,7 +167,8 @@ def run(
     groups = held_out[[*KEYS, "group"]].drop_duplicates()
     past = _week(calibrate(folds, shifts(folds, groups), groups), h)
     week = _week(held_out, h)
-    store_days = h.ids.store_id.nunique() * week.demand.shape[1]
+    orders = {r: order_at(week.deciles, critical_ratio(r)) for r in ratios}
+    one = {r: _one_delivery(week, orders[r], r) for r in ratios}
 
     def targets(rest: pd.DataFrame, table: pd.DataFrame, like: Week) -> np.ndarray:
         calibrated = calibrate(rest, table, groups)[CALIBRATED_COLUMNS]
@@ -177,11 +185,13 @@ def run(
             on_past = order_at(past.deciles, ratio), order_at(past_targets, ratio)
             costs = {s: _cost(past, *on_past, hour, s, r) for s in MORNING_SHARES}
             share = min(costs, key=costs.get)
-            order, target = order_at(week.deciles, ratio), order_at(week_targets, ratio)
-            row = _row(week, order, target, hour, share, r, store_days)
+            target = order_at(week_targets, ratio)
+            row = _row(week, one[r], orders[r], target, hour, share, r)
             rows.append(row | {"past_cost": costs[share]})
 
     plans = pd.DataFrame(rows)
+    lines_per_store = len(h.ids) / h.ids.store_id.nunique()
+    plans["saved_per_store_day"] = plans.pop("saved_per_line_day") * lines_per_store
     plans["chosen"] = plans.index.isin(plans.groupby("ratio").past_cost.idxmin())
     sample = pd.DataFrame([{
         "stores": h.ids.store_id.nunique(), "series": len(h.ids),
@@ -218,12 +228,14 @@ def render_report(results: dict[str, pd.DataFrame]) -> str:
         f"- **Where it comes from:** waste falls from {best.one_delivery_waste:.3f} to "
         f"{best.waste:.3f} per unit of demand, and the fill rate moves from "
         f"{best.one_delivery_fill_rate:.1%} to {best.fill_rate:.1%}. "
-        f"{best.topped_up:.0%} of line-days get a top-up.",
+        f"{best.top_up_share:.0%} of delivered units come on the top-up.",
         "- **What it leaves out:** the saving does not count what the second delivery itself "
-        f"costs. It is worth {best.saved_per_store_day:.1f} wasted units per store per day, so "
-        "a delivery pays only below that.",
-        f"- **Days with no stockout:** the saving is {best.saving_no_stockout:.0%}. Their hourly "
-        "demand is fully observed; on other days the afternoon is recovered, not seen.",
+        f"costs. At r = {r0:g} it is worth {best.saved_per_store_day:.1f} wasted units per store "
+        "per day, so a delivery pays only below that.",
+        f"- **Days with no stockout:** the saving is {best.saving_no_stockout:.0%} (95% CI "
+        f"{best.saving_no_stockout_low:.0%} to {best.saving_no_stockout_high:.0%}). Their hourly "
+        "demand is fully observed, while on other days the afternoon is recovered, not seen. "
+        "They are also a selected set of days, so the gap is not all down to recovery.",
         "## Best plan at each cost ratio",
         md_table(p[p.chosen].drop(columns="chosen")),
         f"## Every decision hour at r = {r0:g}",

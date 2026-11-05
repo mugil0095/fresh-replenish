@@ -39,7 +39,7 @@
 
 - **Set the service level from costs.** Each product's order should come from its forecast range at the level its waste and lost-sale costs justify, not from the single best guess.
 - **Recover hidden demand before forecasting.** Otherwise every stockout makes the next order smaller.
-- **Price a second delivery.** Counting the shelf at 13:00 and topping up by 15:00 pays if a delivery costs less than about 24 wasted units per store per day.
+- **Price a second delivery.** At the assumed 9×, counting the shelf at 13:00 and topping up by 15:00 pays if a delivery costs less than about 24 wasted units per store per day.
 - **Keep a human on unusual orders.** The agent explains the routine ones and routes the exceptions.
 
 ## Caveats

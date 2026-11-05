@@ -6,21 +6,21 @@ One delivery commits the whole day's order before opening. Here the morning carr
 
 - **Best plan at r = 9:** order at 13:00 for a 15:00 delivery, with 80% of the one-delivery order sent in the morning. It costs 0.646 (95% CI 0.623 to 0.670) per unit of demand, 32% less than one delivery (0.947; 95% CI of the saving 31% to 33%).
 
-- **Where it comes from:** waste falls from 0.556 to 0.418 per unit of demand, and the fill rate moves from 95.7% to 97.5%. 66% of line-days get a top-up.
+- **Where it comes from:** waste falls from 0.556 to 0.418 per unit of demand, and the fill rate moves from 95.7% to 97.5%. 13% of delivered units come on the top-up.
 
-- **What it leaves out:** the saving does not count what the second delivery itself costs. It is worth 24.3 wasted units per store per day, so a delivery pays only below that.
+- **What it leaves out:** the saving does not count what the second delivery itself costs. At r = 9 it is worth 24.3 wasted units per store per day, so a delivery pays only below that.
 
-- **Days with no stockout:** the saving is 23%. Their hourly demand is fully observed; on other days the afternoon is recovered, not seen.
+- **Days with no stockout:** the saving is 23% (95% CI 22% to 24%). Their hourly demand is fully observed, while on other days the afternoon is recovered, not seen. They are also a selected set of days, so the gap is not all down to recovery.
 
 ## Best plan at each cost ratio
 
-| ratio | decision_hour | arrival_hour | morning_share | cost | cost_low | cost_high | one_delivery_cost | saving | saving_low | saving_high | saving_no_stockout | saved_per_store_day | waste | one_delivery_waste | fill_rate | one_delivery_fill_rate | topped_up | past_cost |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0.5 | 12 | 14 | 0.9 | 0.1652 | 0.1607 | 0.1695 | 0.206 | 0.1981 | 0.1926 | 0.2041 | 0.1304 | 3.2955 | 0.0512 | 0.0485 | 0.7719 | 0.6851 | 0.7336 | 0.1731 |
-| 1.0 | 13 | 15 | 0.9 | 0.2475 | 0.24 | 0.2543 | 0.3223 | 0.2322 | 0.2265 | 0.2387 | 0.143 | 6.0457 | 0.1006 | 0.1019 | 0.8531 | 0.7795 | 0.6811 | 0.2617 |
-| 2.0 | 13 | 15 | 0.8 | 0.3551 | 0.3442 | 0.3652 | 0.4764 | 0.2546 | 0.249 | 0.2607 | 0.175 | 9.7972 | 0.1626 | 0.1962 | 0.9038 | 0.8599 | 0.7802 | 0.3763 |
-| 4.0 | 13 | 15 | 0.8 | 0.4741 | 0.4587 | 0.4895 | 0.6696 | 0.2919 | 0.2861 | 0.2981 | 0.2031 | 15.788 | 0.2628 | 0.3334 | 0.9472 | 0.9159 | 0.741 | 0.5134 |
-| 9.0 | 13 | 15 | 0.8 | 0.6458 | 0.6225 | 0.6698 | 0.9472 | 0.3183 | 0.3116 | 0.3254 | 0.2291 | 24.348 | 0.4181 | 0.5558 | 0.9747 | 0.9565 | 0.6597 | 0.7041 |
+| ratio | decision_hour | arrival_hour | morning_share | cost | cost_low | cost_high | one_delivery_cost | saving | saving_low | saving_high | saving_no_stockout | saving_no_stockout_low | saving_no_stockout_high | waste | one_delivery_waste | fill_rate | one_delivery_fill_rate | top_up_share | past_cost | saved_per_store_day |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 0.5 | 12 | 14 | 0.9 | 0.1652 | 0.1607 | 0.1695 | 0.206 | 0.1981 | 0.1926 | 0.2041 | 0.1304 | 0.1196 | 0.1408 | 0.0512 | 0.0485 | 0.7719 | 0.6851 | 0.1978 | 0.1731 | 3.2955 |
+| 1.0 | 13 | 15 | 0.9 | 0.2475 | 0.24 | 0.2543 | 0.3223 | 0.2322 | 0.2265 | 0.2387 | 0.143 | 0.1326 | 0.153 | 0.1006 | 0.1019 | 0.8531 | 0.7795 | 0.1682 | 0.2617 | 6.0457 |
+| 2.0 | 13 | 15 | 0.8 | 0.3551 | 0.3442 | 0.3652 | 0.4764 | 0.2546 | 0.249 | 0.2607 | 0.175 | 0.1655 | 0.1844 | 0.1626 | 0.1962 | 0.9038 | 0.8599 | 0.2078 | 0.3763 | 9.7972 |
+| 4.0 | 13 | 15 | 0.8 | 0.4741 | 0.4587 | 0.4895 | 0.6696 | 0.2919 | 0.2861 | 0.2981 | 0.2031 | 0.195 | 0.2111 | 0.2628 | 0.3334 | 0.9472 | 0.9159 | 0.174 | 0.5134 | 15.788 |
+| 9.0 | 13 | 15 | 0.8 | 0.6458 | 0.6225 | 0.6698 | 0.9472 | 0.3183 | 0.3116 | 0.3254 | 0.2291 | 0.221 | 0.2374 | 0.4181 | 0.5558 | 0.9747 | 0.9565 | 0.1314 | 0.7041 | 24.348 |
 
 ## Every decision hour at r = 9
 

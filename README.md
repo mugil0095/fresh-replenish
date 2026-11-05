@@ -111,8 +111,8 @@ The orders above commit the whole day before opening. The hourly data shows what
 - **Result at 9×:** cost falls 32%, from 0.947 to 0.646 per unit of demand (paired 95% CI 31–33%). Waste drops by a quarter and the fill rate rises from 95.7% to 97.5%.
 - **Every cost ratio gains:** from 20% at 0.5× to 32% at 9×.
 - **Timing:** sales peak around 9:00 and 16:00, and the best delivery lands just before the second peak.
-- **Observed days:** on days with no stockout, where hourly demand is fully observed, the saving is 23%. On other days the afternoon is recovered, not seen.
-- **Not counted:** the delivery's own cost. The saving is worth 24.3 wasted units per store per day, so a second delivery pays only below that.
+- **Observed days:** on days with no stockout, where hourly demand is fully observed, the saving is 23%. On other days the afternoon is recovered, not seen. Days with no stockout are also quieter (average demand 1.25 against 1.79), so the gap is not all down to recovery.
+- **Not counted:** the delivery's own cost. At 9× the saving is worth 24.3 wasted units per store per day, so a second delivery pays only below that.
 
 ## Service
 

@@ -403,7 +403,7 @@ A full re-check (tests on a clean copy, re-runs of Phases 1, 2 and 5, the API, t
 - **Night sales** (4.6% of sales) count as the last hour's, so a midday count can't see them. That is the cautious choice for the top-up.
 - **Result at 9×:** order at 13:00 for 15:00, with 80% sent in the morning: 0.646 per unit of demand against 0.947, a 32% saving (paired 95% CI 31–33%). On days with no stockout the saving is 23%.
 - **Left out on purpose:**
-  - the delivery's own cost, which the data can't give, so the report states a break-even of 24.3 wasted units per store per day;
+  - the delivery's own cost, which the data can't give, so the report states a break-even of 24.3 wasted units per store per day at 9× (6.0 at 1×);
   - a live top-up endpoint, which would need real stock counts.
 
 ## Known issues
