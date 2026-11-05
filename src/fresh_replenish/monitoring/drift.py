@@ -139,14 +139,14 @@ def main(
     report = out_dir / "monitoring.md"
     report.write_text(render_report(table, as_of, second), encoding="utf-8")
     overall = table.iloc[0]
-    log_run(
-        tracking_dir, "monitoring", {"as_of": as_of},
-        {
-            "bias": overall.bias, "coverage": overall.coverage,
-            "stockout_change": overall.stockout_rate - overall.stockout_rate_before,
-            "alerts": int(table[["bias_alert", "coverage_alert", "stockout_alert"]].sum().sum()),
-        },
-    )
+    metrics = {
+        "bias": overall.bias, "coverage": overall.coverage,
+        "stockout_change": overall.stockout_rate - overall.stockout_rate_before,
+        "alerts": int(table[["bias_alert", "coverage_alert", "stockout_alert"]].sum().sum()),
+    }
+    if second is not None:
+        metrics["second_delivery_saving"] = second.saving.iloc[0]
+    log_run(tracking_dir, "monitoring", {"as_of": as_of}, metrics)
     print(f"Report written to {report}.")
     return 0
 

@@ -40,6 +40,12 @@ def test_unseen_category_uses_the_pooled_shift(make_series, weekly):
     assert (orders.order == 13).all()  # q90 + 0.5 x spread of 8
 
 
+def test_usual_left_counts_the_decision_hour_as_still_to_come(tiny_dataset):
+    con = connect(*tiny_dataset)  # every line but the first sells only at 12:00
+    assert (batch.usual_left(con, 12).left.iloc[1:] == 1).all()
+    assert batch.usual_left(con, 13).left.iloc[1:].tolist() == pytest.approx([0, 0, 0])
+
+
 def _plan_shifts(group, shift):
     return _shifts(group, shift).assign(decision_hour=13, arrival_hour=15, morning_share=0.8)
 

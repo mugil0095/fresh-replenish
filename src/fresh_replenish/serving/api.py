@@ -36,7 +36,7 @@ class Reorder(BaseModel):
     as_of: str
     ratio: float
     critical_ratio: float
-    morning_share: float | None = None  # of each order, for a store with a second delivery
+    morning_share: float | None = None  # with a second delivery; the 9x plan at every ratio
     lines: list[Line]
 
 

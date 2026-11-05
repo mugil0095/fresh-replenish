@@ -404,7 +404,7 @@ A full re-check (tests on a clean copy, re-runs of Phases 1, 2 and 5, the API, t
 - **Result at 9×:** order at 13:00 for 15:00, with 80% sent in the morning: 0.646 per unit of demand against 0.947, a 32% saving (paired 95% CI 31–33%). On days with no stockout the saving is 23%.
 - **Left out on purpose:**
   - the delivery's own cost, which the data can't give, so the report states a break-even of 24.3 wasted units per store per day at 9× (6.0 at 1×);
-  - a live top-up endpoint, which would need real stock counts.
+  - a live top-up endpoint, which would need real stock counts (added later the same day; see Live top-up below).
 
 ## 2026-11-05: Live top-up
 
@@ -420,7 +420,7 @@ A full re-check (tests on a clean copy, re-runs of Phases 1, 2 and 5, the API, t
 - **Replay:** monitoring replays the served targets on the held-out week. Across all 50,000 lines in 898 stores, cost falls 31% (0.953 to 0.654; 95% CI 31–32%), and 23% on days with no stockout, in line with the 90-store study. A test checks that the served path reproduces the study exactly on the same data.
 - **Daily orders are unchanged:** every decile in the new batch matches the old file exactly.
 - **Timings moved, mostly from the laptop:**
-  - The batch took 13.3 minutes (it was 11.5), partly for loading the hourly data.
+  - The batch took 13.3 minutes (it was 11.5). The two new steps take 17 seconds of that, so nearly all of the rise is not the new code.
   - `/reorder` p95 is now 14.7 ms (it was 7.3). The same day, the code on main measured 19–30 ms against 15–16 ms for this branch, and the old and new orders files were level. So the rise comes from a busier laptop, not the new columns.
 
 ## Known issues

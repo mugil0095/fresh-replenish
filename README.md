@@ -111,7 +111,7 @@ The orders above commit the whole day before opening. The hourly data shows what
 - **Result at 9×:** cost falls 32%, from 0.947 to 0.646 per unit of demand (paired 95% CI 31–33%). Waste drops by a quarter and the fill rate rises from 95.7% to 97.5%.
 - **Every cost ratio gains:** from 20% at 0.5× to 32% at 9×.
 - **Timing:** sales peak around 9:00 and 16:00, and the best delivery lands just before the second peak.
-- **At full scale:** replaying the served plan on all 50,000 lines in 898 stores saves 31% (0.953 to 0.654 per unit of demand), and 23% on days with no stockout. The plan was chosen on 90 stores, so the other 808 played no part in it.
+- **At full scale:** replaying the served plan on all 50,000 lines in 898 stores saves 31% (0.953 to 0.654 per unit of demand), and 23% on days with no stockout. The plan was chosen on 90 stores, so about 90% of these lines played no part in it.
 - **Observed days:** on days with no stockout, where hourly demand is fully observed, the saving is 23%. On other days the afternoon is recovered, not seen. Days with no stockout are also quieter (average demand 1.25 against 1.79), so the gap is not all down to recovery.
 - **Not counted:** the delivery's own cost. At 9× the saving is worth 24.3 wasted units per store per day, so a second delivery pays only below that.
 
@@ -119,7 +119,7 @@ The orders above commit the whole day before opening. The hourly data shows what
 
 - **Batch job:** each night it trains LightGBM, calibrates the forecasts and writes cost-based orders and rest-of-day targets for all 50,000 series. A run takes 13.3 minutes on this laptop and is tracked in MLflow.
 - **API:** `GET /reorder?store_id=…&ratio=…` returns a store's orders, recomputed for any cost ratio from 1/9 to 9. It reads the orders again whenever the nightly batch rewrites them. p95 latency is 14.7 ms.
-- **Top-up:** `POST /topup` takes a store's 13:00 shelf count and returns the units to order for each counted line, up to its rest-of-day target. `/reorder` says what share of each order to send in the morning. p95 latency is 12.3 ms for a whole store.
+- **Top-up:** `POST /topup` takes a store's 13:00 shelf count and returns the units to order for each counted line, up to its rest-of-day target. `/reorder` says what share of each order to send in the morning (the plan chosen at 9×, at every ratio). p95 latency is 12.3 ms for a whole store.
 - **Monitoring:** it checks median bias, range coverage and stockout drift, overall and per category, and replays the served top-up plan on the week. On the held-out week everything is within limits overall (coverage 81.5%), and 13 of 32 categories raise at least one alert.
 - **Docker:** one slim image (no ML stack) runs the API and the dashboard, and `docker compose up` adds MLflow. GitHub Actions builds the image and smoke-tests `/health`, `/reorder` and `/topup`.
 
