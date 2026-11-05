@@ -19,12 +19,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: docker build -t fresh-replenish-api .
-      # One order line, so the smoke test reads parquet and serves a real /reorder.
+      # One order line, so the smoke test reads parquet and serves a real /reorder and /topup.
       - run: >-
           docker run --rm -v "$PWD/smoke:/out" fresh-replenish-api python -c
-          "import pandas as pd; from fresh_replenish.metrics import DECILE_COLUMNS as Q;
+          "import pandas as pd; from fresh_replenish.metrics import DECILE_COLUMNS as Q, REST_COLUMNS as R;
           f = pd.DataFrame({'store_id': [1], 'product_id': [10], 'dt': ['2024-06-26'],
-          'as_of': ['2024-06-25']}); f[Q] = [[float(q) for q in range(1, 10)]];
+          'as_of': ['2024-06-25'], 'decision_hour': [13], 'arrival_hour': [15],
+          'morning_share': [0.8]}); f[Q + R] = [[float(q) for q in range(1, 10)] * 2];
           f.to_parquet('/out/orders.parquet')"
       - run: >-
           docker run -d --name api -p 8000:8000
@@ -32,3 +33,6 @@ jobs:
       # A refused or reset connection both mean uvicorn isn't listening yet.
       - run: curl --retry 10 --retry-all-errors --retry-delay 2 -fsS http://localhost:8000/health
       - run: curl -fsS "http://localhost:8000/reorder?store_id=1"
+      - run: >-
+          curl -fsS -X POST http://localhost:8000/topup -H "content-type: application/json"
+          -d '{"store_id": 1, "date": "2024-06-26", "shelf": {"10": 2}}'

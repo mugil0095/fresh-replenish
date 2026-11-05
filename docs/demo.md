@@ -24,4 +24,4 @@ Open `docs/summary.md`. Read the headline: ordering by cost cut waste + lost-sal
    The agent pauses for you, the planner. Answer `n`, and it doesn't record the order.
 
 ## 4:00 Production (30 s)
-`docker compose up`. Show the API with `curl "localhost:8000/reorder?store_id=0"`, the dashboard on :8501 and MLflow runs on :5000. Close on the test count and CI.
+`docker compose up`. Show the API with `curl "localhost:8000/reorder?store_id=0"`, a midday count posted to `/topup`, the dashboard on :8501 and MLflow runs on :5000. Close on the test count and CI.

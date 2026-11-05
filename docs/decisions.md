@@ -406,6 +406,23 @@ A full re-check (tests on a clean copy, re-runs of Phases 1, 2 and 5, the API, t
   - the delivery's own cost, which the data can't give, so the report states a break-even of 24.3 wasted units per store per day at 9× (6.0 at 1×);
   - a live top-up endpoint, which would need real stock counts.
 
+## 2026-11-05: Live top-up
+
+- **Why:** the second-delivery study showed the saving but no store could use it. `POST /topup` turns a midday shelf count into units to order.
+- **The batch does the work:** it adds each line's rest-of-day deciles, the plan's hours and its morning share to `orders.parquet`, using the shifts `decisions.topup` saves in `topup_shifts.csv`. The API only subtracts the shelf from a target, so no model runs at request time and the slim image stays slim.
+- **Run order:** `decisions.topup` now runs before the batch, which fails with a message if the plan is missing.
+- **One plan:** every store gets the plan chosen at 9× (13:00, 80% in the morning). `/topup` accepts any cost ratio for the target, but the hour and share stay fixed. The study's best differs slightly at low ratios (12:00 at 0.5×, 90% in the morning at 1× or below).
+- **Counts:**
+  - a store can count some lines only, and only those come back, so no line is assumed empty;
+  - a product with no order that day is refused by name;
+  - negative counts and NaN are refused.
+- **Bug found by a test:** FastAPI refused a NaN count but then failed with a 500 trying to echo it back as JSON. Validation errors no longer echo the input.
+- **Replay:** monitoring replays the served targets on the held-out week. Across all 50,000 lines in 898 stores, cost falls 31% (0.953 to 0.654; 95% CI 31–32%), and 23% on days with no stockout, in line with the 90-store study. A test checks that the served path reproduces the study exactly on the same data.
+- **Daily orders are unchanged:** every decile in the new batch matches the old file exactly.
+- **Timings moved, mostly from the laptop:**
+  - The batch took 13.3 minutes (it was 11.5), partly for loading the hourly data.
+  - `/reorder` p95 is now 14.7 ms (it was 7.3). The same day, the code on main measured 19–30 ms against 15–16 ms for this branch, and the old and new orders files were level. So the rise comes from a busier laptop, not the new columns.
+
 ## Known issues
 
 - **Hugging Face downloads on this laptop:** the antivirus intercepts HTTPS, so Hugging Face requests fail certificate checks. The forecasting run therefore used `HF_HUB_OFFLINE=1`, with the pinned weights already in the local cache.

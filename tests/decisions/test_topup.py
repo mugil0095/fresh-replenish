@@ -4,11 +4,12 @@ import pytest
 
 from fresh_replenish.config import REPORTS_DIR
 from fresh_replenish.decisions import topup
-from fresh_replenish.decisions.newsvendor import simulate
-from fresh_replenish.decisions.topup import hourly_demand, serve, still_to_come, top_up
+from fresh_replenish.decisions.newsvendor import simulate, top_up
+from fresh_replenish.decisions.topup import hourly_demand, serve, still_to_come
 from fresh_replenish.forecasting.data import CLASSICAL
 from fresh_replenish.imputation.data import Hours
 from fresh_replenish.metrics import CALIBRATED_COLUMNS, DECILE_COLUMNS, DECILES
+from fresh_replenish.serving import batch
 
 KEYS = ["store_id", "product_id"]
 
@@ -32,12 +33,12 @@ def test_serve_carries_morning_stock_into_the_afternoon():
 
 
 @pytest.mark.parametrize(
-    ("target", "morning", "seen", "units"),
-    [(6.0, 5.0, 3.0, 4.0), (1.0, 5.0, 0.0, 0.0), (6.0, 5.0, 9.0, 6.0)],
-    ids=["counts the shelf", "never negative", "sold out means an empty shelf"],
+    ("target", "shelf", "units"),
+    [(6.0, 2.0, 4.0), (1.0, 5.0, 0.0)],
+    ids=["counts the shelf", "never negative"],
 )
-def test_top_up_orders_up_to_the_target(target, morning, seen, units):
-    assert top_up(np.array(target), np.array(morning), np.array(seen)) == units
+def test_top_up_orders_up_to_the_target(target, shelf, units):
+    assert top_up(np.array(target), np.array(shelf)) == units
 
 
 def _one_day():
@@ -57,6 +58,11 @@ def test_a_plan_sees_the_hours_before_it_decides_and_serves_those_before_it_land
     assert lost[0, 0] == 10.0  # 15 wanted before the 10:00 delivery, 5 on hand
     assert waste[0, 0] == 2.0  # 18 delivered against the last 16
     assert delivered[0, 0] == 23.0
+
+
+def test_a_morning_that_sold_out_leaves_an_empty_shelf():
+    _, extra, _, _ = topup._plan(_one_day(), np.array([[4.0]]), np.array([[20.0]]), 8, 0.5)
+    assert extra[0, 0] == 20.0  # 2 delivered, 3 wanted by 8:00
 
 
 def test_the_rest_of_the_day_starts_at_the_decision_hour():
@@ -168,6 +174,54 @@ def test_days_with_no_stockout_are_scored_on_their_own():
     every_day = topup.run(*_scenario(), ratios=(9.0,), headline=9.0)["plans"]
     assert not np.allclose(plans.saving_no_stockout, every_day.saving_no_stockout)
     assert np.allclose(plans.saving, every_day.saving)
+
+
+def _served(results, h, held_out):
+    """The held-out week's orders as the batch would write them for the plan `run` chose."""
+    orders = held_out[[*KEYS, "dt"]].copy()
+    orders[DECILE_COLUMNS] = held_out[CALIBRATED_COLUMNS].to_numpy()
+    plan = results["shifts"]
+    t = plan.decision_hour.iloc[0] - topup.OPENING
+    first = int(np.isin(h.dates, held_out.dt.unique()).argmax())
+    left = h.ids.assign(left=still_to_come(hourly_demand(h, first))[:, t - 1])
+    ids = h.ids.assign(first_category_id=0)
+    return batch.with_top_up(orders, left, ids, plan)
+
+
+def _demand(held_out):
+    return held_out[[*KEYS, "dt"]].assign(
+        recovered_demand=held_out.actual, stockout_hours=np.where(held_out.in_stock, 0.0, 1.0)
+    )
+
+
+def test_run_hands_the_batch_the_plan_it_chose():
+    results = topup.run(*_scenario(), ratios=(1.0, 9.0), headline=9.0)
+    plans, shifts = results["plans"], results["shifts"]
+    best = plans[plans.chosen & (plans.ratio == 9.0)].iloc[0]
+    assert (shifts.decision_hour == best.decision_hour).all()
+    assert (shifts.arrival_hour == best.arrival_hour).all()
+    assert (shifts.morning_share == best.morning_share).all()
+    assert shifts[DECILE_COLUMNS].notna().all(axis=None)
+
+
+def test_the_served_plan_replays_the_study_exactly():
+    h, past, held_out = _scenario()
+    results = topup.run(h, past, held_out, ratios=(1.0, 9.0), headline=9.0)
+    best = results["plans"].query("chosen and ratio == 9").iloc[0]
+    row = topup.replay(h, _served(results, h, held_out), _demand(held_out)).iloc[0]
+    assert row.cost == pytest.approx(best.cost)
+    assert row.one_delivery_cost == pytest.approx(best.one_delivery_cost)
+    assert row.saving_low == pytest.approx(best.saving_low)
+    assert (row.series, row.stores) == (40, 40)
+
+
+def test_replay_scores_only_the_hours_it_was_served():
+    h, past, held_out = _scenario()
+    results = topup.run(h, past, held_out, ratios=(9.0,), headline=9.0)
+    served = _served(results, h, held_out)
+    row = topup.replay(h, served, _demand(held_out)).iloc[0]
+    assert row.decision_hour == served.decision_hour.iloc[0]
+    assert row.morning_share == served.morning_share.iloc[0]
 
 
 def test_forecasts_must_cover_every_series():

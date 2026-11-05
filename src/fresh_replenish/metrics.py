@@ -6,6 +6,7 @@ SEED = 42
 DECILES = np.round(np.arange(1, 10) / 10, 1)  # 0.1 ... 0.9
 DECILE_COLUMNS = [f"q{round(t * 100)}" for t in DECILES]  # q10 ... q90 in forecast tables
 CALIBRATED_COLUMNS = [f"cal_{c}" for c in DECILE_COLUMNS]  # the same deciles after calibration
+REST_COLUMNS = [f"rest_{c}" for c in DECILE_COLUMNS]  # deciles of demand left at midday
 
 
 def score(pred, actual, valid) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
