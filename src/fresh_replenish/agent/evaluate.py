@@ -113,11 +113,14 @@ def score(question: dict, out: dict, seconds: float) -> dict:
         "out_of_scope": not called and REFUSED.search(answer) is not None,
     }.get(question["type"])
     usage = [m.usage_metadata or {} for m in out["messages"] if m.type == "ai"]
+    known = sources(out["messages"])
+    tried = [m.text for m in out["messages"] if m.type == "ai" and not m.tool_calls]
     return {
         "id": question["id"], "type": question["type"], "tool_choice": float(tool_ok),
         "numbers_match": float(not unsupported(out["answer"], sources(out["messages"]))),
         "first_try": float(out["retries"] == 0),
         "gave_up": float(out["answer"].startswith(REFUSAL)),
+        "rejected": " ".join(token for text in tried for token in unsupported(text, known)),
         "handoff_correct": float((out["handoffs"] > 0) == question["handoff"]),
         "refusal_correct": np.nan if refusal is None else float(refusal),
         "seconds": seconds,

@@ -1,5 +1,5 @@
 from fakes import Scripted
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage, ToolMessage
 
 from fresh_replenish.agent import evaluate
 from fresh_replenish.agent.graph import REFUSAL, build_agent
@@ -59,6 +59,14 @@ def test_report_lists_the_headline_measures(toolbox, orders):
     report = evaluate.render_report(summary, "scripted")
     assert report.startswith("# Agent evaluation") and "tool choice" in report
     assert "0% gave up" in report
+
+
+def test_every_number_the_checker_rejected_is_kept():
+    question = {"id": 1, "type": "why", "tools": [], "optional": [], "handoff": False}
+    tried = [AIMessage("Order 12.5."), AIMessage("Order 7.5."), AIMessage("Order 9.0.")]
+    out = {"tools": [], "answer": "Order 9.0.", "retries": 2, "handoffs": 0,
+           "messages": [ToolMessage('{"order": 9.0}', tool_call_id="1"), *tried]}
+    assert evaluate.score(question, out, 1.0)["rejected"] == "12.5 7.5"
 
 
 def test_an_answer_that_gives_up_is_counted():
