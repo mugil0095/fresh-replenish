@@ -9,6 +9,7 @@
 | Forecast ranges that hold | 80% of demand inside the calibrated 10–90% range (target 80%) |
 | Cost of orders, against the most accurate forecast's median | −56% (−55% against reordering last week's demand) |
 | A second delivery, ordered at 13:00 | a further −32% on the 90-store sample, −31% on all 50,000 lines (−23% on days with fully observed demand), before the delivery's own cost |
+| If unsold stock keeps 2–3 days | ordering by cost still wins, by more (−78% to −80% against the most accurate forecast); a second delivery is worth far less |
 | Nightly batch / API | 50,000 series in 13.3 min; p95 14.7 ms per store request |
 | AI agent (50 questions × 3 runs) | 100% right tools; every final answer passed the number checker; every over-limit order went to a human |
 
@@ -45,7 +46,7 @@ uv run python -m fresh_replenish.imputation.recovery  # writes reports/demand_re
 uv run python -m fresh_replenish.forecasting.evaluate  # writes reports/forecasting.md (~10 min; ~2.5 GB of model weights the first time)
 uv run python -m fresh_replenish.uncertainty.conformal  # writes reports/calibration.md (~4 min)
 uv run python -m fresh_replenish.decisions.newsvendor   # writes reports/orders.md (seconds)
-uv run python -m fresh_replenish.decisions.topup        # writes reports/topup.md (~2 min)
+uv run python -m fresh_replenish.decisions.topup        # writes reports/topup.md (~5 min)
 uv run python -m fresh_replenish.serving.batch          # nightly orders for all 50,000 series (~13 min)
 uv run uvicorn --factory fresh_replenish.serving.api:create_app  # GET /reorder?store_id=0, POST /topup
 uv run python -m fresh_replenish.serving.latency        # writes reports/service.md
@@ -114,6 +115,20 @@ The orders above commit the whole day before opening. The hourly data shows what
 - **At full scale:** replaying the served plan on all 50,000 lines in 898 stores saves 31% (0.953 to 0.654 per unit of demand), and 23% on days with no stockout. The plan was chosen on 90 stores, so about 90% of these lines played no part in it.
 - **Observed days:** on days with no stockout, where hourly demand is fully observed, the saving is 23%. On other days the afternoon is recovered, not seen. Days with no stockout are also quieter (average demand 1.25 against 1.79), so the gap is not all down to recovery.
 - **Not counted:** the delivery's own cost. At 9× the saving is worth 24.3 wasted units per store per day, so a second delivery pays only below that.
+
+## If stock keeps longer
+
+Everything above throws unsold stock away the same night. The data has no shelf lives, so this check lets unsold units keep for up to 3 days at 9×, oldest sold first.
+
+| Shelf life | Cost-based orders against the most accurate forecast | One delivery | Two deliveries | Saving | Second delivery's worth (wasted units per store per day) |
+|---|---|---|---|---|---|
+| 1 day | −56% | 0.947 | 0.646 | 32% | 24.3 |
+| 2 days | −78% | 0.311 | 0.231 | 25% | 6.4 |
+| 3 days | −80% | 0.158 | 0.134 | 15% | 2.0 |
+
+- **The headline gets stronger:** ordering by cost beats the most accurate forecast by more when stock keeps, even at its one-day order level.
+- **The second delivery pays mainly for stock that lasts a day:** its worth falls by three-quarters at 2 days and by over 90% at 3 days.
+- **A fair comparison:** stock that keeps makes overstock cheap, so the newsvendor level stops being the best one. The one-delivery and two-delivery columns are re-tuned on past weeks for each shelf life (one delivery orders 1.3× at 2 days and 1.5× at 3 days).
 
 ## Service
 

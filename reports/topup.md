@@ -14,13 +14,13 @@ One delivery commits the whole day's order before opening. Here the morning carr
 
 ## Best plan at each cost ratio
 
-| ratio | decision_hour | arrival_hour | morning_share | cost | cost_low | cost_high | one_delivery_cost | saving | saving_low | saving_high | saving_no_stockout | saving_no_stockout_low | saving_no_stockout_high | saved_per_store_day | waste | one_delivery_waste | fill_rate | one_delivery_fill_rate | top_up_share | past_cost |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0.5 | 12 | 14 | 0.9 | 0.1652 | 0.1607 | 0.1695 | 0.206 | 0.1981 | 0.1926 | 0.2041 | 0.1304 | 0.1196 | 0.1408 | 3.2955 | 0.0512 | 0.0485 | 0.7719 | 0.6851 | 0.1978 | 0.1731 |
-| 1.0 | 13 | 15 | 0.9 | 0.2475 | 0.24 | 0.2543 | 0.3223 | 0.2322 | 0.2265 | 0.2387 | 0.143 | 0.1326 | 0.153 | 6.0457 | 0.1006 | 0.1019 | 0.8531 | 0.7795 | 0.1682 | 0.2617 |
-| 2.0 | 13 | 15 | 0.8 | 0.3551 | 0.3442 | 0.3652 | 0.4764 | 0.2546 | 0.249 | 0.2607 | 0.175 | 0.1655 | 0.1844 | 9.7972 | 0.1626 | 0.1962 | 0.9038 | 0.8599 | 0.2078 | 0.3763 |
-| 4.0 | 13 | 15 | 0.8 | 0.4741 | 0.4587 | 0.4895 | 0.6696 | 0.2919 | 0.2861 | 0.2981 | 0.2031 | 0.195 | 0.2111 | 15.788 | 0.2628 | 0.3334 | 0.9472 | 0.9159 | 0.174 | 0.5134 |
-| 9.0 | 13 | 15 | 0.8 | 0.6458 | 0.6225 | 0.6698 | 0.9472 | 0.3183 | 0.3116 | 0.3254 | 0.2291 | 0.221 | 0.2374 | 24.348 | 0.4181 | 0.5558 | 0.9747 | 0.9565 | 0.1314 | 0.7041 |
+| ratio | decision_hour | arrival_hour | morning_share | cost | cost_low | cost_high | one_delivery_cost | saving | saving_low | saving_high | saving_no_stockout | saving_no_stockout_low | saving_no_stockout_high | saved_per_store_day | waste | one_delivery_waste | fill_rate | one_delivery_fill_rate | top_up_share | past_cost | one_delivery_level |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 0.5 | 12 | 14 | 0.9 | 0.1652 | 0.1607 | 0.1695 | 0.206 | 0.1981 | 0.1926 | 0.2041 | 0.1304 | 0.1196 | 0.1408 | 3.2955 | 0.0512 | 0.0485 | 0.7719 | 0.6851 | 0.1978 | 0.1731 | 1.0 |
+| 1.0 | 13 | 15 | 0.9 | 0.2475 | 0.24 | 0.2543 | 0.3223 | 0.2322 | 0.2265 | 0.2387 | 0.143 | 0.1326 | 0.153 | 6.0457 | 0.1006 | 0.1019 | 0.8531 | 0.7795 | 0.1682 | 0.2617 | 1.0 |
+| 2.0 | 13 | 15 | 0.8 | 0.3551 | 0.3442 | 0.3652 | 0.4764 | 0.2546 | 0.249 | 0.2607 | 0.175 | 0.1655 | 0.1844 | 9.7972 | 0.1626 | 0.1962 | 0.9038 | 0.8599 | 0.2078 | 0.3763 | 1.0 |
+| 4.0 | 13 | 15 | 0.8 | 0.4741 | 0.4587 | 0.4895 | 0.6696 | 0.2919 | 0.2861 | 0.2981 | 0.2031 | 0.195 | 0.2111 | 15.788 | 0.2628 | 0.3334 | 0.9472 | 0.9159 | 0.174 | 0.5134 | 1.0 |
+| 9.0 | 13 | 15 | 0.8 | 0.6458 | 0.6225 | 0.6698 | 0.9472 | 0.3183 | 0.3116 | 0.3254 | 0.2291 | 0.221 | 0.2374 | 24.348 | 0.4181 | 0.5558 | 0.9747 | 0.9565 | 0.1314 | 0.7041 | 1.0 |
 
 ## Every decision hour at r = 9
 
@@ -37,6 +37,24 @@ One delivery commits the whole day's order before opening. Here the morning carr
 | 16 | 18 | 0.9 | 0.8176 | 0.7542 | 0.2038 |
 | 17 | 19 | 0.9 | 0.8682 | 0.8119 | 0.1429 |
 | 18 | 20 | 0.9 | 0.9206 | 0.87 | 0.0815 |
+
+## If stock keeps longer
+
+Everything above throws unsold stock away the same night. The data has no shelf lives, so this lets unsold units keep for up to 3 days at r = 9, oldest sold first. Each policy counts the stock it carries. The week runs twice and the second pass is scored, so the shelf starts with normal stock.
+
+- **Cost-based orders against the most accurate forecast:** the saving is 56% at 1 day, 78% at 2 days, 80% at 3 days.
+
+- **Cost-based orders against last week's demand:** 55% at 1 day, 75% at 2 days, 77% at 3 days.
+
+- **What a second delivery is worth:** 24.3 wasted units per store per day at 1 day, 6.4 wasted units per store per day at 2 days, 2.0 wasted units per store per day at 3 days.
+
+- **A second delivery against one:** 32% at 1 day, 25% at 2 days, 15% at 3 days. Stock that keeps makes overstock cheaper, so the newsvendor level is no longer the best one: for this comparison, past weeks choose the level of the one delivery again, as well as the top-up's hour and share.
+
+| life_days | last_week_cost | median_cost | cost_based_cost | saving_vs_median | saving_vs_median_low | saving_vs_median_high | saving_vs_last_week | retuned_cost | retuned_level | retuned_waste | retuned_fill_rate | decision_hour | morning_share | top_up_cost | top_up_waste | top_up_fill_rate | top_up_saving | top_up_saving_low | top_up_saving_high | top_up_saving_no_stockout | saved_per_store_day |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | 2.1115 | 2.1664 | 0.9472 | 0.5628 | 0.5521 | 0.5727 | 0.5514 | 0.9472 | 1.0 | 0.5558 | 0.9565 | 13 | 0.8 | 0.6458 | 0.4181 | 0.9747 | 0.3183 | 0.3116 | 0.3254 | 0.2291 | 24.348 |
+| 2 | 1.8505 | 2.0739 | 0.4623 | 0.7771 | 0.7689 | 0.785 | 0.7502 | 0.3105 | 1.3 | 0.1713 | 0.9845 | 14 | 1.0 | 0.2314 | 0.0724 | 0.9823 | 0.2549 | 0.2389 | 0.2703 | 0.4027 | 6.3928 |
+| 3 | 1.8054 | 2.0693 | 0.4073 | 0.8032 | 0.7951 | 0.811 | 0.7744 | 0.1581 | 1.5 | 0.0785 | 0.9912 | 16 | 1.3 | 0.1337 | 0.0466 | 0.9903 | 0.1543 | 0.1378 | 0.1706 | 0.3427 | 1.9699 |
 
 ## Sample
 

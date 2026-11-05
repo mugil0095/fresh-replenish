@@ -6,7 +6,7 @@ from fresh_replenish.config import REPORTS_DIR
 from fresh_replenish.decisions import topup
 from fresh_replenish.decisions.newsvendor import simulate, top_up
 from fresh_replenish.decisions.topup import hourly_demand, serve, still_to_come
-from fresh_replenish.forecasting.data import CLASSICAL
+from fresh_replenish.forecasting.data import BASELINE, CLASSICAL
 from fresh_replenish.imputation.data import Hours
 from fresh_replenish.metrics import CALIBRATED_COLUMNS, DECILE_COLUMNS, DECILES
 from fresh_replenish.serving import batch
@@ -14,22 +14,49 @@ from fresh_replenish.serving import batch
 KEYS = ["store_id", "product_id"]
 
 
+def _days(*values):
+    return np.array([values], dtype=float)
+
+
 def test_one_delivery_costs_the_same_as_the_daily_simulation():
     rng = np.random.default_rng(0)
-    order, early, late = rng.uniform(0, 10, (3, 50, 7))
-    waste, lost = serve(order, 0, early, late)
-    cost = simulate(order, early + late, r=4)[0]
-    assert (waste + 4 * lost).sum(axis=1) == pytest.approx(cost)
+    order, demand = rng.uniform(0, 10, (2, 50, 7))
+    none = np.zeros_like(demand)
+    _, _, waste, lost = serve(order, none, none, demand, demand)
+    assert (waste + 4 * lost).sum(axis=1) == pytest.approx(simulate(order, demand, r=4)[0])
 
 
 def test_serve_loses_what_the_top_up_arrives_too_late_for():
-    waste, lost = serve(np.array(5.0), np.array(4.0), np.array(8.0), np.array(3.0))
-    assert (waste, lost) == (1.0, 3.0)  # 3 lost before it arrives; 4 delivered, 3 sold
+    _, extra, waste, lost = serve(_days(5), _days(6), _days(3), _days(8), _days(11))
+    assert (extra.item(), waste.item(), lost.item()) == (4.0, 1.0, 3.0)
 
 
 def test_serve_carries_morning_stock_into_the_afternoon():
-    waste, lost = serve(np.array(5.0), np.array(1.0), np.array(2.0), np.array(6.0))
-    assert (waste, lost) == (0.0, 2.0)  # 3 left + 1 delivered against 6
+    _, extra, waste, lost = serve(_days(5), _days(4), _days(2), _days(2), _days(8))
+    assert (extra.item(), waste.item(), lost.item()) == (1.0, 0.0, 2.0)
+
+
+def test_the_oldest_stock_sells_first():
+    stock = np.array([[2.0, 3.0]])
+    unmet = topup._sell(stock, np.array([3.0]))
+    assert stock.tolist() == [[0.0, 2.0]] and unmet.tolist() == [0.0]
+
+
+def test_demand_beyond_the_stock_goes_unmet():
+    assert topup._sell(np.array([[2.0, 3.0]]), np.array([7.0])).tolist() == [2.0]
+
+
+def test_unsold_stock_sells_the_next_day_when_it_keeps():
+    up_to, demand, none = _days(5, 5), _days(3, 3), _days(0, 0)
+    assert serve(up_to, none, none, demand, demand)[2].tolist() == [[2.0, 2.0]]
+    morning, _, waste, lost = serve(up_to, none, none, demand, demand, life=2)
+    assert morning.tolist() == [[3.0, 3.0]] and not waste.any() and not lost.any()
+
+
+def test_stock_is_thrown_away_when_its_life_ends():
+    none = _days(0, 0)
+    morning, _, waste, _ = serve(_days(5, 5), none, none, none, none, life=2)
+    assert morning.tolist() == [[5.0, 0.0]] and waste.tolist() == [[0.0, 5.0]]
 
 
 @pytest.mark.parametrize(
@@ -235,10 +262,69 @@ def test_headline_must_be_one_of_the_ratios():
         topup.run(*_scenario(), ratios=(1.0,), headline=9.0)
 
 
+def _forecasts(held_out):
+    return pd.concat([held_out, held_out.assign(model=BASELINE)])
+
+
+def test_past_weeks_retune_one_delivery_when_stock_keeps():
+    short = np.array([[10.0]])  # 31 are wanted: at 9x the highest level is the cheapest
+    assert topup._best_level(_one_day(), short, 9.0, 2) == max(topup.MORNING_SHARES)
+    plenty = np.array([[62.0]])
+    assert topup._best_level(_one_day(), plenty, 9.0, 2) == 0.5
+
+
+def test_one_day_shelf_life_keeps_the_newsvendor_level():
+    plans = topup.run(*_scenario(), ratios=(9.0,), headline=9.0)["plans"]
+    assert (plans.one_delivery_level == 1).all()
+
+
+def test_the_top_up_is_judged_against_the_retuned_delivery():
+    h, past, held_out = _scenario()
+    row = topup.shelf_life(h, past, _forecasts(held_out), r=9.0, lives=(2,)).iloc[0]
+    assert row.retuned_level != 1
+    assert row.top_up_saving == pytest.approx(1 - row.top_up_cost / row.retuned_cost)
+
+
+def test_shelf_life_starts_from_the_one_day_results():
+    h, past, held_out = _scenario()
+    table = topup.shelf_life(h, past, _forecasts(held_out), r=9.0, lives=(1, 2))
+    plans = topup.run(h, past, held_out, ratios=(9.0,), headline=9.0)["plans"]
+    best, first = plans[plans.chosen].iloc[0], table.iloc[0]
+    assert table.life_days.tolist() == [1, 2]
+    assert first.cost_based_cost == pytest.approx(best.one_delivery_cost)
+    assert first.top_up_cost == pytest.approx(best.cost)
+    assert first.top_up_saving == pytest.approx(best.saving)
+    assert first.top_up_saving_low == pytest.approx(best.saving_low)
+    assert first.retuned_cost == first.cost_based_cost and first.retuned_level == 1
+    assert table.cost_based_cost.iloc[1] < first.cost_based_cost
+
+
+def test_shelf_life_compares_each_policy_on_the_same_resamples():
+    h, past, held_out = _scenario()
+    row = topup.shelf_life(h, past, _forecasts(held_out), r=9.0, lives=(1,)).iloc[0]
+    assert row.saving_vs_median == pytest.approx(1 - row.cost_based_cost / row.median_cost)
+    assert row.saving_vs_median_low <= row.saving_vs_median <= row.saving_vs_median_high
+    assert row.saving_vs_last_week == pytest.approx(1 - row.cost_based_cost / row.last_week_cost)
+
+
+def test_the_saved_one_day_shelf_life_matches_the_orders_report():
+    table = pd.read_csv(REPORTS_DIR / "tables" / "topup_shelf_life.csv")
+    orders = pd.read_csv(REPORTS_DIR / "tables" / "orders_policies.csv")
+    orders = orders[orders.ratio == 9].set_index("policy").cost
+    first = table.iloc[0]
+    assert first.life_days == 1
+    assert first.cost_based_cost == pytest.approx(orders[CLASSICAL])
+    assert first.median_cost == pytest.approx(orders[f"{CLASSICAL} median"])
+    assert first.last_week_cost == pytest.approx(orders[BASELINE])
+
+
 def test_report_states_the_saving_and_what_it_leaves_out():
-    results = topup.run(*_scenario(), ratios=(1.0, 9.0), headline=9.0)
+    h, past, held_out = _scenario()
+    results = topup.run(h, past, held_out, ratios=(1.0, 9.0), headline=9.0)
+    results["shelf_life"] = topup.shelf_life(h, past, _forecasts(held_out), r=9.0, lives=(1, 2))
     best = results["plans"].query("chosen and ratio == 9").iloc[0]
     report = topup.render_report(results)
+    assert "## If stock keeps longer" in report
     assert f"{best.saving:.0%} less than one delivery" in report
     assert "does not count what the second delivery itself costs" in report
     assert f"{int(best.decision_hour)}:00" in report

@@ -22,7 +22,9 @@ What didn't work, or didn't hold, and is reported rather than hidden. The eviden
 ## Second delivery
 - **Updating the forecast from the morning's sales barely helped.** In a throwaway run on the past folds at 9× (not kept in the repo), it moved the cost from 0.721 to 0.689. Part of that is circular, so it was dropped. Nearly all the gain comes from counting the shelf.
 - **The saving shrinks on observed days:** 32% overall, 23% on days with no stockout. Part of the headline may rest on recovered afternoon demand, and those days are also quieter, so the two effects can't be separated.
-- **Waste stays high:** even with a top-up, 0.418 units are wasted per unit of demand at 9×.
+- **Waste stays high:** with a one-day shelf life, even a top-up wastes 0.418 units per unit of demand at 9×.
+- **It is worth far less if stock keeps:** 24.3 wasted units per store per day at a 1-day shelf life, 6.4 at 2 days and 2.0 at 3 days.
+- **A first comparison flattered it:** against one delivery left at the newsvendor level, the top-up showed 50–57% savings at 2–3 days. Re-tuning one delivery as well gave 25% and 15%.
 
 ## Service (Phase 6)
 - **The Docker image is unverified.** It was checked in CI only, not built locally, and CI runs once the repo is pushed.

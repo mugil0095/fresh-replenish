@@ -423,6 +423,18 @@ A full re-check (tests on a clean copy, re-runs of Phases 1, 2 and 5, the API, t
   - The batch took 13.3 minutes (it was 11.5). The two new steps take 17 seconds of that, so nearly all of the rise is not the new code.
   - `/reorder` p95 is now 14.7 ms (it was 7.3). The same day, the code on main measured 19–30 ms against 15–16 ms for this branch, and the old and new orders files were level. So the rise comes from a busier laptop, not the new columns.
 
+## 2026-11-05: Shelf life
+
+- **Why:** every result so far throws unsold stock away the same night. The data has no shelf lives, and this is the biggest assumption behind the waste figures.
+- **Simulation:** `serve` now runs day by day with stock by age. The oldest units sell first and units are thrown away after `life` days. At one day it reproduces every earlier number exactly.
+- **A clean start:** a shelf that starts empty and ends full would flatter stock that keeps, so the week runs twice and the second pass is scored. Day 7 leads into day 1, which keeps the weekdays in order.
+- **Assumed:** 1, 2 and 3 days, the same for every product, at 9×.
+- **Result:**
+  - Cost-based orders beat the most accurate forecast by 56%, 78% and 80%, at their one-day order level.
+  - The second delivery saves 32%, 25% and 15% against a re-tuned one delivery, worth 24.3, 6.4 and 2.0 wasted units per store per day.
+- **The first comparison was wrong:** it re-chose the top-up's plan for each shelf life but left one delivery at the newsvendor level, which is no longer the best one when overstock is cheap. That showed 50–57% savings at 2–3 days. Now past weeks choose the level for one delivery too (1.3× and 1.5×), and the morning share may go above 100%.
+- **Still not re-tuned:** the top-up's rest-of-day target stays at the critical ratio, which may understate it a little at 2–3 days.
+
 ## Known issues
 
 - **Hugging Face downloads on this laptop:** the antivirus intercepts HTTPS, so Hugging Face requests fail certificate checks. The forecasting run therefore used `HF_HUB_OFFLINE=1`, with the pinned weights already in the local cache.

@@ -29,6 +29,7 @@
 | Ordering by cost vs ordering the most accurate forecast | −56% cost; served 96% of demand vs 77% |
 | Ordering by cost vs reordering last week's demand | −55% cost |
 | Adding a midday top-up delivery | a further −31% cost across all 50,000 lines (−23% on days with fully observed demand), before the delivery's own cost |
+| If unsold stock keeps 2–3 days instead of 1 | ordering by cost still wins, by more: −78% to −80% against the most accurate forecast |
 | Forecast ranges that hold on a new week | 80% of demand fell inside the stated 80% range |
 | AI agent, 50 scripted questions run 3 times | right tools 100%; every answer passed the number check; every risky order sent to a human |
 
@@ -39,11 +40,12 @@
 
 - **Set the service level from costs.** Each product's order should come from its forecast range at the level its waste and lost-sale costs justify, not from the single best guess.
 - **Recover hidden demand before forecasting.** Otherwise every stockout makes the next order smaller.
-- **Price a second delivery.** At the assumed 9×, counting the shelf at 13:00 and topping up by 15:00 pays if a delivery costs less than about 24 wasted units per store per day.
+- **Price a second delivery.** At the assumed 9×, counting the shelf at 13:00 and topping up by 15:00 pays if a delivery costs less than about 24 wasted units per store per day. That is for stock that lasts one day: at 2 days the figure falls to about 6, and at 3 days to about 2.
 - **Keep a human on unusual orders.** The agent explains the routine ones and routes the exceptions.
 
 ## Caveats
 
 - **Costs:** they are assumed, and results change with the cost ratio. At equal costs, ordering by cost and ordering the forecast cost about the same.
 - **Simulation:** this is one held-out week, simulated against recovered (estimated) demand, not a live trial.
+- **Shelf life:** the data has none. The main results assume unsold stock is thrown away the same night, and a check with 2 and 3 days gives every product the same life.
 - **Scale:** sales in the data are normalised, so results are relative (%), not money.
