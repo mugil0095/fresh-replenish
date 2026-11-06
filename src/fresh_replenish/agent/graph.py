@@ -24,22 +24,25 @@ SYSTEM = """You help dark-store managers decide daily orders of fresh food.
 - For an order, call compute_order and explain it with the get_forecast range and the cost ratio
   (lost-sale cost / waste cost; 9 by default, which orders at the 90th percentile).
 - For a shelf count, call compute_top_up and say how much to top up, when the shelf is counted and
-  when the delivery arrives. A top-up is advice: never save it, and say nothing was ordered.
+  when the delivery arrives. A top-up is advice: say nothing was ordered.
   Without a count, ask for one: never assume it, and don't call compute_top_up.
 - The forecast range runs from the 10th to the 90th percentile; the median is the 50th.
 - What-if answers must say they are model-based estimates, not proof of cause and effect.
 - If a tool returns an error, say the data is not available; never guess.
 - If an order is outside the limits, say so: a planner must approve it.
-- When asked to place or record an order, call write_decision_record after compute_order and
-  before you answer: an answer without the saved record is incomplete. Never call it otherwise.
 - Politely refuse anything that is not about ordering fresh food for these stores.
 Dates are YYYY-MM-DD. A discount is the price as a share of normal (0.8 means 20% off)."""
+# Only with the save tool: named without its arguments, the model guesses them and keeps retrying.
+SAVE_RULE = """
+When asked to place or record an order, call write_decision_record after compute_order and
+before you answer: an answer without the saved record is incomplete."""
 REFUSAL = (
     "I can't back every number in my answer with a tool output, so I won't guess. "
     "Please ask a planner."
 )
 MAX_RETRIES = 2  # answers the number checker may reject before the agent gives up
 MAX_FAILED_CHECKS = 3  # failed limit checks since the last review before a human takes over
+MAX_TOOL_ERRORS = 5  # failed or refused tool calls before the agent stops; one run made 92
 
 
 class State(MessagesState):
@@ -86,6 +89,22 @@ def sources(messages: list) -> list[str]:
 def _called(messages: list) -> list[str]:
     """The tools the model has called so far, in order."""
     return [c["name"] for m in messages if isinstance(m, AIMessage) for c in m.tool_calls]
+
+
+def _tool_errors(messages: list) -> int:
+    """Tool calls in the conversation that failed or were refused."""
+    return sum(
+        m.status == "error" or "error" in _payload(m)
+        for m in messages if isinstance(m, ToolMessage)
+    )
+
+
+def _refusal(messages: list) -> AIMessage:
+    saved = any(
+        m.name == "write_decision_record" and _payload(m) == {"saved": True}
+        for m in messages if isinstance(m, ToolMessage)
+    )
+    return AIMessage(REFUSAL + (" An order from this conversation was already saved." * saved))
 
 
 def _key(store_id, product_id, date, order) -> list:
@@ -138,8 +157,10 @@ def build_agent(model, toolbox: Toolbox):
     no_save = model.bind_tools(tools[:-1])  # the model can't save what nobody asked to save
 
     def agent(state: State) -> dict:
-        llm = bound if _asks_to_save(state["messages"]) else no_save
-        return {"messages": [llm.invoke([SystemMessage(SYSTEM), *state["messages"]])]}
+        llm, rules = (
+            (bound, SYSTEM + SAVE_RULE) if _asks_to_save(state["messages"]) else (no_save, SYSTEM)
+        )
+        return {"messages": [llm.invoke([SystemMessage(rules), *state["messages"]])]}
 
     def after_agent(state: State) -> str:
         if state["messages"][-1].tool_calls:
@@ -147,6 +168,8 @@ def build_agent(model, toolbox: Toolbox):
         return "approval" if _failed(state) else "check"
 
     def limits(state: State) -> Command:
+        if _tool_errors(state["messages"]) >= MAX_TOOL_ERRORS:
+            return Command(goto=END, update={"messages": [_refusal(state["messages"])]})
         return Command(goto="approval" if len(_failed(state)) >= MAX_FAILED_CHECKS else "agent")
 
     def approval(state: State) -> dict:
@@ -178,12 +201,7 @@ def build_agent(model, toolbox: Toolbox):
             return Command(goto=END)
         retries = state.get("retries", 0)
         if retries >= MAX_RETRIES:
-            saved = any(
-                m.name == "write_decision_record" and _payload(m) == {"saved": True}
-                for m in state["messages"] if isinstance(m, ToolMessage)
-            )
-            note = " An order from this conversation was already saved." if saved else ""
-            return Command(goto=END, update={"messages": [AIMessage(REFUSAL + note)]})
+            return Command(goto=END, update={"messages": [_refusal(state["messages"])]})
         retry = HumanMessage(
             f"The number checker rejected {', '.join(bad)}: these are not in any tool output. "
             "Answer again using only numbers from the tool outputs.", name="checker",

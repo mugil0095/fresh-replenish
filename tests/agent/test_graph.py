@@ -1,11 +1,11 @@
 import json
 
 import pytest
-from fakes import Scripted
+from fakes import Recording, Scripted
 from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.types import Command
 
-from fresh_replenish.agent.graph import REFUSAL, ask, build_agent
+from fresh_replenish.agent.graph import MAX_TOOL_ERRORS, REFUSAL, ask, build_agent
 
 DAY = {"store_id": 1, "product_id": 10, "date": "2024-06-26"}
 RECORD = "Record the cost-based order for product 10 at store 1 on 2024-06-26."
@@ -49,6 +49,30 @@ def test_a_request_to_place_a_top_up_cannot_save(toolbox, words):
     script = [call("write_decision_record", order=3.0, reason="top-up"), AIMessage("Not saved.")]
     run(toolbox, script, f"Place {words} of 3 units of product 10 for store 1 on 2024-06-26.")
     assert not toolbox.records.exists()
+
+
+@pytest.mark.parametrize(
+    ("question", "told"),
+    [(RECORD, True), ("How much should store 1 order of product 10 on 2024-06-26?", False)],
+)
+def test_only_a_question_that_asks_to_save_hears_of_the_save_tool(toolbox, question, told):
+    model = Recording(responses=[AIMessage("Not saved.")])
+    ask(build_agent(model, toolbox), question)
+    assert ("write_decision_record" in model.rules[0]) is told
+    assert "save" not in model.rules[0].lower() or told
+
+
+def test_a_run_of_failed_tool_calls_stops_the_conversation(toolbox):
+    guess = {"name": "write_decision_record", "args": {"store_id": 1}, "id": "1"}
+    script = [AIMessage("", tool_calls=[guess]) for _ in range(MAX_TOOL_ERRORS + 3)]
+    out = run(toolbox, script)
+    assert out["answer"] == REFUSAL and len(out["tools"]) == MAX_TOOL_ERRORS
+
+
+def test_a_few_failed_tool_calls_do_not_stop_the_conversation(toolbox):
+    script = [call("get_forecast", product_id=99), call("get_forecast", product_id=98),
+              AIMessage("That forecast is not available.")]
+    assert run(toolbox, script)["answer"] == "That forecast is not available."
 
 
 def test_checker_rejects_an_invented_number_then_accepts_a_retry(toolbox):

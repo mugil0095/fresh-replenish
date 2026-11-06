@@ -6,3 +6,13 @@ class Scripted(FakeMessagesListChatModel):
 
     def bind_tools(self, tools, **kwargs):
         return self
+
+
+class Recording(Scripted):
+    """A scripted model that keeps the rules it was given."""
+
+    rules: list = []
+
+    def _generate(self, messages, *args, **kwargs):
+        self.rules.append(messages[0].text)
+        return super()._generate(messages, *args, **kwargs)
