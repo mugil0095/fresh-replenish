@@ -12,7 +12,7 @@
 | A second delivery, ordered at 13:00 | a further −32% on the 90-store sample, −31% on all 50,000 lines (−23% on days with fully observed demand), before the delivery's own cost |
 | If unsold stock keeps 2–3 days | cost falls by two-thirds or more; ordering by cost keeps an 8–11% edge over a tuned multiple; a second delivery is worth far less |
 | Nightly batch / API | 50,000 series in 13.3 min; p95 14.7 ms per store request |
-| AI agent (56 questions × 3 runs) | 99% right tools; every final answer passed the number checker, though 7% gave up and told the user to ask a planner; every over-limit order went to a human |
+| AI agent (56 questions × 3 runs) | 99% right tools; every final answer passed the number checker and none gave up; every over-limit order went to a human |
 
 The project:
 
@@ -150,10 +150,11 @@ A LangGraph agent turns the forecasts into explained orders.
 - **Tools:** five plain-code tools: forecast lookup, cost-based order within limits, top-up advice from a shelf count, Chronos-2 what-if, and decision record.
 - **Numbers:** a checker rejects an answer with a number that isn't in a tool output or the question; small counts and ranks like "90th" are allowed.
 - **Hand-off:** orders over the limits pause for a planner's approval. After a rejection, only an order a planner approved can be saved in that conversation.
+- **Stops:** the agent stops after 5 failed tool calls, and hears about the save tool only when the question asks to save.
 - **Evaluation:** 56 scripted questions, each run three times, score tool choice, numbers, hand-offs, refusals and latency (and cost, when `FRESH_LLM_PRICE` is set).
-- **Results** ([agent evaluation](reports/agent_gpt-oss-120b.md)): on Ollama Cloud `gpt-oss:120b`, re-run with the top-up tool (misses are in [negative results](docs/negative_results.md)):
+- **Results** ([agent evaluation](reports/agent_gpt-oss-120b.md)): on Ollama Cloud `gpt-oss:120b`, re-run with the top-up tool; 167 of 168 runs finished and one hit a provider error (misses are in [negative results](docs/negative_results.md)):
   - correct tool choice 99%;
-  - every final answer passed the number checker, but 7% passed by giving up and telling the user to ask a planner (29% of "why this order?" runs);
+  - every final answer passed the number checker, 99% on the first try, and none gave up;
   - every over-limit order was handed to a planner, and nothing was saved after a rejection;
   - all 12 top-ups with a shelf count were right, and all 6 without one asked for it;
   - every out-of-scope and missing-data question was handled correctly;

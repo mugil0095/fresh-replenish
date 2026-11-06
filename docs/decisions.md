@@ -457,23 +457,27 @@ A full re-check (tests on a clean copy, re-runs of Phases 1, 2 and 5, the API, t
 - **Advice only:** saved as an order, a top-up would replace the day's order in the store's capacity count. So a question that names a top-up never gets the save tool, and a conversation that called `compute_top_up` can't save. Top-ups also skip the order limits, since nothing is placed.
 - **No count, no answer:** the number checker doesn't read tool arguments, so an invented shelf count would pass. The prompt tells the agent to ask, and 2 of the 6 new questions test that.
 - **Questions:** the 6 new ones come last, so the original 50 keep their random draws (checked line by line). That makes 56 questions and 168 runs. A new `gave_up` measure counts answers that end in "ask a planner".
-- **It took three runs:**
+- **It took five runs:**
 
-  | | Before | 1: top-up tool | 2: rule in the prompt | 3: published |
-  |---|---|---|---|---|
-  | Right tools | 100% | 99.4% | 95% | 98.8% |
-  | Hand-off on over-limit orders | 100% | 100% | 92% | 100% |
-  | Over-limit runs that saved after a rejection | 5 of 24* | 6 of 24 | 0 | 0 |
-  | Gave up | 9 of 150 | 9 of 168 | 8 of 168 | 11 of 168 |
-  | Tokens per run | 2,936 | 3,309 | 6,252 | 3,392 |
+  | | Before | 1: top-up tool | 2: rule in the prompt | 3: rule moved | 4: checker fixed | 5: published |
+  |---|---|---|---|---|---|---|
+  | Right tools | 100% | 99.4% | 95% | 98.8% | 96% | 99.4% |
+  | Hand-off on over-limit orders | 100% | 100% | 92% | 100% | 100% | 100% |
+  | Over-limit runs that saved after a rejection | 5 of 24* | 6 of 24 | 0 | 0 | 0 | 0 |
+  | Passed the check first try | 79% | 77% | 78% | 80% | 98% | 99% |
+  | Gave up | 9 of 150 | 9 of 168 | 8 of 168 | 11 of 168 | 0 | 0 |
+  | Unasked saves on "why" and other-ratio runs | 0 | 0 | 5 | 2 | 6 | 0 |
+  | Tokens per run | 2,936 | 3,309 | 6,252 | 3,392 | 9,765 | 2,383 |
 
   \* From tool calls; that run's records weren't kept.
 
 - **Run 1 looked fine until the answers were read.** After a planner rejected an order, the agent placed a smaller one itself. A code check now refuses any save once a planner rejects, except an order a planner approved.
 - **Run 2 added a prompt rule for the same thing, and it backfired.** The rule reached every question: 5 "why" and other-ratio runs tried to save (one made 59 tool calls), 2 over-limit runs skipped the planner, and 2 of 12 record runs never saved.
 - **Run 3 moved the instruction into the message that reports a rejection,** so other questions see the same prompt as run 1. All 24 over-limit runs say no order was placed, all 12 record runs saved, all 12 top-ups with a count were right, and all 6 without one asked.
-- **Not fully explained:** 2 unasked save attempts remain in run 3, so the rule wasn't their only cause. They were refused, and nothing was saved.
-- **Left alone:** the tool assumes a count at 13:00, as `/topup` does, and doesn't state the morning share. Both are in the limitations.
+- **Run 4 fixed the give-ups.** A 14-question sample kept every answer the checker saw: all 29 rejected numbers were percentile labels typed oddly, like "90-th" or "Median (50 %)". The model wasn't inventing anything. The checker now reads those labels, and real inventions like "Demand rises 50 %" still fail. A new `rejected` column keeps what it rejects.
+- **Run 4 also showed why the unasked saves happen.** The rules named the save tool on questions where it wasn't offered. The model guessed its arguments, and the error told it to fix them and try again. One run made 92 calls and used 1.03 million tokens, so the evaluation used 1.64 million instead of the 0.4 million estimated.
+- **Run 5 removed that cause and capped the damage.** The save rule now appears only with the save tool, and the agent stops after 5 failed tool calls, handing any waiting order to a planner first. There were no unasked saves, no run made more than 3 calls, and the evaluation used 0.4 million tokens. 167 of 168 runs finished; one hit an Ollama Cloud server error.
+- **Left alone:** the tool assumes a count at 13:00, as `/topup` does, and doesn't state the morning share. Five or more missing products end in a refusal, and loops of successful calls aren't capped. All are in the limitations.
 
 ## Known issues
 

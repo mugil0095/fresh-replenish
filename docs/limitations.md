@@ -12,7 +12,8 @@ What this project can and can't claim. Results that failed or didn't hold are in
 - **Limits are made up.** The agent's line limit (1.5 × the 90th percentile) and the 400-unit store-day capacity are assumptions, not store rules.
 - **What-ifs aren't causal.** Discounts and promotions weren't assigned at random, so Chronos-2 scenario answers are model estimates.
 - **Agent scores are in-sample.** The prompt and the save rule were tuned on the same 56 questions they're scored on, over repeated runs, with one model (`gpt-oss:120b`). The save tool is offered only when the question says place, record or save.
-- **The agent gives up on some explanations.** 7 of 24 "why this order?" runs and 4 of 18 other-ratio runs ended with "ask a planner", because the number checker kept rejecting the answer.
+- **The number checker reads percentile labels by pattern.** The patterns come from how `gpt-oss:120b` types them, so another model may trigger retries or give-ups.
+- **The agent stops after 5 failed tool calls.** A question about 5 or more missing products ends in "ask a planner", not "no data". Loops of successful calls aren't capped.
 - **The agent's top-ups are advice.** It saves nothing, skips the order limits and store capacity, and assumes the shelf was counted at the decision hour (13:00), as `/topup` does. It doesn't mention the morning share.
 - **One dataset, one retailer.** All results come from FreshRetailNet-50K (Dingdong, 18 Chinese cities, spring 2024).
 - **Not production-hardened.** No authentication on the API, one process, and the orders file is the only store. CI runs Docker Compose on tiny smoke data, but the stack has not been run on the real outputs.
