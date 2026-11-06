@@ -104,7 +104,8 @@ def _refusal(messages: list) -> AIMessage:
         m.name == "write_decision_record" and _payload(m) == {"saved": True}
         for m in messages if isinstance(m, ToolMessage)
     )
-    return AIMessage(REFUSAL + (" An order from this conversation was already saved." * saved))
+    note = " An order from this conversation was already saved." if saved else ""
+    return AIMessage(REFUSAL + note)
 
 
 def _key(store_id, product_id, date, order) -> list:
@@ -168,9 +169,10 @@ def build_agent(model, toolbox: Toolbox):
         return "approval" if _failed(state) else "check"
 
     def limits(state: State) -> Command:
-        if _tool_errors(state["messages"]) >= MAX_TOOL_ERRORS:
+        failed, stuck = _failed(state), _tool_errors(state["messages"]) >= MAX_TOOL_ERRORS
+        if stuck and not failed:
             return Command(goto=END, update={"messages": [_refusal(state["messages"])]})
-        return Command(goto="approval" if len(_failed(state)) >= MAX_FAILED_CHECKS else "agent")
+        return Command(goto="approval" if stuck or len(failed) >= MAX_FAILED_CHECKS else "agent")
 
     def approval(state: State) -> dict:
         orders, failed = _orders(state), _failed(state)

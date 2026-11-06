@@ -69,6 +69,15 @@ def test_a_run_of_failed_tool_calls_stops_the_conversation(toolbox):
     assert out["answer"] == REFUSAL and len(out["tools"]) == MAX_TOOL_ERRORS
 
 
+def test_the_stop_still_hands_a_waiting_order_to_a_planner(toolbox):
+    guess = {"name": "write_decision_record", "args": {"store_id": 1}, "id": "1"}
+    script = [call("compute_order", units=20)]
+    script += [AIMessage("", tool_calls=[guess]) for _ in range(MAX_TOOL_ERRORS)]
+    script += [AIMessage("A planner rejected 20 units, so nothing was placed.")]
+    question = "Place an order of 20 units of product 10 for store 1 on 2024-06-26."
+    assert run(toolbox, script, question)["handoffs"] == 1
+
+
 def test_a_few_failed_tool_calls_do_not_stop_the_conversation(toolbox):
     script = [call("get_forecast", product_id=99), call("get_forecast", product_id=98),
               AIMessage("That forecast is not available.")]
