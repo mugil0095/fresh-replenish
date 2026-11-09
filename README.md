@@ -55,6 +55,7 @@ uv run python -m fresh_replenish.monitoring.drift       # writes reports/monitor
 uv run streamlit run src/fresh_replenish/dashboard/app.py  # the dashboard on :8501
 docker compose up                                       # the API on :8000, dashboard on :8501, MLflow on :5000
 FRESH_LLM=ollama:gpt-oss:120b uv run python -m fresh_replenish.agent.evaluate  # OLLAMA_API_KEY in .env (or google_genai:gemini-3.6-flash)
+FRESH_LLM=ollama:gpt-oss:120b uv run python -m fresh_replenish.agent.evaluate holdout  # held-out questions: run once
 uv run python -m fresh_replenish.agent.chat "Place an order of 6 units of product 4 for store 57 on 2024-07-02."  # you approve hand-offs
 uv run pytest                                    # data and model tests run once the data and weights are downloaded
 ```
