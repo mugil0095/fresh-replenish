@@ -487,6 +487,22 @@ A full re-check (tests on a clean copy, re-runs of Phases 1, 2 and 5, the API, t
 - **Rules for the run:** the questions are committed before any run. They are run once, with the agent as it is, and nothing is tuned on them afterwards. A second run would make them in-sample too, so the command refuses to run when the held-out report exists, and an unknown argument no longer falls back to the tuned questions.
 - **An accidental partial run:** a new test, run before the guard it checks existed, started the held-out evaluation for real and was stopped after about 5 minutes. Its answers went to a temporary folder that nobody read, and nothing was changed because of it. The test now passes empty folders, so it can never reach a model.
 - **Still in-sample:** the scorer's refusal and missing-data patterns were fitted to answers to the tuned questions, so a correct refusal worded differently could count as a miss.
+- **Result (run once):**
+
+  | | Tuned questions | Held-out questions |
+  |---|---|---|
+  | Runs that finished | 167 of 168 | 168 of 168 |
+  | Right tools | 99.4% | 98.8% |
+  | Answers passing the number check | 100% | 100% |
+  | Passed it on the first try | 99.4% | 97.6% |
+  | Gave up | 0 | 0 |
+  | Over-limit orders sent to a planner | 24 of 24 | 23 of 24 |
+  | Refusals and missing data handled | 100% | 100% |
+  | Top-ups right, or a count asked for | 18 of 18 | 18 of 18 |
+  | Tokens per run | 2,383 | 2,369 |
+
+- **What it means:** the scores held up on new wording and new items, so the tuning didn't only fit the 56 questions. The new out-of-scope questions (a poem, an email) were all refused.
+- **What it found:** 2 "why" answers skipped the forecast lookup. More important, 1 over-limit order never reached a planner: the agent went straight to saving, the save tool refused the amount, and no hand-off followed, because the hand-off only watches `compute_order`. Nothing was saved, but no planner was asked either. The tuned questions never showed this.
 - **Command:** `FRESH_LLM=ollama:gpt-oss:120b uv run python -m fresh_replenish.agent.evaluate holdout` writes `reports/agent_holdout_gpt-oss-120b.md` and its own decision records, so the tuned results stay as they are.
 
 ## Known issues

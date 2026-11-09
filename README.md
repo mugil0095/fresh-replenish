@@ -12,7 +12,7 @@
 | A second delivery, ordered at 13:00 | a further −32% on the 90-store sample, −31% on all 50,000 lines (−23% on days with fully observed demand), before the delivery's own cost |
 | If unsold stock keeps 2–3 days | cost falls by two-thirds or more; ordering by cost keeps an 8–11% edge over a tuned multiple; a second delivery is worth far less |
 | Nightly batch / API | 50,000 series in 13.3 min; p95 14.7 ms per store request |
-| AI agent (56 questions × 3 runs) | 99% right tools; every final answer passed the number checker and none gave up; every over-limit order went to a human |
+| AI agent (56 questions × 3 runs) | 99% right tools; every final answer passed the number checker and none gave up; every over-limit order went to a human. On 56 new questions, run once: 99% right tools, 23 of 24 to a human |
 
 The project:
 
@@ -160,6 +160,7 @@ A LangGraph agent turns the forecasts into explained orders.
   - all 12 top-ups with a shelf count were right, and all 6 without one asked for it;
   - every out-of-scope and missing-data question was handled correctly;
   - p50 latency 3.0 s.
+- **Held-out check:** 56 new questions, reworded and drawn again, were run once after all tuning: right tools 99%, every answer passed the number checker with none giving up, and 23 of 24 over-limit orders went to a planner ([report](reports/agent_holdout_gpt-oss-120b.md)). The miss is in the negative results.
 
 ## Data
 
