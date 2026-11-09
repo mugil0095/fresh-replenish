@@ -484,7 +484,9 @@ A full re-check (tests on a clean copy, re-runs of Phases 1, 2 and 5, the API, t
 - **Why:** the agent's prompt, scorer and checker were tuned on the same 56 questions they're scored on, over many runs. Those scores show what the agent does on questions it was fitted to, not on new ones.
 - **Questions:** `eval/questions_holdout.jsonl` has the same 9 types and counts, drawn again with seed 7, so no store-product-day overlaps the tuned set. Every question is reworded ("How many units of product 333 will store 835 sell on 2024-07-01?"), and the two out-of-scope questions are new.
 - **Same tools on both:** the new wording offers the save tool exactly where the tuned wording does, and a test checks it. Otherwise a reworded record question could fail only because "save" changed to "keep".
-- **Rules for the run:** the questions are committed before any run. They are run once, with the agent as it is, and nothing is tuned on them afterwards. A second run would make them in-sample too.
+- **Rules for the run:** the questions are committed before any run. They are run once, with the agent as it is, and nothing is tuned on them afterwards. A second run would make them in-sample too, so the command refuses to run when the held-out report exists, and an unknown argument no longer falls back to the tuned questions.
+- **An accidental partial run:** a new test, run before the guard it checks existed, started the held-out evaluation for real and was stopped after about 5 minutes. Its answers went to a temporary folder that nobody read, and nothing was changed because of it. The test now passes empty folders, so it can never reach a model.
+- **Still in-sample:** the scorer's refusal and missing-data patterns were fitted to answers to the tuned questions, so a correct refusal worded differently could count as a miss.
 - **Command:** `FRESH_LLM=ollama:gpt-oss:120b uv run python -m fresh_replenish.agent.evaluate holdout` writes `reports/agent_holdout_gpt-oss-120b.md` and its own decision records, so the tuned results stay as they are.
 
 ## Known issues

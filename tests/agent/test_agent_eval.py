@@ -111,6 +111,14 @@ def test_main_without_a_model_names_the_setting(tmp_path, capsys, monkeypatch):
     assert "FRESH_LLM" in capsys.readouterr().err
 
 
+def test_the_held_out_questions_run_only_once(tmp_path, capsys, monkeypatch):
+    monkeypatch.setenv("FRESH_LLM", "ollama:gpt-oss:120b")
+    (tmp_path / "agent_holdout_gpt-oss-120b.md").write_text("done", encoding="utf-8")
+    # No data here: even without the guard it stops before calling a model.
+    assert evaluate.main(tmp_path, tmp_path, tmp_path, holdout=True) == 2
+    assert "run once" in capsys.readouterr().err
+
+
 def test_provider_errors_are_recorded_and_stop_the_run(orders):
     def broken(question):
         raise RuntimeError("429 RESOURCE_EXHAUSTED")

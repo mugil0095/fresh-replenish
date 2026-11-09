@@ -288,6 +288,13 @@ def main(
             "ollama:gpt-oss:120b) and that provider's API key.", file=sys.stderr,
         )
         return 2
+    suffix = "_holdout" if holdout else ""  # its own files, so the tuned results stay
+    slug = re.sub(r"[^a-z0-9.]+", "-", model_name.split(":", 1)[1].lower()).strip("-")
+    report = out_dir / f"agent{suffix}_{slug}.md"
+    if holdout and report.exists():
+        print(f"{report} exists: the held-out questions are run once (see docs/decisions.md).",
+              file=sys.stderr)
+        return 2
     paths = local_paths(raw_dir)
     orders_path = processed_dir / "orders.parquet"
     if paths is None or not orders_path.exists():
@@ -299,7 +306,6 @@ def main(
     path, wording = QUESTIONS, {}
     if holdout:
         path, wording = HOLDOUT, {"seed": HOLDOUT_SEED, "texts": REWORDED}
-    suffix = "_holdout" if holdout else ""  # its own files, so the tuned results stay
     questions = (
         [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
         if path.exists() else write_questions(orders, path, **wording)
@@ -318,15 +324,15 @@ def main(
         lambda question: app, questions,
         price=None if not price else tuple(float(x) for x in price.split(",")),
     )
-    slug = re.sub(r"[^a-z0-9.]+", "-", model_name.split(":", 1)[1].lower()).strip("-")
     (out_dir / "tables").mkdir(parents=True, exist_ok=True)
     runs.to_csv(out_dir / "tables" / f"agent_runs{suffix}_{slug}.csv", index=False)
     summary.to_csv(out_dir / "tables" / f"agent_summary{suffix}_{slug}.csv", index=False)
-    report = out_dir / f"agent{suffix}_{slug}.md"
     report.write_text(render_report(summary, model_name, path.name), encoding="utf-8")
     print(f"Report written to {report}.")
     return 0
 
 
 if __name__ == "__main__":
+    if sys.argv[1:] not in ([], ["holdout"]):
+        sys.exit("usage: python -m fresh_replenish.agent.evaluate [holdout]")
     sys.exit(main(holdout=sys.argv[1:] == ["holdout"]))
