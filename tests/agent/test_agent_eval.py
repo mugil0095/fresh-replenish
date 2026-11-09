@@ -1,8 +1,13 @@
+import json
+
+import pandas as pd
+import pytest
 from fakes import Scripted
-from langchain_core.messages import AIMessage, ToolMessage
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
 from fresh_replenish.agent import evaluate
-from fresh_replenish.agent.graph import REFUSAL, build_agent
+from fresh_replenish.agent.graph import REFUSAL, _asks_to_save, build_agent
+from fresh_replenish.config import PROCESSED_DIR
 
 
 def test_ollama_cloud_requests_time_out(monkeypatch):
@@ -23,6 +28,29 @@ def test_every_type_of_question_comes_from_the_orders(orders):
     assert top_ups[-1]["tools"] == [] and "counted" not in top_ups[-1]["question"]  # must ask
     assert "counted 2.5 units" in top_ups[0]["question"]  # below the 4.5 target
     assert "counted 5.5 units" in top_ups[1]["question"]  # no top-up needed
+
+
+def test_held_out_questions_are_reworded_and_drawn_again(orders):
+    tuned = evaluate.make_questions(orders)
+    held = evaluate.make_questions(orders, seed=evaluate.HOLDOUT_SEED, texts=evaluate.REWORDED)
+    assert [(q["type"], q["tools"], q["handoff"]) for q in held] == [
+        (q["type"], q["tools"], q["handoff"]) for q in tuned
+    ]
+    assert not {q["question"] for q in held} & {q["question"] for q in tuned}
+    # The new wording must offer the save tool exactly where the tuned wording does.
+    def offered(questions):
+        return [_asks_to_save([HumanMessage(q["question"])]) for q in questions]
+
+    assert offered(held) == offered(tuned)
+
+
+@pytest.mark.data
+def test_the_tuned_questions_still_come_out_the_same():
+    orders = PROCESSED_DIR / "orders.parquet"
+    if not orders.exists():
+        pytest.skip("run the batch first (see the README)")
+    lines = evaluate.QUESTIONS.read_text(encoding="utf-8").splitlines()
+    assert evaluate.make_questions(pd.read_parquet(orders)) == [json.loads(x) for x in lines]
 
 
 def _factory(toolbox):
@@ -58,7 +86,9 @@ def test_report_lists_the_headline_measures(toolbox, orders):
     runs, summary = evaluate.evaluate(_factory(toolbox), questions, repeats=1)
     report = evaluate.render_report(summary, "scripted")
     assert report.startswith("# Agent evaluation") and "tool choice" in report
-    assert "0% gave up" in report
+    assert "0% gave up" in report and "`eval/questions.jsonl`" in report
+    held = evaluate.render_report(summary, "scripted", "questions_holdout.jsonl")
+    assert "`eval/questions_holdout.jsonl`" in held
 
 
 def test_every_number_the_checker_rejected_is_kept():
