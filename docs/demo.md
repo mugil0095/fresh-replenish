@@ -22,6 +22,9 @@ Open `docs/summary.md`. Read the headline: ordering by cost cut waste + lost-sal
 2. A risky order:
    `uv run python -m fresh_replenish.agent.chat "Place an order of 6 units of product 4 for store 57 on 2024-07-02."`
    The agent pauses for you, the planner. Answer `n`, and it doesn't record the order.
+3. A top-up:
+   `uv run python -m fresh_replenish.agent.chat "Store 609 counted 0.5 units of product 515 on the shelf on 2024-06-30. How much should it top up?"`
+   It gives the units and when the delivery arrives.
 
 ## 4:00 Production (30 s)
 `docker compose up`. Show the API with `curl "localhost:8000/reorder?store_id=0"`, a midday count posted to `/topup`, the dashboard on :8501 and MLflow runs on :5000. Close on the test count and CI.

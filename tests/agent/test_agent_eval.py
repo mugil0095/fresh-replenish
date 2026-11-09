@@ -1,8 +1,13 @@
+import json
+
+import pandas as pd
+import pytest
 from fakes import Scripted
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
 from fresh_replenish.agent import evaluate
-from fresh_replenish.agent.graph import build_agent
+from fresh_replenish.agent.graph import REFUSAL, _asks_to_save, build_agent
+from fresh_replenish.config import PROCESSED_DIR
 
 
 def test_ollama_cloud_requests_time_out(monkeypatch):
@@ -10,14 +15,42 @@ def test_ollama_cloud_requests_time_out(monkeypatch):
     assert evaluate.chat_model("ollama:gpt-oss:120b")._client._client.timeout.read == 120
 
 
-def test_fifty_questions_of_every_type_from_the_orders(orders):
+def test_every_type_of_question_comes_from_the_orders(orders):
     questions = evaluate.make_questions(orders)
-    assert len(questions) == 50 and questions == evaluate.make_questions(orders)  # seeded
+    assert len(questions) == 56 and questions == evaluate.make_questions(orders)  # seeded
     counts = {t: sum(q["type"] == t for q in questions) for t in evaluate.TYPES}
     assert counts == evaluate.TYPES
     limit = next(q for q in questions if q["type"] == "limit")
     assert limit["handoff"] and limit["tools"] == ["compute_order"]
     assert "write_decision_record" in limit["optional"]  # "place an order" may try to record it
+    top_ups = [q for q in questions if q["type"] == "top_up"]
+    assert all(q["tools"] == ["compute_top_up"] for q in top_ups[:4])
+    assert top_ups[-1]["tools"] == [] and "counted" not in top_ups[-1]["question"]  # must ask
+    assert "counted 2.5 units" in top_ups[0]["question"]  # below the 4.5 target
+    assert "counted 5.5 units" in top_ups[1]["question"]  # no top-up needed
+
+
+def test_held_out_questions_are_reworded_and_drawn_again(orders):
+    tuned = evaluate.make_questions(orders)
+    held = evaluate.make_questions(orders, seed=evaluate.HOLDOUT_SEED, texts=evaluate.REWORDED)
+    assert [(q["type"], q["tools"], q["handoff"]) for q in held] == [
+        (q["type"], q["tools"], q["handoff"]) for q in tuned
+    ]
+    assert not {q["question"] for q in held} & {q["question"] for q in tuned}
+    # The new wording must offer the save tool exactly where the tuned wording does.
+    def offered(questions):
+        return [_asks_to_save([HumanMessage(q["question"])]) for q in questions]
+
+    assert offered(held) == offered(tuned)
+
+
+@pytest.mark.data
+def test_the_tuned_questions_still_come_out_the_same():
+    orders = PROCESSED_DIR / "orders.parquet"
+    if not orders.exists():
+        pytest.skip("run the batch first (see the README)")
+    lines = evaluate.QUESTIONS.read_text(encoding="utf-8").splitlines()
+    assert evaluate.make_questions(pd.read_parquet(orders)) == [json.loads(x) for x in lines]
 
 
 def _factory(toolbox):
@@ -53,12 +86,37 @@ def test_report_lists_the_headline_measures(toolbox, orders):
     runs, summary = evaluate.evaluate(_factory(toolbox), questions, repeats=1)
     report = evaluate.render_report(summary, "scripted")
     assert report.startswith("# Agent evaluation") and "tool choice" in report
+    assert "0% gave up" in report and "`eval/questions.jsonl`" in report
+    held = evaluate.render_report(summary, "scripted", "questions_holdout.jsonl")
+    assert "`eval/questions_holdout.jsonl`" in held
+
+
+def test_every_number_the_checker_rejected_is_kept():
+    question = {"id": 1, "type": "why", "tools": [], "optional": [], "handoff": False}
+    tried = [AIMessage("Order 12.5."), AIMessage("Order 7.5."), AIMessage("Order 9.0.")]
+    out = {"tools": [], "answer": "Order 9.0.", "retries": 2, "handoffs": 0,
+           "messages": [ToolMessage('{"order": 9.0}', tool_call_id="1"), *tried]}
+    assert evaluate.score(question, out, 1.0)["rejected"] == "12.5 7.5"
+
+
+def test_an_answer_that_gives_up_is_counted():
+    question = {"id": 1, "type": "why", "tools": [], "optional": [], "handoff": False}
+    out = {"tools": [], "answer": REFUSAL, "messages": [], "retries": 2, "handoffs": 0}
+    assert evaluate.score(question, out, 1.0)["gave_up"] == 1.0
 
 
 def test_main_without_a_model_names_the_setting(tmp_path, capsys, monkeypatch):
     monkeypatch.delenv("FRESH_LLM", raising=False)
     assert evaluate.main(processed_dir=tmp_path, out_dir=tmp_path) == 2
     assert "FRESH_LLM" in capsys.readouterr().err
+
+
+def test_the_held_out_questions_run_only_once(tmp_path, capsys, monkeypatch):
+    monkeypatch.setenv("FRESH_LLM", "ollama:gpt-oss:120b")
+    (tmp_path / "agent_holdout_gpt-oss-120b.md").write_text("done", encoding="utf-8")
+    # No data here: even without the guard it stops before calling a model.
+    assert evaluate.main(tmp_path, tmp_path, tmp_path, holdout=True) == 2
+    assert "run once" in capsys.readouterr().err
 
 
 def test_provider_errors_are_recorded_and_stop_the_run(orders):

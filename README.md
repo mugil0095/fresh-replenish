@@ -12,7 +12,7 @@
 | A second delivery, ordered at 13:00 | a further −32% on the 90-store sample, −31% on all 50,000 lines (−23% on days with fully observed demand), before the delivery's own cost |
 | If unsold stock keeps 2–3 days | cost falls by two-thirds or more; ordering by cost keeps an 8–11% edge over a tuned multiple; a second delivery is worth far less |
 | Nightly batch / API | 50,000 series in 13.3 min; p95 14.7 ms per store request |
-| AI agent (50 questions × 3 runs) | 100% right tools; every final answer passed the number checker; every over-limit order went to a human |
+| AI agent (56 questions × 3 runs) | 99% right tools; every final answer passed the number checker and none gave up; every over-limit order went to a human. On 56 new questions, run once: 99% right tools, 23 of 24 to a human |
 
 The project:
 
@@ -55,6 +55,7 @@ uv run python -m fresh_replenish.monitoring.drift       # writes reports/monitor
 uv run streamlit run src/fresh_replenish/dashboard/app.py  # the dashboard on :8501
 docker compose up                                       # the API on :8000, dashboard on :8501, MLflow on :5000
 FRESH_LLM=ollama:gpt-oss:120b uv run python -m fresh_replenish.agent.evaluate  # OLLAMA_API_KEY in .env (or google_genai:gemini-3.6-flash)
+FRESH_LLM=ollama:gpt-oss:120b uv run python -m fresh_replenish.agent.evaluate holdout  # held-out questions: run once
 uv run python -m fresh_replenish.agent.chat "Place an order of 6 units of product 4 for store 57 on 2024-07-02."  # you approve hand-offs
 uv run pytest                                    # data and model tests run once the data and weights are downloaded
 ```
@@ -147,16 +148,19 @@ Costs are per unit of demand. Multiples are chosen on past weeks for each shelf 
 
 A LangGraph agent turns the forecasts into explained orders.
 
-- **Tools:** four plain-code tools: forecast lookup, cost-based order within limits, Chronos-2 what-if, and decision record.
+- **Tools:** five plain-code tools: forecast lookup, cost-based order within limits, top-up advice from a shelf count, Chronos-2 what-if, and decision record.
 - **Numbers:** a checker rejects an answer with a number that isn't in a tool output or the question; small counts and ranks like "90th" are allowed.
-- **Hand-off:** orders over the limits pause for a planner's approval.
-- **Evaluation:** 50 scripted questions, each run three times, score tool choice, numbers, hand-offs, refusals and latency (and cost, when `FRESH_LLM_PRICE` is set).
-- **Results** ([agent evaluation](reports/agent_gpt-oss-120b.md)): on Ollama Cloud `gpt-oss:120b`, re-run after the audit fixes (misses are in [negative results](docs/negative_results.md)):
-  - correct tool choice 100%;
-  - every final answer passed the number checker;
-  - every over-limit order was handed to a planner;
+- **Hand-off:** orders over the limits pause for a planner's approval. After a rejection, only an order a planner approved can be saved in that conversation.
+- **Stops:** the agent stops after 5 failed tool calls, and hears about the save tool only when the question asks to save.
+- **Evaluation:** 56 scripted questions, each run three times, score tool choice, numbers, hand-offs, refusals and latency (and cost, when `FRESH_LLM_PRICE` is set).
+- **Results** ([agent evaluation](reports/agent_gpt-oss-120b.md)): on Ollama Cloud `gpt-oss:120b`, re-run with the top-up tool; 167 of 168 runs finished and one hit a provider error (misses are in [negative results](docs/negative_results.md)):
+  - correct tool choice 99%;
+  - every final answer passed the number checker, 99% on the first try, and none gave up;
+  - every over-limit order was handed to a planner, and nothing was saved after a rejection;
+  - all 12 top-ups with a shelf count were right, and all 6 without one asked for it;
   - every out-of-scope and missing-data question was handled correctly;
-  - p50 latency 3.5 s.
+  - p50 latency 3.0 s.
+- **Held-out check:** 56 new questions, reworded and drawn again, were run once after all tuning: right tools 99%, every answer passed the number checker with none giving up, and 23 of 24 over-limit orders went to a planner ([report](reports/agent_holdout_gpt-oss-120b.md)). The miss is in the negative results.
 
 ## Data
 

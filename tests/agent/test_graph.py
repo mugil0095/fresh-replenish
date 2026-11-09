@@ -1,9 +1,11 @@
 import json
 
-from fakes import Scripted
-from langchain_core.messages import AIMessage, HumanMessage
+import pytest
+from fakes import Recording, Scripted
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+from langgraph.types import Command
 
-from fresh_replenish.agent.graph import REFUSAL, ask, build_agent
+from fresh_replenish.agent.graph import MAX_TOOL_ERRORS, REFUSAL, _orders, ask, build_agent
 
 DAY = {"store_id": 1, "product_id": 10, "date": "2024-06-26"}
 RECORD = "Record the cost-based order for product 10 at store 1 on 2024-06-26."
@@ -21,6 +23,65 @@ def test_tool_loop_answers_with_tool_numbers(toolbox):
     out = run(toolbox, [call("get_forecast"), AIMessage("Median 5.0, likely 1.0 to 9.0.")])
     assert out["answer"] == "Median 5.0, likely 1.0 to 9.0."
     assert out["tools"] == ["get_forecast"] and not out["handoffs"]
+
+
+def test_a_shelf_count_is_answered_from_the_top_up_tool(toolbox):
+    question = "Store 1 counted 1.5 units of product 10 on 2024-06-26. How much should it top up?"
+    script = [call("compute_top_up", shelf=1.5), AIMessage("Top up 3.0 units, here by 15:00.")]
+    out = run(toolbox, script, question)
+    assert out["tools"] == ["compute_top_up"] and out["retries"] == 0 and not out["handoffs"]
+
+
+def test_a_top_up_is_never_saved_as_the_days_order(toolbox):
+    both = AIMessage("", tool_calls=[
+        {"name": "compute_top_up", "args": {**DAY, "shelf": 1.5}, "id": "1"},
+        {"name": "write_decision_record", "args": {**DAY, "order": 3.0, "reason": "top-up"},
+         "id": "2"},
+    ])
+    question = "Store 1 has 1.5 of product 10 on the shelf on 2024-06-26. Place what it needs."
+    out = run(toolbox, [both, AIMessage("Top up 3.0 units. Nothing was saved.")], question)
+    assert not toolbox.records.exists()
+    assert "advice" in out["messages"][3].text  # the save call's result
+
+
+@pytest.mark.parametrize("words", ["a top-up", "a top up", "the second delivery"])
+def test_a_request_to_place_a_top_up_cannot_save(toolbox, words):
+    script = [call("write_decision_record", order=3.0, reason="top-up"), AIMessage("Not saved.")]
+    run(toolbox, script, f"Place {words} of 3 units of product 10 for store 1 on 2024-06-26.")
+    assert not toolbox.records.exists()
+
+
+@pytest.mark.parametrize(
+    ("question", "told"),
+    [(RECORD, True), ("How much should store 1 order of product 10 on 2024-06-26?", False)],
+)
+def test_only_a_question_that_asks_to_save_hears_of_the_save_tool(toolbox, question, told):
+    model = Recording(responses=[AIMessage("Not saved.")])
+    ask(build_agent(model, toolbox), question)
+    assert ("write_decision_record" in model.rules[0]) is told
+    assert "save" not in model.rules[0].lower() or told
+
+
+def test_a_run_of_failed_tool_calls_stops_the_conversation(toolbox):
+    guess = {"name": "write_decision_record", "args": {"store_id": 1}, "id": "1"}
+    script = [AIMessage("", tool_calls=[guess]) for _ in range(MAX_TOOL_ERRORS + 3)]
+    out = run(toolbox, script)
+    assert out["answer"] == REFUSAL and len(out["tools"]) == MAX_TOOL_ERRORS
+
+
+def test_the_stop_still_hands_a_waiting_order_to_a_planner(toolbox):
+    guess = {"name": "write_decision_record", "args": {"store_id": 1}, "id": "1"}
+    script = [call("compute_order", units=20)]
+    script += [AIMessage("", tool_calls=[guess]) for _ in range(MAX_TOOL_ERRORS)]
+    script += [AIMessage("A planner rejected 20 units, so nothing was placed.")]
+    question = "Place an order of 20 units of product 10 for store 1 on 2024-06-26."
+    assert run(toolbox, script, question)["handoffs"] == 1
+
+
+def test_a_few_failed_tool_calls_do_not_stop_the_conversation(toolbox):
+    script = [call("get_forecast", product_id=99), call("get_forecast", product_id=98),
+              AIMessage("That forecast is not available.")]
+    assert run(toolbox, script)["answer"] == "That forecast is not available."
 
 
 def test_checker_rejects_an_invented_number_then_accepts_a_retry(toolbox):
@@ -56,6 +117,71 @@ def test_over_limit_order_pauses_for_a_human_and_resumes(toolbox):
     out = run(toolbox, script, "Order 20 units of product 10 for store 1 on 2024-06-26.")
     assert out["handoffs"] == 1 and out["approval"] == "rejected"
     assert out["answer"] == "A planner rejected the order of 20 units."
+
+
+def test_nothing_is_saved_after_a_planner_rejects(toolbox):
+    script = [
+        call("compute_order", units=20), AIMessage("20 units is over the limit."),
+        call("compute_order", units=9.0),
+        call("write_decision_record", order=9.0, reason="within the limits"),
+        AIMessage("A planner rejected 20 units, so nothing was saved."),
+    ]
+    question = "Place an order of 20 units of product 10 for store 1 on 2024-06-26."
+    out = run(toolbox, script, question)
+    assert out["approval"] == "rejected" and not toolbox.records.exists()
+    planner = next(m.text for m in out["messages"] if m.text.startswith("A planner rejected the"))
+    assert "nothing was placed" in planner  # told here, not in the rules every question sees
+
+
+@pytest.mark.parametrize(("decisions", "saved"), [((True, False), [10]), ((False, True), [11])])
+def test_only_the_approved_order_is_saved_after_mixed_decisions(toolbox, decisions, saved):
+    checks = [
+        {"name": "compute_order", "args": {**DAY, "product_id": p, "units": 20}, "id": str(p)}
+        for p in (10, 11)
+    ]
+    saves = [
+        {"name": "write_decision_record", "id": f"save {p}",
+         "args": {**DAY, "product_id": p, "order": order, "reason": "asked"}}
+        for p, order in ((10, 20.0 if decisions[0] else 9.0), (11, 20.0 if decisions[1] else 9.0))
+    ]
+    script = [AIMessage("", tool_calls=checks), AIMessage("Over the limit."), AIMessage("Next."),
+              AIMessage("", tool_calls=saves), AIMessage("Done.")]
+    app = build_agent(Scripted(responses=script), toolbox)
+    config = {"configurable": {"thread_id": "t"}}
+    question = "Place 20 units each of products 10 and 11 for store 1 on 2024-06-26."
+    app.invoke({"messages": [HumanMessage(question)]}, config)
+    for approved in decisions:
+        app.invoke(Command(resume={"approved": approved}), config)
+    lines = toolbox.records.read_text(encoding="utf-8").splitlines()
+    assert [json.loads(line)["product_id"] for line in lines] == saved
+
+
+PLACE = "Place an order of 20 units of product 10 for store 1 on 2024-06-26."
+
+
+def test_a_refused_save_hands_the_order_to_a_planner(toolbox):
+    script = [call("write_decision_record", order=20.0, reason="asked"),
+              AIMessage("20 units is over the limit."),
+              AIMessage("A planner rejected 20 units, so nothing was placed.")]
+    out = run(toolbox, script, PLACE)
+    assert out["handoffs"] == 1 and not toolbox.records.exists()
+
+
+def test_a_checked_and_refused_order_goes_to_the_planner_once(toolbox):
+    script = [call("compute_order", units=20),
+              call("write_decision_record", order=20.0, reason="asked"),
+              AIMessage("20 units is over the limit."),
+              AIMessage("A planner rejected 20 units, so nothing was placed.")]
+    assert run(toolbox, script, PLACE)["handoffs"] == 1
+
+
+def test_a_save_refused_after_a_passing_check_still_counts():
+    # The store can fill up between the check and the save, so the refusal must still count.
+    passed = {**DAY, "order": 9.0, "within_limits": True}
+    refused = {**passed, "within_limits": False, "error": "outside the limits"}
+    messages = [ToolMessage(json.dumps(passed), name="compute_order", tool_call_id="1"),
+                ToolMessage(json.dumps(refused), name="write_decision_record", tool_call_id="2")]
+    assert [o["within_limits"] for o in _orders({"messages": messages})] == [True, False]
 
 
 def test_three_failed_limit_checks_hand_off(toolbox):

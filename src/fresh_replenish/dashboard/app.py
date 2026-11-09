@@ -96,7 +96,9 @@ cols[2].metric(
 )
 cols[3].metric(
     "Answers passing number check", f"{d['agent'].loc['all', 'numbers_match']:.0%}",
-    help=f"Correct tool choice: {d['agent'].loc['all', 'tool_choice']:.0%} of 150 runs.",
+    help=f"Correct tool choice: {d['agent'].loc['all', 'tool_choice']:.0%} of "
+         f"{d['agent'].loc['all', 'runs']:.0f} runs. {d['agent'].loc['all', 'gave_up']:.0%} of "
+         "answers gave up.",
 )
 
 money, policy_tab, forecast_tab, order_tab, agent_tab = st.tabs(
@@ -230,10 +232,13 @@ with order_tab:
 with agent_tab:
     agent = d["agent"]
     st.markdown(
-        f"On 150 scripted runs (Ollama Cloud gpt-oss:120b) the agent chose the right tools "
+        f"On {agent.loc['all', 'runs']:.0f} scripted runs (Ollama Cloud gpt-oss:120b) the agent "
+        "chose the right tools "
         f"**{agent.loc['all', 'tool_choice']:.0%}** of the time, every final answer passed the "
-        f"number checker (**{agent.loc['all', 'numbers_match']:.0%}**), and every over-limit "
-        f"order went to a planner (**{agent.loc['limit', 'handoff_correct']:.0%}**). "
+        f"number checker (**{agent.loc['all', 'numbers_match']:.0%}**) with "
+        f"**{agent.loc['all', 'gave_up']:.0%}** giving up, and every over-limit order went to a "
+        "planner "
+        f"(**{agent.loc['limit', 'handoff_correct']:.0%}**). "
         "Misses are listed in the negative results."
     )
     st.dataframe(data.records(RECORDS), hide_index=True)

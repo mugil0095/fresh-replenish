@@ -8,6 +8,32 @@ from fresh_replenish.config import PROCESSED_DIR
 from fresh_replenish.data.db import connect
 
 
+def test_a_shelf_count_is_topped_up_to_the_rest_of_day_target(toolbox):
+    out = toolbox.compute_top_up(1, 10, "2024-06-26", shelf=1.5)
+    assert out == {
+        "store_id": 1, "product_id": 10, "date": "2024-06-26", "ratio": 9.0,
+        "critical_ratio": 0.9, "shelf": 1.5, "target": 4.5, "top_up": 3.0,
+        "decision_hour": 13, "arrival_hour": 15,
+    }
+    json.dumps(out)  # the model reads it as JSON
+
+
+def test_a_full_shelf_needs_no_top_up(toolbox):
+    assert toolbox.compute_top_up(1, 10, "2024-06-26", shelf=6.0)["top_up"] == 0
+
+
+def test_the_top_up_target_follows_the_cost_ratio(toolbox):
+    assert toolbox.compute_top_up(1, 10, "2024-06-26", shelf=0, ratio=1)["target"] == 2.5
+
+
+@pytest.mark.parametrize(
+    ("product", "shelf", "ratio"),
+    [(99, 1.0, 9.0), (10, -1.0, 9.0), (10, float("nan"), 9.0), (10, 1.0, 20.0)],
+)
+def test_a_top_up_refuses_what_it_cannot_answer(toolbox, product, shelf, ratio):
+    assert "error" in toolbox.compute_top_up(1, product, "2024-06-26", shelf, ratio)
+
+
 def test_forecast_lookup(toolbox):
     assert toolbox.get_forecast(1, 10, "2024-06-26") == {
         "store_id": 1, "product_id": 10, "date": "2024-06-26", "as_of": "2024-06-25",

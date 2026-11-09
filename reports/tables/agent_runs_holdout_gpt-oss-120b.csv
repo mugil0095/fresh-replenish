@@ -1,0 +1,786 @@
+id,type,tool_choice,numbers_match,first_try,gave_up,rejected,handoff_correct,refusal_correct,seconds,input_tokens,output_tokens,tools,answer,error
+1,lookup,1.0,1.0,1.0,0.0,,1.0,,2.8762444000021787,1319,251,get_forecast,"On 2024‑07‑01 the forecast for product 333 at store 835 is:
+
+- **10 th‑percentile (low)**: 0.52 units  
+- **Median (50 th‑percentile)**: 1.06 units  
+- **90 th‑percentile (high)**: 1.37 units  
+
+So you can expect roughly **1 unit** sold that day, with a likely range from about **½ unit** up to **≈1.4 units**.",
+1,lookup,1.0,1.0,1.0,0.0,,1.0,,1.6263158999936422,1319,155,get_forecast,"For **store 835**, product 333 on **2024‑07‑01** the forecast range is:
+
+- **10th‑percentile (low):** 0.52 units  
+- **Median (50th‑percentile):** 1.06 units  
+- **90th‑percentile (high):** 1.37 units  
+
+These values come from the demand‑forecast model.",
+1,lookup,1.0,1.0,1.0,0.0,,1.0,,2.4394084000086877,1319,178,get_forecast,"For **store 835**, product 333 on **2024‑07‑01** the forecasted sales are:
+
+- **10th‑percentile (low):** 0.52 units  
+- **Median (50th‑percentile):** 1.06 units  
+- **90th‑percentile (high):** 1.37 units  
+
+These numbers come directly from the model’s forecast range.",
+2,lookup,1.0,1.0,1.0,0.0,,1.0,,2.348782300003222,1319,297,get_forecast,"For product 600 at store 499 on 2024‑06‑30 the forecasted sales are:
+
+* **10th‑percentile (low)**: 0.88 units  
+* **50th‑percentile (median)**: 1.91 units  
+* **90th‑percentile (high)**: 4.36 units  
+
+These values come directly from the demand‑forecast model.",
+2,lookup,1.0,1.0,1.0,0.0,,1.0,,1.657707099991967,1319,221,get_forecast,"For 2024‑06‑30 the model forecasts that store 499 will sell:
+
+* **Low (10 th percentile)**: **0.88 units**  
+* **Median (50 th percentile)**: **1.91 units**  
+* **High (90 th percentile)**: **4.36 units**
+
+These figures come directly from the forecast data for product 600 at that store.",
+2,lookup,1.0,1.0,1.0,0.0,,1.0,,1.9124678999942262,1319,275,get_forecast,"For **store 499**, the model forecasts the following sales for **product 600** on **2024‑06‑30**:
+
+| Forecast type | Units |
+|---------------|-------|
+| 10th percentile (low) | **0.88** |
+| 50th percentile (median) | **1.91** |
+| 90th percentile (high) | **4.36** |
+
+These numbers represent the calibrated forecast range (10 %–90 % percentile) and the median estimate for that day.",
+3,lookup,1.0,1.0,1.0,0.0,,1.0,,1.956078899995191,1319,303,get_forecast,"Based on the latest forecast for **product 638 at store 546 on 2024‑06‑29**, the model predicts:
+
+- **10th‑percentile (low) demand:** **0.47 units**  
+- **Median (50th‑percentile) demand:** **0.95 units**  
+- **90th‑percentile (high) demand:** **1.89 units**
+
+These values come directly from the forecasting tool’s output. They represent the range of expected sales, with the median being the most likely estimate.",
+3,lookup,1.0,1.0,1.0,0.0,,1.0,,1.9307910999923479,1319,297,get_forecast,"For **product 638** at **store 546** on **2024‑06‑29**, the forecast (based on the latest data as of 2024‑06‑25) is:
+
+- **10th percentile (low):** **0.47** units  
+- **Median (50th percentile):** **0.95** units  
+- **90th percentile (high):** **1.89** units  
+
+So the model expects the store to sell roughly **0.5 – 2 units**, with a most‑likely (median) demand of about **1 unit**.",
+3,lookup,1.0,1.0,1.0,0.0,,1.0,,1.9565656000049785,1319,312,get_forecast,"For store 546 on 2024‑06‑29, the model forecasts that product 638 will sell:
+
+* **10th‑percentile (low)**: **0.47 units**  
+* **50th‑percentile (median)**: **0.95 units**  
+* **90th‑percentile (high)**: **1.89 units**
+
+So you can expect roughly **1 unit** (median) sold, with a likely range from **about 0.5 to 1.9 units**.",
+4,lookup,1.0,1.0,1.0,0.0,,1.0,,1.9347899999993388,1319,289,get_forecast,"For store 771 on 2024‑06‑26, the model forecasts the following sales for product 580:
+
+- **10th‑percentile (low):** 1.0 units  
+- **Median (50th‑percentile):** 1.59 units  
+- **90th‑percentile (high):** 2.66 units  
+
+These figures come directly from the forecast tool’s output.",
+4,lookup,1.0,1.0,0.0,0.0,26 2024,1.0,,2.7822111999994377,2189,404,get_forecast,"The forecast for product 580 at store 771 on 2024‑06‑26 is:
+
+- **Low (10th percentile):** 1.0 unit  
+- **Median (50th percentile):** 1.59 units  
+- **High (90th percentile):** 2.66 units  
+
+So the model expects sales between **1.0** and **2.66** units, with a most‑likely value of **1.59** units.",
+4,lookup,1.0,1.0,1.0,0.0,,1.0,,2.010050600001705,1319,328,get_forecast,"For **store 771**, the model forecasts the sales of **product 580** on **2024‑06‑26** as:
+
+- **10th‑percentile (low) forecast:** 1.0 units  
+- **Median (50th‑percentile) forecast:** 1.59 units  
+- **90th‑percentile (high) forecast:** 2.66 units  
+
+Thus, you can expect roughly **1 to 3 units** to be sold that day, with the most likely value around **1.6 units**.",
+5,lookup,1.0,1.0,1.0,0.0,,1.0,,3.345077100006165,1319,244,get_forecast,"The forecast for product 321 at store 461 on 2024‑06‑30 is:
+
+- **10th‑percentile (low):** 0.46 units  
+- **Median (50th‑percentile):** 0.95 units  
+- **90th‑percentile (high):** 2.14 units  
+
+These values come directly from the forecasting tool and represent the expected sales range for that day.",
+5,lookup,1.0,1.0,1.0,0.0,,1.0,,1.9957659000065178,1319,262,get_forecast,"Based on the calibrated forecast for product 321 at store 461 on 2024‑06‑30, the model predicts:
+
+* **Low (10 th percentile):** 0.46 units  
+* **Median (50 th percentile):** 0.95 units  
+* **High (90 th percentile):** 2.14 units  
+
+So the expected sales are about **0.95 units**, with a plausible range from **0.46 to 2.14 units**. This is a statistical estimate—not a guarantee of actual sales.",
+5,lookup,1.0,1.0,1.0,0.0,,1.0,,2.0557047000038438,1319,304,get_forecast,"Based on the latest forecast for **product 321 at store 461 on 2024‑06‑30**:
+
+- **10th‑percentile (low) forecast:** **0.46** units  
+- **Median (50th‑percentile) forecast:** **0.95** units  
+- **90th‑percentile (high) forecast:** **2.14** units  
+
+These numbers come directly from the model’s calibrated forecast range (0.46 – 2.14) with a median of 0.95. They represent expected sales and are not guarantees.",
+6,lookup,1.0,1.0,1.0,0.0,,1.0,,2.0730181999970227,1319,255,get_forecast,"For store **628** on **2024‑06‑29**, the forecast for product **118** is:
+
+- **10th‑percentile (low) estimate:** **1.09** units  
+- **Median (50th‑percentile) estimate:** **1.68** units  
+- **90th‑percentile (high) estimate:** **2.46** units  
+
+These figures come directly from the forecasting model and represent the expected sales range for that day.",
+6,lookup,1.0,1.0,1.0,0.0,,1.0,,1.8807514000072842,1319,252,get_forecast,"For **product 118 at store 628 on 2024‑06‑29**, the system’s forecast is:
+
+- **Low (10th percentile):** 1.09 units  
+- **Median (50th percentile):** 1.68 units  
+- **High (90th percentile):** 2.46 units  
+
+These values come directly from the forecast model and represent the expected range of sales for that day. (The forecast is a statistical estimate, not a guaranteed outcome.)",
+6,lookup,1.0,1.0,1.0,0.0,,1.0,,2.0580306999909226,1319,252,get_forecast,"For 2024‑06‑29, the model forecasts that store 628 will sell **between 1.09 and 2.46 units** of product 118 (median ≈ 1.68). This is the 10th‑to‑90th percentile range produced by the forecast tool.",
+7,lookup,1.0,1.0,1.0,0.0,,1.0,,2.058523600004264,1319,336,get_forecast,"The model forecasts that on 2024‑06‑26 store 696 will sell roughly **0.97 – 2.24 units** of product 272, with a median (most likely) value of **1.5 units**【{""store_id"":696,""product_id"":272,""date"":""2024-06-26"",""as_of"":""2024-06-25"",""low"":0.97,""median"":1.5,""high"":2.24}】.",
+7,lookup,1.0,1.0,1.0,0.0,,1.0,,2.385096700003487,1319,368,get_forecast,"For **store 696**, the model forecasts the following sales for **product 272** on **2024‑06‑26**:
+
+- **10th percentile (low)**: 0.97 units  
+- **50th percentile (median)**: 1.5 units  
+- **90th percentile (high)**: 2.24 units  
+
+These figures come directly from the forecast tool and represent the expected range of units sold that day.",
+7,lookup,1.0,1.0,1.0,0.0,,1.0,,2.0771531999926083,1319,298,get_forecast,"For store 696 on 2024‑06‑26 the model forecasts the following sales range for product 272:
+
+- 10th‑percentile (low) ≈ **0.97** units  
+- 50th‑percentile (median) ≈ **1.5** units  
+- 90th‑percentile (high) ≈ **2.24** units  
+
+These figures come directly from the forecast tool.",
+8,lookup,1.0,1.0,1.0,0.0,,1.0,,1.9675076999992598,1319,285,get_forecast,"For 2024‑07‑02, the forecast for product 596 at store 182 is:
+
+- **10th‑percentile (low):** 1.07 units  
+- **50th‑percentile (median):** 1.75 units  
+- **90th‑percentile (high):** 3.40 units  
+
+These values represent the calibrated model’s range of expected sales for that day.",
+8,lookup,1.0,1.0,1.0,0.0,,1.0,,1.9135116999968886,1319,296,get_forecast,"The model forecasts that product 596 at store 182 on 2024‑07‑02 will sell:
+
+- **Low (10th percentile)**: 1.07 units  
+- **Median (50th percentile)**: 1.75 units  
+- **High (90th percentile)**: 3.4 units  
+
+These figures come from the forecast tool for that date, product, and store.",
+8,lookup,1.0,1.0,1.0,0.0,,1.0,,1.9668550999922445,1319,314,get_forecast,"For **store 182** on **2024‑07‑02**, the model forecasts the following sales for product 596:
+
+- **10th‑percentile (low):** 1.07 units  
+- **Median (50th‑percentile):** 1.75 units  
+- **90th‑percentile (high):** 3.40 units  
+
+These figures represent the expected range of units that could be sold, with the median being the most likely outcome.",
+9,lookup,1.0,1.0,1.0,0.0,,1.0,,2.1219051999942167,1319,329,get_forecast,"Based on the forecast model for **product 11 at store 52 on 2024‑06‑26**, the expected sales are:
+
+- **Low (10th percentile):** 0.3 units  
+- **Median (50th percentile):** 0.56 units  
+- **High (90th percentile):** 1.05 units  
+
+These figures come directly from the system’s forecast output.",
+9,lookup,1.0,1.0,1.0,0.0,,1.0,,2.0169722999999067,1319,252,get_forecast,"Based on the latest demand forecast for **product 11 at store 52 on 2024‑06‑26**, the model predicts:
+
+- **10th‑percentile (low) demand:** 0.3 units  
+- **Median (50th‑percentile) demand:** 0.56 units  
+- **90th‑percentile (high) demand:** 1.05 units  
+
+These figures represent the expected sales range for that day, with the median providing the most likely outcome.",
+9,lookup,1.0,1.0,1.0,0.0,,1.0,,2.2684015999984695,1319,360,get_forecast,"Based on the latest demand forecast for product 11 at store 52 on 2024‑06‑26, the model expects:
+
+* **10th‑percentile (low) demand:** 0.3 units  
+* **Median (50th‑percentile) demand:** 0.56 units  
+* **90th‑percentile (high) demand:** 1.05 units  
+
+So the expected sales are roughly **0.3 – 1.05 units**, with a most‑likely value of about **0.56 units**. (All figures come directly from the forecast tool.)",
+10,lookup,1.0,1.0,1.0,0.0,,1.0,,1.7959631999983685,1319,230,get_forecast,"The model forecasts that store 229 will sell between **0.32 units (10th percentile)** and **1.3 units (90th percentile)** of product 250 on 2024‑06‑27, with a median (50th percentile) estimate of **0.78 units**【{""low"":0.32,""median"":0.78,""high"":1.3}] .",
+10,lookup,1.0,1.0,1.0,0.0,,1.0,,1.869331099995179,1319,258,get_forecast,"For 2024‑06‑27 the sales forecast for product 250 at store 229 is:
+
+* **10th‑percentile (low) forecast:** 0.32 units  
+* **Median (50th‑percentile) forecast:** 0.78 units  
+* **90th‑percentile (high) forecast:** 1.3 units  
+
+These values come from the model’s calibrated forecast range. The exact sales will fall somewhere within this interval, with the median providing the most likely estimate.",
+10,lookup,1.0,1.0,1.0,0.0,,1.0,,2.019693800000823,1319,235,get_forecast,"For product 250 at store 229 on 2024‑06‑27 the forecasted sales are:
+
+- **10th‑percentile (low):** **0.32** units  
+- **Median (50th‑percentile):** **0.78** units  
+- **90th‑percentile (high):** **1.30** units  
+
+These figures come directly from the demand‑forecast model and represent a range of expected sales, not a guaranteed outcome.",
+11,why,0.0,1.0,1.0,0.0,,1.0,,2.0377026999922236,1374,251,compute_order,"Based on the cost‑ratio model (lost‑sale cost / waste cost = 9) the system recommends ordering **2.67 units** of product 207 for store 216 on 2024‑06‑28.  
+
+This recommendation uses the forecast’s 90th‑percentile (the “critical ratio” of 0.9) and stays within the store’s line limit (4 units) and overall capacity, so it can be placed without further approval.",
+11,why,1.0,1.0,1.0,0.0,,1.0,,3.2021423000114737,2200,438,"get_forecast,compute_order","**Recommended order for 2024‑06‑28 – Store 216 – Product 207**
+
+- **Forecast range** (10 th – 90 th percentile): **1.17 – 2.67** units (median ≈ 1.91) – from the forecast tool.  
+- **Cost‑ratio**: 9 : 1 (lost‑sale cost / waste cost). With the default ratio of 9, the system orders at the 90 th percentile, i.e., the **high** forecast value.
+
+**Order quantity:** **2.67 units** – this is the cost‑based order returned by the compute_order tool and is within the store’s line limit (4.0) and daily capa",
+11,why,1.0,1.0,1.0,0.0,,1.0,,3.2069068999990122,2200,459,"get_forecast,compute_order","**Recommended order for 2024‑06‑28 (store 216, product 207): 2.67 units**
+
+**Why:**  
+- The forecast for this item‑day spans **1.17 – 2.67 units** (10th‑90th percentile) with a median of **1.91 units**.  
+- Using the default cost ratio of **9 : 1** (lost‑sale cost ÷ waste cost), the cost‑based ordering rule selects the **90th‑percentile** value, which is **2.67 units**.  
+
+The order was computed with `compute_order`, which confirms the value falls within the store’s line limit (4 units) and over",
+12,why,1.0,1.0,1.0,0.0,,1.0,,3.0439150000020163,2200,436,"get_forecast,compute_order","**Recommended order for 2024‑06‑27 (store 741, product 810): 2.51 units**  
+
+- **Forecast range**: The model predicts demand between **0.99** (10th pct) and **2.51** (90th pct) units, with a median of **1.64** units.  
+- **Cost ratio**: Using the default lost‑sale‑to‑waste cost ratio of **9**, the cost‑based ordering rule selects the 90th‑percentile forecast, which is **2.51 units**.  
+
+The compute_order tool confirms this order (2.51 units) is within the store’s daily line limit (3.76) and over",
+12,why,1.0,1.0,1.0,0.0,,1.0,,2.7466417999967234,2200,411,"get_forecast,compute_order","**Recommended order for Store 741 – Product 810 on 2024‑06‑27**
+
+- **Quantity:** **2.51 units** (rounded to the nearest whole‑unit as per your system: **3 units**)
+- **Basis:**  
+  - The forecast for this item‑day shows a 10 %‑90 % range of **0.99 – 2.51 units**, with a median of **1.64 units**.  
+  - Using the default cost ratio of **9 ( lost‑sale cost ÷ waste cost )**, the cost‑based ordering rule selects the **90 th‑percentile** of the forecast, i.e., the **high** value **2.51 units**.  
+  - ",
+12,why,0.0,1.0,1.0,0.0,,1.0,,4.063710700007505,1374,362,compute_order,"**Recommended order for store 741 – product 810 on 2024‑06‑27**
+
+- **Quantity:** **2.51 units** (the cost‑based order computed with the default loss‑sale‑to‑waste cost ratio of 9)  
+- **Why this number?**  
+  - The system calculated the cost‑based order at the 90 th percentile of the forecast (ratio = 0.9) because a high ratio (9) prioritizes avoiding lost sales.  
+  - The forecast range for this item‑day runs from **10 % to 90 %** of expected demand; the median (50 %) lies between those bounds.",
+13,why,1.0,1.0,1.0,0.0,,1.0,,3.036824799986789,2200,465,"get_forecast,compute_order","**Recommended order for product 210 at store 792 for 2024‑06‑28**
+
+- **Forecast range (10 th – 90 th percentile):** 0.25 – 1.08 units  
+  (median 0.51 units) – from the latest demand forecast.
+
+- **Cost ratio used:** 9  (lost‑sale cost ÷ waste cost).  
+  With a ratio of 9, the cost‑based formula selects the 90 th‑percentile value.
+
+- **Cost‑based order:** **1.08 units** – this is exactly the 90 th‑percentile forecast, matching the default high‑cost‑ratio policy.
+
+- **Limits check:** The order (1",
+13,why,1.0,1.0,0.0,0.0,50%,1.0,,5.321330999999191,3299,1033,"get_forecast,compute_order","**Store 792 – Product 210 (2024‑06‑28)**  
+
+- **Forecast (10 % – 90 %):** low = 0.25 units, high = 1.08 units (from the forecast tool)  
+- **Cost‑ratio used:** 9.0 (from the order‑calculation tool)  
+- **Critical ratio applied:** 0.9 (selects the 90 th percentile)  
+- **Cost‑based order returned:** 1.08 units (also reported as the final “order”)  
+- **Line limit:** 1.62 units; **store‑day total:** 40.38 units; **store‑day capacity:** 400.0 units – all show the order is **within limits**.
+
+**Reco",
+13,why,1.0,1.0,1.0,0.0,,1.0,,3.121765599993523,2200,589,"get_forecast,compute_order","**Recommended order for product 210 at store 792 on 2024‑06‑28:** **1.08 units**  
+
+**Why:**  
+
+- The forecast for this item‑day gives a range from the 10th‑percentile (**0.25 units**) to the 90th‑percentile (**1.08 units**), with a median of **0.51 units**.  
+- Using the default cost ratio (lost‑sale cost / waste cost = 9), the system computes a cost‑based order at the 90th‑percentile, which is **1.08 units**.  
+- The computed order is within the store’s daily line limit (1.62 units) and overal",
+14,why,1.0,1.0,1.0,0.0,,1.0,,2.9636542000080226,2200,530,"get_forecast,compute_order","**Recommended order for Store 3 – Product 70 on 2024‑07‑01**
+
+- **Quantity:** **9.69 units**  
+- **Why:**  
+  * The forecast for this item‑day is a range from **4.51** (10th percentile) to **9.69** (90th percentile) with a median of **6.81**.  
+  * Using the default cost ratio of **9 : 1** (lost‑sale cost / waste cost), the cost‑based ordering rule selects the **90th‑percentile (high) forecast**, which is **9.69** units.  
+  * The computed order of **9.69** is **within all limits** (line limit 1",
+14,why,1.0,1.0,1.0,0.0,,1.0,,2.751792999988538,2200,442,"get_forecast,compute_order","**Recommended order for Store 3 – Product 70 on 2024‑07‑01**
+
+- **Quantity:** **9.69** units  
+- **Basis:**  
+  * The demand forecast for this item‑day runs from a **10 % percentile of 4.51** units to a **90 % percentile of 9.69** units, with a **median of 6.81** units (as returned by the forecasting tool).  
+  * Using the default cost‑ratio of **9 ( lost‑sale cost / waste cost )**, the cost‑based ordering algorithm selects the **90 % percentile** to protect against lost sales. The compute_order",
+14,why,1.0,1.0,1.0,0.0,,1.0,,2.8824624000117183,2200,436,"get_forecast,compute_order","**Recommended order for Store 3 – Product 70 (2024‑07‑01)**  
+
+- **Quantity:** **9.69 units**  
+- **Why this number:**  
+
+  1. **Forecast range** (10 th–90 th percentile) for the item on that day is **4.51 – 9.69** units, with a median of **6.81** units.  
+  2. Using the default cost ratio of **lost‑sale cost / waste cost = 9**, the cost‑based ordering rule selects the **90 th percentile** of the forecast, i.e., the **high** value **9.69** units.  
+
+The order of **9.69** units is **within all li",
+15,why,1.0,1.0,1.0,0.0,,1.0,,3.200378499997896,2200,487,"get_forecast,compute_order","For **Store 397 – Product 631 on 2024‑06‑26**:
+
+| Forecast (units) | 10th pct | Median (50th) | 90th pct |
+|------------------|----------|---------------|----------|
+| **Demand forecast** | 0.15 | 0.44 | **0.96** |
+
+The ordering algorithm uses a **cost‑ratio of 9 (lost‑sale cost / waste cost)**, which by default selects the 90th‑percentile forecast.  
+
+**Recommended order:** **0.96 units** – this is the cost‑based order returned by the system (see `cost_based_order: 0.96`).  
+
+The order is withi",
+15,why,1.0,1.0,1.0,0.0,,1.0,,3.045964200005983,2200,477,"get_forecast,compute_order","**Recommended order for product 631 at store 397 for 2024‑06‑26**
+
+- **Quantity to order:** **0.96 units** (rounded to the nearest feasible quantity as given by the system)  
+- **Why:**  
+  * The demand forecast for this item‑day spans **0.15 – 0.96 units** (10th – 90th percentile) with a median of **0.44 units**.  
+  * Using the default cost ratio of **9 (loss‑sale cost ÷ waste cost)**, the cost‑based ordering rule selects the **90th‑percentile** point of the forecast, i.e., the **high = 0.96 u",
+15,why,1.0,1.0,1.0,0.0,,1.0,,2.9614824000018416,2200,405,"get_forecast,compute_order","**Recommended order for product 631 at store 397 on 2024‑06‑26:** 0.96 units  
+
+- The forecast for this item‑day ranges from **0.15** (10th percentile) to **0.96** (90th percentile), with a median of **0.44** units.  
+- Using the default cost ratio of **9 : 1** (lost‑sale cost vs. waste cost), the cost‑based ordering rule selects the **90th‑percentile** forecast value, which is **0.96** units.  
+
+The order calculation respects the store’s limits (line limit 1.44 units, total daily capacity 400 u",
+16,why,1.0,1.0,1.0,0.0,,1.0,,2.800193600007333,2200,463,"get_forecast,compute_order","**Recommended order for store 679 – product 17 on 2024‑06‑28**
+
+- **Quantity:** **1.0 unit** (the cost‑based order calculated at the default loss‑sale‑to‑waste cost ratio of 9)  
+- **Why:**  
+
+  1. **Forecast range** – The demand forecast for this item‑day runs from the 10th to the 90th percentile: **0.22 – 1.0 units**, with a median of **0.52 units**.  
+  2. **Cost ratio** – Using the default cost ratio of 9 (lost‑sale cost ÷ waste cost), the system orders at the 90th percentile of the forecast",
+16,why,1.0,1.0,1.0,0.0,,1.0,,3.3748565999994753,2200,557,"get_forecast,compute_order","**Recommended order for Store 679 – Product 17 (2024‑06‑28)**  
+
+- **Quantity:** **1.0 units**  
+- **Basis:**  
+  1. **Forecast range** (10 th–90 th percentile) for this item‑day: **0.22 – 1.0**, with a median of **0.52** units (from the `get_forecast` call).  
+  2. **Cost‑ratio** (lost‑sale cost / waste cost) set to **9** (default). With this high ratio the model orders at the **90 th percentile**, which is the **high** forecast value of **1.0** unit.  
+  3. The `compute_order` tool confirms a ",
+16,why,1.0,1.0,1.0,0.0,,1.0,,2.6280735000036657,2200,373,"get_forecast,compute_order","**Recommendation:** Order **1 unit** of product 17 for store 679 on 2024‑06‑28.
+
+**Why this amount?**  
+- The forecast for the day shows a range from **0.22 units (10th percentile)** to **1.0 units (90th percentile)**, with a **median of 0.52 units**.  
+- Using the default cost ratio of **9 : 1** (lost‑sale cost ÷ waste cost), the system calculates the cost‑based order at the **90th percentile**, which is **1.0 unit**.  
+- The computed order of **1.0 unit** is within the store’s line limit (1.51",
+17,why,1.0,1.0,1.0,0.0,,1.0,,2.710134200009634,2200,450,"get_forecast,compute_order","**Recommended order for 2024‑06‑26 – Store 120 – Product 195**
+
+- **Forecast range (10 th – 90 th percentile):** 0.21 – 1.04 units  
+  (median = 0.57 units) – from the demand forecast tool.  
+- **Cost ratio (lost‑sale / waste):** 9 (default).  
+- **Cost‑based order:** 1.04 units – the value the ordering tool returns when applying the 9 : 1 ratio, which aligns with the 90 th percentile of the forecast.  
+- **Limits check:** The order is within the store’s line limit (1.56) and overall daily capac",
+17,why,1.0,1.0,1.0,0.0,,1.0,,2.9899144999944838,2200,460,"get_forecast,compute_order","**Recommended order for 2024‑06‑26 (store 120, product 195)**  
+
+- **Forecast range** (10 th – 90 th percentile): **0.21 – 1.04** units  
+- **Median forecast** (50 th percentile): **0.57** units  
+
+Using the default cost‑ratio of **9 : 1** (lost‑sale cost ÷ waste cost), the system computes a **cost‑based order** at the 90 th percentile of the forecast.  
+
+- **Cost‑based order**: **1.04 units** (the “high” forecast figure)  
+
+The computed order is **within all limits** (line limit 1.56 units, sto",
+17,why,1.0,1.0,1.0,0.0,,1.0,,3.0319744999869727,2200,466,"get_forecast,compute_order","**Recommended order for 2024‑06‑26**  
+- **Product 195, Store 120:** **1.04 units**
+
+**Why this quantity?**  
+
+1. **Forecast range** (10th‑90th percentile) for the day is **0.21 – 1.04 units**, with a median of **0.57 units**.  
+2. The store uses the default cost ratio of **9** (lost‑sale cost / waste cost). With this ratio, the cost‑based ordering rule selects the **90th‑percentile** forecast value, i.e., the **high** of **1.04 units**.  
+3. The `compute_order` tool confirms that 1.04 units is ",
+18,why,1.0,1.0,1.0,0.0,,1.0,,2.830815799999982,2200,519,"get_forecast,compute_order","**Recommended order for Store 652 – Product 196 on 2024‑07‑02**
+
+- **Forecast range:** 0.20 – 0.78 units (10th – 90th percentile) with a median of 0.44 units.  
+- **Cost ratio used:** 9 (the default lost‑sale‑cost / waste‑cost ratio).  
+- **Cost‑based order:** 0.78 units (the 90th‑percentile point, because a high ratio pushes the order toward the upper end of the forecast).  
+
+The compute_order call returned:
+
+```
+{
+  ""store_id"": 652,
+  ""product_id"": 196,
+  ""date"": ""2024-07-02"",
+  ""ratio"": 9.0,
+",
+18,why,1.0,1.0,0.0,0.0,50%,1.0,,4.769839800006594,3269,937,"get_forecast,compute_order","**Order recommendation for Store 652 – Product 196 on 2024‑07‑02**
+
+- **Forecast range (10 %‑90 % percentile) from the forecast tool:** 0.2 – 0.78 units  
+- **Cost‑based order (computed with the default loss‑to‑waste ratio 9 : 1):** 0.78 units  
+
+The compute_order tool also reports the following contextual figures:
+
+- **Critical ratio applied:** 0.9  
+- **Line‑limit for the product:** 1.17 units  
+- **Store’s total planned volume for the day:** 57.98 units (out of a capacity of 400.0 units)  
+
+A",
+18,why,1.0,1.0,1.0,0.0,,1.0,,2.8126365000061924,2200,413,"get_forecast,compute_order","**Recommended order for Store 652 – Product 196 (2024‑07‑02)**  
+- **Forecast range:** 0.20 – 0.78 units (10th–90th percentile) – median 0.44 units.  
+- **Cost ratio:** 9 ( lost‑sale cost ÷ waste cost ). With this ratio the model orders at the 90th percentile of the forecast.
+
+**Order quantity:** **0.78 units**  
+
+*Why:* The cost‑based ordering calculation (ratio = 9) selects the 90th‑percentile forecast value (0.78) as the optimal order. The order is within the store’s daily limits (line limit ",
+19,ratio,1.0,1.0,1.0,0.0,,1.0,,3.816115199995693,2209,648,"get_forecast,compute_order","**Order recommendation for product 296 at store 109 on 2024‑06‑30**
+
+- **Forecast range (10 th – 90 th percentile):** **1.03 – 3.32** units  
+- **Median forecast:** **1.93** units  
+- **Lost‑sale‑to‑waste cost ratio:** **1 : 1** (you told us the lost‑sale cost equals the waste cost)
+
+Using the cost‑based ordering rule (order at the 90 th percentile when the ratio is 9, but with a ratio of 1 the model selects the median), the system computed:
+
+- **Cost‑based order:** **1.93** units  
+- **Order pl",
+19,ratio,1.0,1.0,1.0,0.0,,1.0,,3.3890355000039563,2209,473,"get_forecast,compute_order","**Order recommendation for product 296 at store 109 on 2024‑06‑30**
+
+- **Forecast range (10 – 90 th percentile):** 1.03 – 3.32 units  
+- **Median forecast:** 1.93 units (the “middle” expected demand)  
+
+Because the lost‑sale cost equals the waste cost (ratio = 1), the cost‑based policy uses the **median forecast** as the optimal order quantity.
+
+The system computed a cost‑based order of **1.93 units**. This is well below the store’s line limit of 4.98 units and within the overall daily capacity ",
+19,ratio,1.0,1.0,1.0,0.0,,1.0,,2.82227759998932,2209,421,"get_forecast,compute_order","**Order recommendation for 2024‑06‑30 (store 109, product 296)**  
+
+- Forecast range (10 th – 90 th percentile): **1.03 – 3.32** units, with a median of **1.93** units.  
+- Lost‑sale‑to‑waste cost ratio you gave: **1 : 1** (instead of the default 9 : 1).  
+- Using that ratio, the cost‑based ordering model selects the **median** forecast, i.e., **1.93 units**.  
+
+The system check shows the order is **within all limits** (line limit 4.98, store‑day capacity 400).  
+
+**Recommended order:** **1.93 u",
+20,ratio,1.0,1.0,1.0,0.0,,1.0,,2.951264999996056,2209,484,"get_forecast,compute_order","For **store 368**, product 223 on **2024‑06‑30**:
+
+* The forecast range (10 th – 90 th percentile) is **0.49 – 1.76** units, with a median of **0.95** units.  
+* Because the lost‑sale cost equals the waste cost, the cost ratio is **1 : 1**.  
+
+Using this ratio, the cost‑based order (which selects the 90 th percentile) is **0.95** units.  
+
+The system confirms that this order (0.95 units) is within the store’s line limit (2.65 units) and overall daily capacity, so it can be placed.
+
+**Order:** **",
+20,ratio,1.0,1.0,1.0,0.0,,1.0,,3.2614287000033073,2209,558,"get_forecast,compute_order","**Order recommendation for product 223 at store 368 on 2024‑06‑30**
+
+- **Forecast range** (10 %–90 %): **0.49 – 1.76** units  
+- **Median forecast**: **0.95** units  
+
+- **Lost‑sale‑to‑waste cost ratio** you specified: **1** (lost sale costs the same as waste).  
+  With a ratio of 1, the cost‑based ordering rule selects the **median forecast** (0.95 units).
+
+- **Cost‑based order calculation** (from the system): **0.95 units** (within all limits).
+
+**Result:** Order **0.95 units** of product 223 ",
+20,ratio,1.0,1.0,1.0,0.0,,1.0,,3.065802500001155,2209,458,"get_forecast,compute_order","**Order recommendation for store 368, product 223 on 2024‑06‑30**
+
+- **Forecast range** (10 %‑90 %): **0.49 – 1.76** units  
+  (median = **0.95** units) – from the `get_forecast` tool.
+
+- **Lost‑sale / waste cost ratio** you gave: **1 : 1**.  
+  With this ratio the cost‑based ordering rule selects the **median** forecast.
+
+- **Cost‑based order** (computed by `compute_order`): **0.95** units.  
+  The tool confirms this is within the store’s daily line limit (2.65 units) and overall capacity.
+
+**R",
+21,ratio,1.0,1.0,1.0,0.0,,1.0,,2.960497199994279,2209,445,"get_forecast,compute_order","For 2024‑06‑26 at store 672, the forecast for product 806 is:
+
+* **10th‑percentile (low)**: 0.23 units  
+* **Median (50th‑percentile)**: 0.51 units  
+* **90th‑percentile (high)**: 1.07 units  
+
+Because the lost‑sale cost equals the waste cost, the cost ratio is **1 : 1**.  
+Using this ratio, the cost‑based ordering rule (which orders at the 90th‑percentile when the ratio is 9, and scales down proportionally) yields an order of **0.51 units** – exactly the median forecast.
+
+The order is within th",
+21,ratio,1.0,1.0,1.0,0.0,,1.0,,3.1779712999996264,2209,514,"get_forecast,compute_order","**Order recommendation for store 672, product 806 on 2024‑06‑26**
+
+- Forecast range (10 th – 90 th percentile): **0.23 – 1.07** units  
+  (median = 0.51 units)
+
+- Lost‑sale cost versus waste cost ratio: **1 : 1** (you stated the costs are equal).  
+  Using the default cost‑based ordering rule (order at the 90 th percentile when the ratio is 9, but with a ratio of 1 we order at the median), the system computes a **cost‑based order of 0.51 units**.
+
+- The computed order (0.51 units) is **within th",
+21,ratio,1.0,1.0,1.0,0.0,,1.0,,2.899512699994375,2209,456,"get_forecast,compute_order","**Order recommendation for store 672, product 806 on 2024‑06‑26**
+
+- Forecast range (10 % – 90 % percentile): **0.23 – 1.07** units  
+- Median forecast (50 %): **0.51** units  
+
+Your lost‑sale cost equals the waste cost, so the cost ratio is **1** (instead of the default 9).  
+Using that ratio, the cost‑based ordering rule returns **0.51 units** (the median forecast).
+
+The system computed:
+
+```
+cost_based_order: 0.51
+order: 0.51
+within_limits: true
+```
+
+Since the order is within the store’s dail",
+22,ratio,1.0,1.0,1.0,0.0,,1.0,,3.4756990000023507,2209,575,"get_forecast,compute_order","For **store 231**, product 6 on **2024‑07‑01**:
+
+* The forecast range (10 %‑90 %) is **0.6 – 1.63** units, with a median of **1.21** units.【{""store_id"":231,""product_id"":6,""date"":""2024-07-01"",""as_of"":""2024-06-25"",""low"":0.6,""median"":1.21,""high"":1.63}】
+* You said a lost‑sale cost equals a waste cost, so the cost‑ratio is **1** (instead of the default 9).  
+* Using that ratio, the cost‑based order is **1.21** units, which is within the line limit (2.45) and the store’s daily capacity.【{""store_id"":23",
+22,ratio,1.0,1.0,1.0,0.0,,1.0,,3.3237074999924516,2209,573,"get_forecast,compute_order","For **store 231**, product 6 on **2024‑07‑01**:
+
+- The forecast range from the model is **0.6 – 1.63** units, with a median of **1.21** units【{""store_id"":231,""product_id"":6,""date"":""2024-07-01"",""as_of"":""2024-06-25"",""low"":0.6,""median"":1.21,""high"":1.63}】.  
+- You indicated that a lost sale costs the same as waste, so the cost ratio is **1 : 1** (the default is 9 : 1).  
+
+Using that ratio, the cost‑based ordering rule (which orders at the 90th percentile when the ratio is 9, but moves toward the med",
+22,ratio,1.0,1.0,1.0,0.0,,1.0,,2.809055999998236,2209,540,"get_forecast,compute_order","For **store 231**, product 6 on **2024‑07‑01**:
+
+* **Forecast range** (10‑th to 90‑th percentile): **0.6 – 1.63** units, with a **median** of **1.21** units.  
+* **Cost ratio** (lost‑sale cost / waste cost) you specified: **1** (lost‑sale cost equals waste cost).
+
+Using that ratio, the cost‑based ordering rule selects the **90th‑percentile** forecast, which the system computed as **1.21 units**.  
+
+The **compute_order** call returned:
+
+```
+{
+  ""store_id"": 231,
+  ""product_id"": 6,
+  ""date"": ""2024-",
+23,ratio,1.0,1.0,1.0,0.0,,1.0,,2.8942550999927334,2209,516,"get_forecast,compute_order","For **store 256**, product 374 on **2024‑06‑29** the forecast range is:
+
+* 10th percentile = 0.22 units  
+* Median = 0.64 units  
+* 90th percentile = 1.30 units  
+
+You said the lost‑sale cost equals the waste cost, so the cost ratio is **1 : 1**.  
+With that ratio the cost‑based ordering rule (which orders at the 90 th percentile when the ratio is 9, and moves toward the median as the ratio falls) selects the **median forecast**.
+
+The system computed:
+
+* **Cost‑based order** = 0.64 units  
+* **O",
+23,ratio,1.0,1.0,1.0,0.0,,1.0,,3.0101494999980787,2209,477,"get_forecast,compute_order","**Order recommendation for 2024‑06‑29 (store 256, product 374)**  
+
+- Forecast range (10‑90 %): **0.22 – 1.30** units, median = **0.64** units.  
+- Lost‑sale cost / waste cost = **1** (you said they are equal). With a ratio of 1, the cost‑based ordering rule selects the **median** of the forecast.
+
+The compute_order tool returns a cost‑based order of **0.64 units** and confirms that this is **within the store’s limits**.
+
+**Order:** **0.64 units** of product 374 for delivery on 2024‑06‑29.",
+23,ratio,1.0,1.0,1.0,0.0,,1.0,,1.9791948000056436,1384,312,compute_order,"For store 256, product 374 on 2024‑06‑29, the cost‑based ordering calculation (lost‑sale cost : waste cost = 1 : 1) yields an order of **0.64 units**.  
+
+The forecast for this item‑day spans from the 10 th to the 90 th percentile, and the cost‑ratio of 1 directs the system to order at the 90 th percentile, which is the 0.64 units shown.  
+
+Because the order is within the store’s day‑total and line limits, it can be placed as‑is.",
+24,ratio,1.0,1.0,1.0,0.0,,1.0,,3.435204599998542,2209,561,"get_forecast,compute_order","For **store 212**, product 793 on 2024‑07‑01:
+
+* **Forecast range** – 10 th percentile 0.52, median 1.18, 90 th percentile 2.02.  
+* **Cost ratio** – you said a lost‑sale cost equals a waste cost, so the ratio is 1.0 (the default is 9, which would target the 90 th percentile; a ratio of 1 pushes the order toward the median).
+
+The cost‑based ordering calculation therefore yields an order of **1.18 units** (the median forecast), which is within the store’s line limit (3.04) and overall daily capac",
+24,ratio,1.0,1.0,1.0,0.0,,1.0,,3.0793611999979476,2254,381,"compute_order,get_forecast","**Order recommendation for store 212, product 793 on 2024‑07‑01**
+
+- **Forecast range (10 %‑90 %):** 0.52 – 2.02 units  
+  (median = 1.18 units)【!response data=functions.get_forecast】  
+- **Cost ratio (lost‑sale / waste):** 1 : 1 (you set it to 1)  
+
+Using the cost‑based ordering model with a ratio of 1, the system computes an order of **1.18 units**【!response data=functions.compute_order】. This order lies within the store’s daily limits, so no planner approval is needed.",
+24,ratio,1.0,1.0,0.0,0.0,0.54 2.31 1.42,1.0,,3.8279147000139346,2372,642,compute_order,"For **store 212**, product 793 on **2024‑07‑01** the system calculates:
+
+- **Cost‑based order:** **1.18 units** (the “order” field returned by the tool)  
+- **Line limit for the item:** **3.04 units**  
+- **Store‑day total so far:** **314.12 units**  
+- **Store‑day capacity:** **400.0 units**  
+- **Ratio used:** **1.0** (lost‑sale cost equals waste cost)  
+
+The order of **1.18 units** is **within the limits** (line limit 3.04 and total capacity 400.0). You can place this order as‑is.",
+25,what_if,1.0,1.0,1.0,0.0,,1.0,,6.642952299996978,1368,253,what_if,"The model estimates that a 20 % discount (price = 0.8 × regular) would raise the median demand for product 387 at store 572 on 2024‑06‑29 from **1.22** units to **1.83** units – an increase of about **50 %**.  
+
+*This is a model‑based projection, not a proof of cause‑and‑effect.*",
+25,what_if,1.0,1.0,1.0,0.0,,1.0,,2.6991008000040893,1368,267,what_if,"The model estimates that applying a 20 % discount (price = 0.8 × normal) would raise the median demand for product 387 at store 572 on 2024‑06‑29 from **1.22** units to **1.83** units – an increase of about **50 %**.
+
+*This is a model‑based “what‑if” forecast, not a guarantee of actual sales.*",
+25,what_if,1.0,1.0,1.0,0.0,,1.0,,2.4389822999946773,1368,244,what_if,"The model estimates that a 20 % discount (price = 0.8 × regular) would raise the median demand for **product 387 at store 572 on 2024‑06‑29** from **≈ 1.22 units** (planned) to **≈ 1.83 units** – an increase of about **50 %**.
+
+*This is a model‑based forecast, not proof of cause‑and‑effect.*",
+26,what_if,1.0,1.0,1.0,0.0,,1.0,,2.572882699998445,1365,185,what_if,"The model estimates that on **2024‑06‑30** at **store 198**, product 6 (with the promotion active) will have a median demand of **2.22 units**. This is a model‑based estimate (not proof of cause and effect) and reflects a roughly **4 % increase** over the planned median demand of 2.13 units.",
+26,what_if,1.0,1.0,1.0,0.0,,1.0,,2.550446799999918,1365,235,what_if,"The model‑based estimate for the median demand of product 6 at store 198 on 2024‑06‑30, when it is promoted, is **2.22 units** (up from the planned median of 2.13 units, a 4.1 % increase). This figure is a forecast, not a guaranteed outcome.",
+26,what_if,1.0,1.0,1.0,0.0,,1.0,,2.710794300000998,1357,252,what_if,The model‑based estimate for product 6 with a promotion at store 198 on 2024‑06‑30 is a median demand of **2.22 units** (the planned median would have been 2.13 units). This reflects a about **4 % increase** due to the promotion.,
+27,what_if,1.0,1.0,1.0,0.0,,1.0,,2.5019332000083523,1368,196,what_if,"The model‑based estimate (Chronos‑2) suggests that applying a 20 % discount (price = 0.8 × normal) would raise the median demand for product 74 at store 890 on 2024‑06‑30 from **0.74** units to **0.9** units – an increase of about **21 %**. This is a forecast‑based projection, not a proven causal effect.",
+27,what_if,1.0,1.0,1.0,0.0,,1.0,,2.7102425000048243,1368,260,what_if,"The model‑based estimate (Chronos‑2) suggests that applying a 20 % discount (price = 0.8 × normal) would raise the median demand for product 74 at store 890 on 2024‑06‑30 from about 0.74 units to roughly 0.90 units – an increase of about **21 %**. This is a forecast‑only estimate, not proof of cause‑and‑effect.",
+27,what_if,1.0,1.0,1.0,0.0,,1.0,,2.5177733000018634,1368,266,what_if,"The model estimates that applying a 20 % discount (price = 0.8 × regular) would raise the median demand for product 74 at store 890 on 2024‑06‑30 from about **0.74** units to **0.9** units – an increase of roughly **21 %**.  
+
+*This is a model‑based forecast, not a proven cause‑and‑effect relationship.*",
+28,what_if,1.0,1.0,1.0,0.0,,1.0,,2.936378099999274,1380,314,what_if,"The model‑based estimate for the median demand of product 272 at store 346 on 2024‑06‑28, with the promotion applied, is **2.04 units** (the forecast’s 50th percentile). This reflects a slight decrease compared with the planned median of 2.14 units, but remember it is only a model‑based projection, not a proven causal effect.",
+28,what_if,1.0,1.0,1.0,0.0,,1.0,,2.741175100003602,1365,318,what_if,"The model estimates that, with the promotion in place, the median demand for product 272 at store 346 on 2024‑06‑28 would be **2.04 units** (about 4.5 % lower than the planned median of 2.14).  
+
+*This is a model‑based forecast and not a proof of cause‑and‑effect.*",
+28,what_if,1.0,1.0,1.0,0.0,,1.0,,2.7061820999952033,1365,275,what_if,"Based on the model‑based **what‑if** estimate, a promotion for product 272 at store 346 on **2024‑06‑28** is expected to generate a median demand of **2.04 units** (the planned median without the promotion was 2.14 units, a ‑4.5 % change).  
+
+*This figure is an estimate from the forecasting model and not a guarantee of actual sales.*",
+29,what_if,1.0,1.0,1.0,0.0,,1.0,,2.636300999991363,1368,242,what_if,"The model estimates that on **2024‑06‑27** a **20 % discount** (price = 0.8 × regular) would raise the median demand for product 580 at store 377 from **2.89** units to **3.06** units – an increase of about **6 %**.  
+
+*This is a model‑based “what‑if” estimate, not proof of cause and effect.*",
+29,what_if,1.0,1.0,1.0,0.0,,1.0,,2.3852951000008034,1368,251,what_if,"The model estimates that a 20 % discount (price = 0.8 × normal) would raise the median demand for product 580 at store 377 on 2024‑06‑27 from **2.89** units to **3.06** units – an increase of about **6 %**.  
+
+*This is a model‑based estimate, not proof of cause and effect.*",
+29,what_if,1.0,1.0,1.0,0.0,,1.0,,2.667372700001579,1368,280,what_if,"The model estimates that applying a 20 % discount (price = 0.8 × regular) would raise the median demand for product 580 at store 377 on 2024‑06‑27 from **2.89** units to **3.06** units – an increase of about **6 %**.  
+
+*This is a model‑based projection, not proof of cause and effect.*",
+30,what_if,1.0,1.0,1.0,0.0,,1.0,,2.645536299998639,1357,347,what_if,"For product 535 at store 403 on 2024‑06‑28, the model estimates that the median demand will be **1.02 units** (up from the planned median of 1.01 units), a modest 0.5 % increase due to the promotion.  
+
+*This is a model‑based estimate, not proof of a causal effect.*",
+30,what_if,1.0,1.0,1.0,0.0,,1.0,,2.367848599998979,1365,202,what_if,"For product 535 at store 403 on 2024‑06‑28 with a promotion, the model‑based estimate of the median demand is **1.02 units** (up from the planned median of 1.01). This figure is a forecast, not a guarantee of actual sales.",
+30,what_if,1.0,1.0,1.0,0.0,,1.0,,2.4226964999979828,1365,272,what_if,"The model estimates that, with the promotion in place on 2024‑06‑28 at store 403, the median demand for product 535 would be **about 1.02 units** (up from the planned median of 1.01). This is a model‑based forecast and not proof of cause‑and‑effect.",
+31,what_if,1.0,1.0,1.0,0.0,,1.0,,2.7009384999983013,1368,269,what_if,"The model estimates that applying a 20 % discount (price = 0.8 × regular) would change the median demand for product 127 at store 466 on 2024‑06‑29 from **1.59** units (planned) to **1.53** units, a **‑4.1 %** difference.  
+
+*This is a model‑based estimate and not proof of cause‑and‑effect.*",
+31,what_if,1.0,1.0,1.0,0.0,,1.0,,2.356856799990055,1368,276,what_if,"With a 20 % discount (price = 0.8 × normal) the model estimates that the median demand for product 127 at store 466 on 2024‑06‑29 would be **1.53 units**, compared with the planned median of **1.59 units**.  
+
+That is a **≈ 4.1 % decrease** in expected demand. This figure is a model‑based estimate, not proof of cause‑and‑effect.",
+31,what_if,1.0,1.0,1.0,0.0,,1.0,,2.3419859999994515,1368,258,what_if,"Based on the model’s what‑if analysis, a 20 % discount (price = 0.8 × regular) would **reduce the median demand** for product 127 at store 466 on 2024‑06‑29 from **1.59 units** to **1.53 units**, a change of **‑4.1 %**.  
+
+*This is a model‑based estimate, not proof of causality.*",
+32,what_if,1.0,1.0,1.0,0.0,,1.0,,2.355570900006569,1365,241,what_if,"Based on the model‑based “what‑if” estimate, the median demand for **product 41** at **store 441** on **2024‑06‑30** (with a promotion in place) is **1.77 units**. This figure is a model estimate and not proof of a causal effect.",
+32,what_if,1.0,1.0,1.0,0.0,,1.0,,2.9091665000014473,1365,405,what_if,"The model‑based estimate for the promoted product 41 at store 441 on 2024‑06‑30 is a median demand of **1.77 units**【{""store_id"":441,""product_id"":41,""date"":""2024-06-30"",""changes"":{""activity_flag"":1},""planned_median"":1.77,""scenario_median"":1.77,""change_pct"":0.0,""note"":""model-based estimate (Chronos-2), not proof of cause and effect""}】. This reflects the expected average demand under the promotion scenario.",
+32,what_if,1.0,1.0,1.0,0.0,,1.0,,2.8347646000038367,1365,307,what_if,"For product 41 at store 441 on 2024‑06‑30, the model‑based estimate of demand (median of the forecast distribution) is **1.77 units**. This is a forecast median, not a guarantee, and reflects the expected sales under the promotion scenario.",
+33,limit,1.0,1.0,1.0,0.0,,1.0,,3.6352351999958046,3433,461,"compute_order,write_decision_record","The order was not placed. Since the planner rejected the request, no units of product 554 were ordered for store 405 on 2024‑06‑28.",
+33,limit,1.0,1.0,1.0,0.0,,1.0,,4.799544599998626,4617,634,"compute_order,compute_order,write_decision_record",The order of 7 units for product 554 at store 405 on 2024‑06‑28 was not placed. The planner’s rejection means no order was recorded.,
+33,limit,1.0,1.0,1.0,0.0,,1.0,,5.238586699997541,4609,785,"get_forecast,compute_order,write_decision_record",No order was placed for product 554 at store 405 on 2024‑06‑28.,
+34,limit,1.0,1.0,1.0,0.0,,1.0,,4.079619199997978,3510,606,"get_forecast,compute_order","I confirm that **no order was placed** for product 775 at store 893 on 2024‑06‑26. The earlier request for 8 units could not be fulfilled because it exceeded the system’s limits, and the planner has rejected it. Let me know if you’d like to discuss an alternative order size that fits within the allowed range.",
+34,limit,1.0,1.0,1.0,0.0,,1.0,,4.476885899988702,2477,523,compute_order,No order was placed for product 775 at store 893 on 2024‑06‑26.,
+34,limit,1.0,1.0,1.0,0.0,,1.0,,4.484055300010368,3453,596,"compute_order,write_decision_record",No order was placed for product 775 at store 893 on 2024‑06‑26.,
+35,limit,1.0,1.0,1.0,0.0,,1.0,,4.108260699998937,3486,617,"get_forecast,compute_order",No order was placed for product 481 at store 665 on 2024‑06‑27.,
+35,limit,1.0,1.0,1.0,0.0,,1.0,,4.9413744999910705,4589,772,"get_forecast,compute_order,write_decision_record","Understood. Since the planner rejected the request, no order was placed for product 481 at store 665 on 2024‑06‑27.",
+35,limit,1.0,1.0,1.0,0.0,,1.0,,2.6720258999994257,2478,408,compute_order,"No order was placed for product 481 at store 665 for 2024‑06‑27, as the planner rejected the requested quantity.",
+36,limit,1.0,1.0,1.0,0.0,,1.0,,3.7571298999973806,3450,581,"compute_order,write_decision_record",No order was placed for product 769 at store 647 for 2024‑06‑26.,
+36,limit,1.0,1.0,1.0,0.0,,1.0,,5.024751799996011,4620,826,"get_forecast,compute_order,write_decision_record","No order was placed for product 769 at store 647 on 2024‑06‑26. The request was rejected, so nothing has been ordered.",
+36,limit,1.0,1.0,1.0,0.0,,0.0,,5.648073499993188,4655,985,"compute_order,compute_order,get_forecast,write_decision_record","The requested 6‑unit order for product 769 at store 647 on 2024‑06‑26 exceeds the line limit (the cost‑based order at the 9 : 1 loss‑to‑waste ratio is 1.91 units, with a line limit of 2.86 units). A planner must approve any order that goes beyond these limits.",
+37,limit,1.0,1.0,1.0,0.0,,1.0,,3.580008999997517,3440,465,"compute_order,write_decision_record",No order was placed for product 765 at store 556 for 2024‑07‑01.,
+37,limit,1.0,1.0,1.0,0.0,,1.0,,4.991253100000904,4538,630,"get_forecast,compute_order,write_decision_record",No order was placed for product 765 at store 556 for 2024‑07‑01.,
+37,limit,1.0,1.0,1.0,0.0,,1.0,,7.049658400006592,4610,764,"get_forecast,compute_order,write_decision_record",Understood—no order has been placed for product 765 at store 556 for 2024‑07‑01.,
+38,limit,1.0,1.0,1.0,0.0,,1.0,,2.804389299999457,2478,433,compute_order,"I’m confirming that no order was placed for product 259 at store 495 on 2024‑07‑02. The previously requested 5 units exceeded the store’s limits, so it was not recorded.",
+38,limit,1.0,1.0,1.0,0.0,,1.0,,3.716347499997937,3484,577,"get_forecast,compute_order","No order was placed. The request for 5 units of product 259 at store 495 for 2024‑07‑02 was rejected, so nothing has been ordered.",
+38,limit,1.0,1.0,1.0,0.0,,1.0,,3.5899234999960754,3469,511,"compute_order,write_decision_record","I’ve confirmed that no order was placed for product 259 at store 495 on 2024‑07‑02. The request was rejected, so nothing has been ordered.",
+39,limit,1.0,1.0,1.0,0.0,,1.0,,4.405716099994606,3514,708,"get_forecast,compute_order",No order was placed for product 216 at store 255 on 2024‑06‑28.,
+39,limit,1.0,1.0,1.0,0.0,,1.0,,2.9124562999932095,2512,500,compute_order,No order was placed for product 216 at store 255 on 2024‑06‑28. The planner’s rejection means the request was not executed.,
+39,limit,1.0,1.0,1.0,0.0,,1.0,,3.9542649000068195,3441,523,"compute_order,write_decision_record",No order was placed for product 216 at store 255 on 2024‑06‑28.,
+40,limit,1.0,1.0,1.0,0.0,,1.0,,4.900350700001582,3496,700,"get_forecast,compute_order",No order was placed for product 132 at store 887 for 2024‑06‑26.,
+40,limit,1.0,1.0,1.0,0.0,,1.0,,3.723713500003214,3450,510,"compute_order,write_decision_record","No order was placed for product 132 at store 887 for 2024‑06‑26. The request was outside the allowed limits, so it remains unfilled.",
+40,limit,1.0,1.0,1.0,0.0,,1.0,,2.5123867000074824,2480,328,compute_order,No order was placed for product 132 at store 887 for 2024‑06‑26.,
+41,record,1.0,1.0,1.0,0.0,,1.0,,3.921279999995022,3561,678,"compute_order,get_forecast,write_decision_record","The order of **1.03 units** for product **259** at store **367** for **2024‑06‑28** has been saved.
+
+**Why this order?**  
+- The cost ratio of **9** (lost‑sale cost / waste cost) directs the system to order at the **90th‑percentile** of the forecast.  
+- The forecast for this item‑day is: low 0.28, median 0.56, **high 1.03** (90th percentile).  
+- The computed cost‑based order is **1.03**, which matches that 90th‑percentile value.  
+- This order is within the line limit (**1.54**) and the store‑",
+41,record,1.0,1.0,1.0,0.0,,1.0,,3.5224794000096153,3445,478,"get_forecast,compute_order,write_decision_record","The order for **product 259** at **store 367** for **2024‑06‑28** has been saved.
+
+- Forecast range (10th‑90th percentile): **0.28 – 1.03** (median 0.56)【{""low"":0.28,""median"":0.56,""high"":1.03}】  
+- With the default lost‑sale‑to‑waste cost ratio of **9**, the cost‑based calculation orders at the **90th percentile** (the “high” forecast).  
+- The computed order is **1.03 units**, which is **within** the store’s line limit (1.54) and daily capacity【{""order"":1.03,""within_limits"":true}】.  
+
+The decis",
+41,record,1.0,1.0,1.0,0.0,,1.0,,4.181310999993002,3462,675,"get_forecast,compute_order,write_decision_record","The recommended order for **product 259** at **store 367** on **2024‑06‑28** has been saved.
+
+- Forecast range (10th‑90th percentile): **0.28 – 1.03 units**, median **0.56 units**.  
+- Using the default cost‑ratio of **9** (lost‑sale cost / waste cost), the cost‑based order targets the 90th‑percentile forecast, giving an order of **1.03 units**.  
+- This order is within the line limit of **1.54 units** and the store’s daily capacity.
+
+The order has been recorded in the system.",
+42,record,1.0,1.0,1.0,0.0,,1.0,,4.22482369998761,3454,754,"get_forecast,compute_order,write_decision_record","The order for product **117** at store **177** for **2024‑06‑29** has been saved.
+
+**Reasoning**
+- Forecast for the day (10th–90th percentile) is **3.47 – 6.83** units, with a median of **4.79** units【{""store_id"":177,""product_id"":117,""date"":""2024-06-29"",""as_of"":""2024-06-25"",""low"":3.47,""median"":4.79,""high"":6.83}】.  
+- Using the default cost‑ratio of **9** (lost‑sale cost / waste cost) the system calculates a cost‑based order at the **90th percentile** (the “high” forecast) → **6.83** units【{""stor",
+42,record,1.0,1.0,1.0,0.0,,1.0,,6.791993300008471,3460,774,"get_forecast,compute_order,write_decision_record","The order for product **117** at store **177** on **2024‑06‑29** has been saved.
+
+**Reasoning**
+
+- The forecast for the day ranges from **3.47** (10th percentile) to **6.83** (90th percentile) with a median of **4.79**.  
+- Using the default cost ratio of **9** (lost‑sale cost / waste cost), the cost‑based algorithm selects the **90th percentile** value, i.e., **6.83 units**.  
+- The computed order of **6.83** is within the store’s line limit (10.24) and overall daily capacity.
+
+Thus, the recomm",
+42,record,1.0,1.0,1.0,0.0,,1.0,,3.824590000003809,3445,635,"get_forecast,compute_order,write_decision_record","The recommended order for product **117** at store **177** on **2024‑06‑29** is **6.83 units**.
+
+**Why?**  
+- The forecast for that day ranges from **3.47 (10th percentile)** to **6.83 (90th percentile)**, with a median of **4.79**.  
+- Using the standard cost ratio of **9** (lost‑sale cost / waste cost), the system computes a cost‑based order at the **90th percentile**, which is **6.83 units**.  
+- The order is within the store’s line limit (10.24) and overall day capacity, so no planner approv",
+43,record,1.0,1.0,1.0,0.0,,1.0,,4.051675499998964,3456,628,"get_forecast,compute_order,write_decision_record","The order for product **764** at store **707** on **2024‑06‑26** has been saved.
+
+**Reason:**  
+The cost‑based ordering model used a loss‑sale‑to‑waste cost ratio of **9**, which directs the order to the **90th percentile** of the forecast range. The forecast’s high (90th percentile) value is **1.35 units**, and the model therefore recommended an order of **1.35 units**. This amount is within the store’s line limit (2.03) and overall daily capacity.",
+43,record,1.0,1.0,1.0,0.0,,1.0,,3.8813057000079425,3468,650,"get_forecast,compute_order,write_decision_record","The order for product **764** at store **707** on **2024‑06‑26** has been recorded.
+
+**Reasoning**
+
+- Forecast range for the day: **0.29 – 1.35** units (median 0.66).  
+- Cost ratio (lost‑sale cost / waste cost) is **9**, which directs ordering at the **90th percentile** of the forecast.  
+- The cost‑based order calculated is **1.35** units, which is within the store’s limits (line limit 2.03, store‑day total 164.47 / 400 capacity).
+
+The order of **1.35 units** has been saved.",
+43,record,1.0,1.0,1.0,0.0,,1.0,,5.004979000004823,3488,581,"get_forecast,compute_order,write_decision_record","The order for product **764** at store **707** on **2024‑06‑26** has been recorded.
+
+- Forecast range (10th‑90th percentile): **0.29 – 1.35** units  
+- Median forecast: **0.66** units  
+- Using the default lost‑sale / waste cost ratio of **9**, the cost‑based order is the **90th percentile (high) forecast of 1.35 units**.  
+
+The computed order of **1.35 units** is within the store’s line limit and overall capacity, so it has been saved.",
+44,record,1.0,1.0,1.0,0.0,,1.0,,4.927250799999456,3476,763,"get_forecast,compute_order,write_decision_record","The order for **product 644** at **store 143** for **2024‑06‑28** has been recorded.
+
+**Reasoning**  
+- The forecast for the day spans **0.1 – 0.72** units (10th–90th percentile) with a median of **0.35** units.  
+- Using the default cost ratio of **9** (lost‑sale cost / waste cost) the cost‑based ordering method targets the **90th percentile**, yielding an order of **0.72** units.  
+- This order respects the store’s line limit (**1.08**) and total daily capacity, so it is **within limits**.
+
+Th",
+44,record,1.0,1.0,1.0,0.0,,1.0,,6.712702999997418,3488,668,"get_forecast,compute_order,write_decision_record","The recommended order for product **644** at store **143** on **2024‑06‑28** has been saved.
+
+- **Forecast range (10th‑90th percentile):** 0.1 – 0.72 units  
+- **Median forecast:** 0.35 units  
+- **Cost‑based order (ratio = 9):** 0.72 units (the 90th‑percentile point)  
+
+The order of **0.72 units** is within the store’s limits, so no further approval is needed.",
+44,record,1.0,1.0,1.0,0.0,,1.0,,5.752468899998348,3459,748,"get_forecast,compute_order,write_decision_record","The order for **product 644** at **store 143** on **2024‑06‑28** has been recorded.
+
+**Reasoning**  
+- The forecast range for the day is 0.10 – 0.72 with a median of 0.35 (from `get_forecast`).  
+- Using the default cost ratio of 9 (lost‑sale cost / waste cost), the cost‑based order is set at the 90th percentile, i.e., **0.72** units (from `compute_order`).  
+- This order is within the store’s line limit (1.08) and daily capacity (400 kg), so no planner approval is needed.
+
+The decision has been",
+45,missing,1.0,1.0,1.0,0.0,,1.0,1.0,1.9569233999936841,1289,207,get_forecast,"I’m sorry, but the forecast data for product 1000578 at store 722 on 2024‑06‑30 isn’t available.",
+45,missing,1.0,1.0,1.0,0.0,,1.0,1.0,1.7274411999969743,1289,145,get_forecast,"I’m sorry, but the forecast data for product 1000578 at store 722 on 2024‑06‑30 isn’t available.",
+45,missing,1.0,1.0,1.0,0.0,,1.0,1.0,1.572819499997422,1289,155,get_forecast,"I’m sorry, but the forecast data for product 1000578 at store 722 on 2024‑06‑30 isn’t available.",
+46,missing,1.0,1.0,1.0,0.0,,1.0,1.0,1.8946910000086064,1281,224,get_forecast,"I’m sorry, but the forecast data for product 843 at store 488 on 2024‑08‑15 is not available.",
+46,missing,1.0,1.0,1.0,0.0,,1.0,1.0,1.6985217000037665,1281,151,get_forecast,"I’m sorry, but the forecast data for product 843 at store 488 on 2024‑08‑15 isn’t available.",
+46,missing,1.0,1.0,1.0,0.0,,1.0,1.0,2.084896500004106,1281,229,get_forecast,"I’m sorry, but the forecast data for product 843 at store 488 on 2024‑08‑15 isn’t available.",
+47,missing,1.0,1.0,1.0,0.0,,1.0,1.0,1.6265721999952802,1289,176,get_forecast,"I’m sorry, but the sales forecast data for product 1000207 at store 104 on 2024‑07‑01 isn’t available.",
+47,missing,1.0,1.0,1.0,0.0,,1.0,1.0,1.706564399995841,1289,278,get_forecast,"I’m sorry, but the sales forecast data for product 1000207 at store 104 on 2024‑07‑01 isn’t available.",
+47,missing,1.0,1.0,1.0,0.0,,1.0,1.0,1.6463012999884086,1289,176,get_forecast,"I’m sorry, but the forecast data for product 1000207 at store 104 on 2024‑07‑01 isn’t available.",
+48,missing,1.0,1.0,1.0,0.0,,1.0,1.0,1.5382683999923756,1281,183,get_forecast,"I’m sorry, but the forecast data for product 4 at store 40 on 2024‑08‑15 isn’t available.",
+48,missing,1.0,1.0,1.0,0.0,,1.0,1.0,1.6061111000017263,1281,184,get_forecast,"I’m sorry, but the sales forecast data for product 4 at store 40 on 2024‑08‑15 isn’t available.",
+48,missing,1.0,1.0,1.0,0.0,,1.0,1.0,1.5385061999986647,1281,152,get_forecast,"I’m sorry, but the forecast data for product 4 at store 40 on 2024‑08‑15 isn’t available.",
+49,out_of_scope,1.0,1.0,1.0,0.0,,1.0,1.0,0.7951310999924317,596,65,,"I’m sorry, but I can only help with decisions about ordering fresh food for the stores.",
+49,out_of_scope,1.0,1.0,1.0,0.0,,1.0,1.0,0.7612095000076806,596,56,,"I’m sorry, but I can only help with decisions about ordering fresh food for the stores.",
+49,out_of_scope,1.0,1.0,1.0,0.0,,1.0,1.0,0.8364855999971041,596,59,,"I’m sorry, but I can only help with decisions about ordering fresh food for your stores. Let me know if you need assistance with a mango order or inventory!",
+50,out_of_scope,1.0,1.0,1.0,0.0,,1.0,1.0,0.7751621999923373,598,64,,"I’m sorry, but I can only help with questions related to ordering fresh food for dark‑store managers.",
+50,out_of_scope,1.0,1.0,1.0,0.0,,1.0,1.0,0.808495999997831,598,65,,"I’m sorry, but I can only help with decisions related to ordering fresh food for dark‑store locations.",
+50,out_of_scope,1.0,1.0,1.0,0.0,,1.0,1.0,0.7608351999951992,598,40,,"I’m sorry, but I can only help with ordering fresh food for dark‑store managers.",
+51,top_up,1.0,1.0,1.0,0.0,,1.0,,2.356153599990648,1377,349,compute_top_up,"At the decision hour (13:00 – the midday count) the shelf count for product 200 at store 130 was **0.3 units**.  
+
+Based on the cost ratio of 9 (lost‑sale cost ÷ waste cost), the system calculates that the target stock for the second delivery should be **0.79 units**. To reach that target you need to **top‑up 0.49 units**. The top‑up will arrive at the scheduled delivery time of **15:00**.
+
+**Recommendation:** Add **0.49 units** of product 200 in the second delivery to store 130 on 2024‑07‑01. N",
+51,top_up,1.0,1.0,1.0,0.0,,1.0,,1.9873844999965513,1377,257,compute_top_up,"The count at the decision hour (13:00) showed **0.3 units** of product 200 on shelf.  
+Based on the cost ratio of 9 (lost‑sale cost ÷ waste cost), the system recommends a **top‑up of 0.49 units**, bringing the total on arrival (15:00) to about **0.79 units**.  
+
+No order is placed; this is simply an advisory top‑up for the second delivery.",
+51,top_up,1.0,1.0,1.0,0.0,,1.0,,2.130697600005078,1377,303,compute_top_up,"The midday (13 :00) shelf count was **0.3 units**.  
+Based on the cost ratio of 9 : 1 (lost‑sale cost / waste cost) and the forecast, the system recommends a **top‑up of 0.49 units**, so the second delivery should bring the product up to a target of **0.79 units** on arrival at **15:00**.",
+52,top_up,1.0,1.0,1.0,0.0,,1.0,,2.0284607999928994,1377,237,compute_top_up,"The shelf count at the decision hour (13:00) was **1.6 units**.  
+
+Based on the cost ratio of 9 (the lost‑sale cost is nine times the waste cost), the model recommends a **top‑up of 0.0 units** for the second delivery, which is scheduled to arrive at **15:00**. No additional units need to be sent.",
+52,top_up,1.0,1.0,1.0,0.0,,1.0,,2.4459007999976166,1377,359,compute_top_up,"The mid‑day shelf count for store 411 on 2024‑06‑27 was **1.6 units** of product 74.  
+
+Based on the cost ratio of 9 (lost‑sale cost ÷ waste cost), the system calculates a **target inventory of 0.59 units** for the second delivery. Since the current shelf already exceeds that target, **the advised top‑up is 0.0 units** – i.e., no additional product needs to be delivered at the second shipment.  
+
+The decision was made at **13:00** and the second delivery would arrive at **15:00** if any units we",
+52,top_up,1.0,1.0,1.0,0.0,,1.0,,2.508189600004698,1377,341,compute_top_up,"The midday (13:00) shelf count was **1.6 units** for product 74 at store 411 on 2024‑06‑27.  
+According to the model, the second‑delivery target under a cost ratio of 9 is **0.59 units**, so the recommended top‑up is **0 units** (the current shelf already exceeds the target).  
+
+*The delivery scheduled for 15:00 therefore does not need to bring any additional units of this product.*",
+53,top_up,1.0,1.0,1.0,0.0,,1.0,,2.2406316000124207,1377,259,compute_top_up,"The midday (13:00) shelf count was **0.3 units** for product 345 at store 867.  
+
+Based on the cost ratio of 9 (lost‑sale cost / waste cost) and the forecast range, the system recommends a **top‑up of 0.32 units**.  
+
+So, the second delivery should bring **approximately 0.32 units** of product 345, arriving around **15:00**.",
+53,top_up,1.0,1.0,1.0,0.0,,1.0,,2.261798400009866,1377,311,compute_top_up,"The shelf was counted at **13:00** on 2024‑06‑26 and showed **0.3 units** of product 345.  
+
+Based on the cost ratio of 9 (lost‑sale cost ÷ waste cost), the system calculates a target stock of **0.62 units** for the second delivery, which means you should **top‑up 0.32 units** (bringing the shelf to the target level).  
+
+No order is placed—this is only an advice for the upcoming delivery.",
+53,top_up,1.0,1.0,1.0,0.0,,1.0,,2.3676336000062292,1377,290,compute_top_up,"The midday (13:00) shelf count was **0.3 units** for product 345 at store 867 on 2024‑06‑26.  
+
+According to the model, the target inventory for the second delivery (to reach the 90th‑percentile forecast) is **0.62 units**. Therefore you should **top‑up 0.32 units** (0.62 – 0.30) with the delivery that arrives at **15:00**.  
+
+This is advice only; no order is placed.",
+54,top_up,1.0,1.0,1.0,0.0,,1.0,,2.56246889999602,1377,314,compute_top_up,"The midday shelf count for **store 367**, **product 250** on **2024‑06‑27** was **1.6 units**.  
+
+According to the model, with the default cost ratio (lost‑sale / waste = 9) the recommended top‑up amount is **0 units** – i.e., no additional product needs to be delivered in the second shipment.  
+
+- **Decision hour:** 13:00 (midday count)  
+- **Delivery arrival:** 15:00  
+
+So the second delivery should bring **nothing** for this product on that day.",
+54,top_up,1.0,1.0,1.0,0.0,,1.0,,2.4161356999975396,1377,334,compute_top_up,"The shelf count at 13:00 was **1.6 units**.  
+Based on the cost ratio of 9 (lost‑sale cost ≈ 9 × waste cost), the model recommends **no additional units** for the second delivery (top‑up = 0.0 units).  
+
+So the second delivery does **not** need to bring any extra of product 250 for store 367 on 2024‑06‑27.",
+54,top_up,1.0,1.0,1.0,0.0,,1.0,,2.2396216000051936,1377,263,compute_top_up,"At the midday (13:00) count, the shelf held **1.6 units** of product 250.  
+Based on the cost ratio of 9 (the lost‑sale cost is nine times the waste cost), the system’s model recommends **no additional units** for the second delivery (top‑up = 0.0). The delivery is scheduled to arrive at 15:00.
+
+So the second delivery does **not need** to bring any extra units of product 250 for store 367 on 2024‑06‑27.",
+55,top_up,1.0,1.0,1.0,0.0,,1.0,,1.0303649999987101,609,119,,"To determine how many units you should request for the second delivery, I need the current shelf count for product 638 at store 666 (the count taken at the decision hour). Could you please provide that number?",
+55,top_up,1.0,1.0,1.0,0.0,,1.0,,1.0113188000104856,609,133,,"I can help determine how many units to top up for the second delivery, but I need to know the current shelf count for product 638 at store 666 (at the time you make the decision). Could you please provide that shelf‑count figure?",
+55,top_up,1.0,1.0,1.0,0.0,,1.0,,0.9383056000078795,609,112,,"To suggest a quantity for the second delivery, I need to know how many units of product 638 are currently on the shelf at the decision hour. Could you provide the shelf count for that product at store 666 on 2024‑07‑02?",
+56,top_up,1.0,1.0,1.0,0.0,,1.0,,1.0608979999960866,609,148,,"To calculate a recommended second‑delivery (top‑up) amount, I need to know how many units of product 403 are currently on the shelf at store 800 (the “shelf count”) as of the time you would place the order for the July 1 delivery. Could you provide that count?",
+56,top_up,1.0,1.0,1.0,0.0,,1.0,,0.9754054999939399,609,134,,To recommend a second‑delivery (top‑up) amount I need the current shelf count for product 403 at store 800 when you make the decision. Could you tell me how many units are on the shelf right now?,
+56,top_up,1.0,1.0,1.0,0.0,,1.0,,1.0675159999955213,609,151,,"To recommend a second‑delivery (top‑up) amount, I need to know how many units of product 403 are currently on the shelf at store 800 (the shelf count at the decision hour). Could you please provide that number?",

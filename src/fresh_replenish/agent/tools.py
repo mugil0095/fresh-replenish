@@ -15,14 +15,15 @@ import numpy as np
 import pandas as pd
 
 from fresh_replenish.config import REPO_ROOT
-from fresh_replenish.decisions.newsvendor import HEADLINE, critical_ratio, order_at
+from fresh_replenish.decisions.newsvendor import HEADLINE, critical_ratio, order_at, top_up
 from fresh_replenish.forecasting.data import HORIZON, INPUTS, Series, load_series
-from fresh_replenish.metrics import DECILE_COLUMNS
+from fresh_replenish.metrics import DECILE_COLUMNS, REST_COLUMNS
 
 LINE_FACTOR = 1.5  # an order above 1.5 x the item's 90th-percentile forecast needs a human
 STORE_DAY_CAPACITY = 400.0  # units per store per day; planned days reach 366 at the 99th pct
 RECORDS = REPO_ROOT / "data" / "decisions" / "records.jsonl"
 NOTE = "model-based estimate (Chronos-2), not proof of cause and effect"
+BAD_RATIO = "ratio (lost-sale cost / waste cost) must be between 1/9 and 9"
 
 # (store_id, product_id, date, {input: value}) -> (planned median, changed median) or None
 Scenario = Callable[[int, int, str, dict], tuple[float, float] | None]
@@ -86,7 +87,7 @@ class Toolbox:
         if line is None:
             return self._missing(store_id, product_id, date)
         if not 1 / 9 <= ratio <= 9:
-            return {"error": "ratio (lost-sale cost / waste cost) must be between 1/9 and 9"}
+            return {"error": BAD_RATIO}
         if units is not None and not units >= 0:  # also refuses NaN
             return {"error": "units must be zero or more"}
         level = critical_ratio(ratio)
@@ -101,6 +102,26 @@ class Toolbox:
             "order": _r(order), "line_limit": _r(line_limit),
             "store_day_total": _r(store_total), "store_day_capacity": self.capacity,
             "within_limits": bool(order <= line_limit and store_total <= self.capacity),
+        }
+
+    def compute_top_up(
+        self, store_id: int, product_id: int, date: str, shelf: float, ratio: float = HEADLINE,
+    ) -> dict:
+        """Units for the second delivery, from the shelf count at the decision hour. Advice only."""
+        line = self._line(store_id, product_id, date)
+        if line is None:
+            return self._missing(store_id, product_id, date)
+        if not 1 / 9 <= ratio <= 9:
+            return {"error": BAD_RATIO}
+        if not shelf >= 0:  # also refuses NaN
+            return {"error": "the shelf count must be zero or more"}
+        level = critical_ratio(ratio)
+        target = float(order_at(line[REST_COLUMNS].to_numpy(dtype=float), level))
+        return {
+            "store_id": store_id, "product_id": product_id, "date": date, "ratio": ratio,
+            "critical_ratio": _r(level), "shelf": shelf, "target": _r(target),
+            "top_up": _r(top_up(target, shelf)),
+            "decision_hour": int(line.decision_hour), "arrival_hour": int(line.arrival_hour),
         }
 
     def what_if(

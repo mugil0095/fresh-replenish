@@ -1,14 +1,22 @@
 """Numbers only from tools (spec section 11): every number in an answer must come from a tool
 output or the question. Rounding is allowed, and so are a fraction stated as a percentage (with
-a % sign), small whole counts (0-10, as in "3 days" or a numbered list) and ranks ("90th")."""
+a % sign), small whole counts (0-10, as in "3 days" or a numbered list) and ranks ("90th", or
+a percentile label however it is typed, like "90 % percentile" or "Median (50 %)")."""
 
 import re
 
 DATE = re.compile(r"\b\d{4}-\d{2}-\d{2}\b")
 # Also the end of a range like 1.0-9.0; a % sign or a rank suffix stays on the token.
-NUMBER = re.compile(r"(?<![\w.])-?\d[\d,]*(?:\.\d+)?(?:%|(?:st|nd|rd|th)\b)?")
+NUMBER = re.compile(r"(?<![\w.%])-?\d[\d,]*(?:\.\d+)?(?:%|(?:st|nd|rd|th)\b)?")
 RANK = ("st", "nd", "rd", "th")
-PERCENT = re.compile(r"(?<=\d)[ -]?percent\b", re.IGNORECASE)  # "90 percent" reads as "90%"
+# The ways models type percentile labels and percents, read as "90th" and "90%".
+TYPED = [(re.compile(pattern, re.IGNORECASE), plain) for pattern, plain in (
+    (r"(?<=\d)[ -](?=(?:st|nd|rd|th)\b)", ""),  # 90-th, 90 th
+    (r"(\d) *%?[ -]*percentile", r"\1th percentile"),  # 90 percentile, 90 % percentile
+    (r"\b(low *\(10|median *\(50|high *\(90) *%\)", r"\1th)"),  # Median (50 %)
+    (r"(?<!from )\b10 *%? *(?:-|to) *90 *%", "10th-90th"),  # 10 %-90 %, the forecast range
+    (r"(?<=\d)(?:[ -]?percent\b| +%)", "%"),  # 90 percent, 90 %
+)]
 # Numbers written as words above ten; ten and below are counts, like the digits 0-10.
 WORDS = re.compile(
     r"\b(?:eleven|twelve|(?:thir|four|fif|six|seven|eigh|nine)teen"
@@ -25,7 +33,9 @@ PLAIN = str.maketrans(
 
 def numbers(text: str) -> list[str]:
     """Dates first, then the other number tokens, as written (with any % sign or rank suffix)."""
-    text = PERCENT.sub("%", text.translate(PLAIN))
+    text = text.translate(PLAIN)
+    for typed, plain in TYPED:
+        text = typed.sub(plain, text)
     return DATE.findall(text) + NUMBER.findall(DATE.sub(" ", text))
 
 
