@@ -34,6 +34,24 @@ The project:
 
 Each choice is explained in [decisions](docs/decisions.md). What didn't work is in [negative results](docs/negative_results.md), what the results can't claim is in [limitations](docs/limitations.md), and the dataset is described in the [data card](docs/data_card.md).
 
+## How it fits together
+
+```mermaid
+flowchart TB
+    data[("FreshRetailNet-50K<br/>hourly sales, stockout flags")] --> recover["Recover the demand<br/>stockouts hid"]
+    recover --> forecast["Forecast daily demand<br/>LightGBM quantiles"]
+    forecast --> calibrate["Calibrate the<br/>10–90% range"]
+    calibrate --> orders["Order by cost,<br/>set midday top-up targets"]
+    orders --> batch[("Nightly batch<br/>orders.parquet")]
+    batch --> api["API<br/>/reorder, /topup"]
+    batch --> dashboard["Dashboard"]
+    batch --> agent["Agent<br/>5 tools, planner hand-off"]
+    batch --> monitoring["Drift monitoring"]
+    batch --> mlflow["MLflow run log"]
+```
+
+The research phases compared the options for each step offline (recovery methods, foundation models, ordering policies). The nightly batch runs the ones they chose.
+
 ## Run it
 
 You need Python 3.12 and [uv](https://docs.astral.sh/uv/).
