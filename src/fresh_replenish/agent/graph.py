@@ -68,7 +68,7 @@ def _orders(state: State) -> list[dict]:
         if isinstance(m, ToolMessage) and m.name in ("compute_order", "write_decision_record"):
             result = _payload(m)
             if isinstance(result, dict) and "within_limits" in result:
-                key = (result["store_id"], result["product_id"], result["date"], result["order"])
+                key = tuple(_key(*(result[k] for k in ("store_id", "product_id", "date", "order"))))
                 if m.name == "compute_order" or key not in failed:
                     orders.append(result)
                 if not result["within_limits"]:

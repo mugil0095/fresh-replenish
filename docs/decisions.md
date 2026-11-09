@@ -503,6 +503,7 @@ A full re-check (tests on a clean copy, re-runs of Phases 1, 2 and 5, the API, t
 
 - **What it means:** the scores held up on new wording and new items, so the tuning didn't only fit the 56 questions. The new out-of-scope questions (a poem, an email) were all refused.
 - **What it found:** 2 "why" answers skipped the forecast lookup. More important, 1 over-limit order never reached a planner: the agent went straight to saving, the save tool refused the amount, and no hand-off followed, because the hand-off only watches `compute_order`. Nothing was saved, but no planner was asked either. The tuned questions never showed this.
+- **Fixed after the run:** a save refused for the limits now counts as a failed check, so the order goes to a planner, once, even if the agent skipped `compute_order`. Scripted-model tests cover it. Neither evaluation has measured it: the held-out questions can't be run again, and the published scores describe the agent before the fix.
 - **Command:** `FRESH_LLM=ollama:gpt-oss:120b uv run python -m fresh_replenish.agent.evaluate holdout` writes `reports/agent_holdout_gpt-oss-120b.md` and its own decision records, so the tuned results stay as they are.
 
 ## Known issues
