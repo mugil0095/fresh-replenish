@@ -61,12 +61,19 @@ def _payload(message: ToolMessage):
 
 
 def _orders(state: State) -> list[dict]:
-    """Every compute_order result in the conversation that ran its limit check."""
-    results = [
-        _payload(m) for m in state["messages"]
-        if isinstance(m, ToolMessage) and m.name == "compute_order"
-    ]
-    return [r for r in results if isinstance(r, dict) and "within_limits" in r]
+    """Every limit check in the conversation: compute_order results, and saves refused for the
+    limits that no failed check already covers (or the order would end without a planner)."""
+    failed, orders = set(), []
+    for m in state["messages"]:
+        if isinstance(m, ToolMessage) and m.name in ("compute_order", "write_decision_record"):
+            result = _payload(m)
+            if isinstance(result, dict) and "within_limits" in result:
+                key = (result["store_id"], result["product_id"], result["date"], result["order"])
+                if m.name == "compute_order" or key not in failed:
+                    orders.append(result)
+                if not result["within_limits"]:
+                    failed.add(key)
+    return orders
 
 
 def _failed(state: State) -> list[int]:
@@ -142,7 +149,8 @@ def make_tools(toolbox: Toolbox) -> list[StructuredTool]:
             if "error" in check:
                 return check
             if not check["within_limits"] and not approved:
-                return {"error": "this order is outside the limits: a planner must approve it"}
+                return {"error": "this order is outside the limits: a planner must approve it",
+                        **check}
             outputs = [_payload(m) for m in state["messages"] if isinstance(m, ToolMessage)]
             return toolbox.write_decision_record(store_id, product_id, date, order, reason, outputs)
 

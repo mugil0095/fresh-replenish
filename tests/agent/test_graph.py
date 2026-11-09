@@ -2,10 +2,10 @@ import json
 
 import pytest
 from fakes import Recording, Scripted
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langgraph.types import Command
 
-from fresh_replenish.agent.graph import MAX_TOOL_ERRORS, REFUSAL, ask, build_agent
+from fresh_replenish.agent.graph import MAX_TOOL_ERRORS, REFUSAL, _orders, ask, build_agent
 
 DAY = {"store_id": 1, "product_id": 10, "date": "2024-06-26"}
 RECORD = "Record the cost-based order for product 10 at store 1 on 2024-06-26."
@@ -154,6 +154,34 @@ def test_only_the_approved_order_is_saved_after_mixed_decisions(toolbox, decisio
         app.invoke(Command(resume={"approved": approved}), config)
     lines = toolbox.records.read_text(encoding="utf-8").splitlines()
     assert [json.loads(line)["product_id"] for line in lines] == saved
+
+
+PLACE = "Place an order of 20 units of product 10 for store 1 on 2024-06-26."
+
+
+def test_a_refused_save_hands_the_order_to_a_planner(toolbox):
+    script = [call("write_decision_record", order=20.0, reason="asked"),
+              AIMessage("20 units is over the limit."),
+              AIMessage("A planner rejected 20 units, so nothing was placed.")]
+    out = run(toolbox, script, PLACE)
+    assert out["handoffs"] == 1 and not toolbox.records.exists()
+
+
+def test_a_checked_and_refused_order_goes_to_the_planner_once(toolbox):
+    script = [call("compute_order", units=20),
+              call("write_decision_record", order=20.0, reason="asked"),
+              AIMessage("20 units is over the limit."),
+              AIMessage("A planner rejected 20 units, so nothing was placed.")]
+    assert run(toolbox, script, PLACE)["handoffs"] == 1
+
+
+def test_a_save_refused_after_a_passing_check_still_counts():
+    # The store can fill up between the check and the save, so the refusal must still count.
+    passed = {**DAY, "order": 9.0, "within_limits": True}
+    refused = {**passed, "within_limits": False, "error": "outside the limits"}
+    messages = [ToolMessage(json.dumps(passed), name="compute_order", tool_call_id="1"),
+                ToolMessage(json.dumps(refused), name="write_decision_record", tool_call_id="2")]
+    assert [o["within_limits"] for o in _orders({"messages": messages})] == [True, False]
 
 
 def test_three_failed_limit_checks_hand_off(toolbox):
