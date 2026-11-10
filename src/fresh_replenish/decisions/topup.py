@@ -3,8 +3,8 @@
 One delivery (`newsvendor.py`) commits the whole day's order before opening. Here the morning
 carries a share of that order; at the decision hour the store counts what is left and orders up
 to a calibrated target for the rest of the day, delivered LEAD hours later. Days end as before:
-unsold units are wasted and missed sales are not made up. `shelf_life` then asks what changes if
-unsold units keep for more than one day.
+unsold units are wasted and missed sales are not made up. `targeting` asks which stores earn the
+delivery back, and `shelf_life` what changes if unsold units keep for more than one day.
 """
 
 import sys
@@ -44,6 +44,7 @@ DECISION_HOURS = range(8, CLOSING - LEAD - 1)  # the last top-up lands an hour b
 MORNING_SHARES = np.round(np.arange(4, 21) / 10, 1)  # of the one-delivery order
 LEVELS = np.round(np.arange(4, 41) / 10, 1)  # multiples of an order to try
 LIVES = (1, 2, 3)  # days unsold stock keeps: an assumption, the data has no shelf lives
+COST_MULTIPLES = (0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0)  # delivery costs / average past saving
 
 
 def hourly_demand(h: Hours, stop: int | None = None) -> np.ndarray:
@@ -259,6 +260,67 @@ def run(
     return {"plans": plans, "shifts": served, "sample": sample}
 
 
+def _by_store(week: Week, values: np.ndarray) -> pd.Series:
+    """Line-day values as each store's total per day."""
+    stores = week.frame.store_id.to_numpy().reshape(week.demand.shape)[:, 0]
+    return pd.Series(values.sum(axis=1), index=stores).groupby(level=0).sum() / values.shape[1]
+
+
+def targeting(
+    h: Hours, folds: pd.DataFrame, held_out: pd.DataFrame, results: dict, multiples=COST_MULTIPLES
+) -> dict[str, pd.DataFrame]:
+    """Which stores earn a second delivery back: chosen on past weeks, scored on the held-out one.
+
+    A delivery costs the same wherever it goes, so a store gets one only if its past saving per
+    day under the plan `run` chose beats that cost. The rival is the better of delivering
+    everywhere or nowhere, and it is picked with hindsight, so the gain is never flattered.
+    Savings and costs are wasted units per store per day.
+    """
+    plan, r = results["shifts"], float(results["sample"].headline_ratio.iloc[0])
+    hour, share = int(plan.decision_hour.iloc[0]), float(plan.morning_share.iloc[0])
+    level = critical_ratio(r)
+    groups = held_out[[*KEYS, "group"]].drop_duplicates()
+    weeks = {
+        "past": _week(calibrate(folds, shifts(folds, groups), groups), h),
+        "held_out": _week(held_out, h),
+    }
+    columns = {}
+    for name, week in weeks.items():
+        rest = calibrate(_rest_of_day(week, hour), plan, groups)[CALIBRATED_COLUMNS]
+        target = order_at(rest.to_numpy(dtype=float).reshape(week.deciles.shape), level)
+        order = order_at(week.deciles, level)
+        *_, waste, lost = _plan(week, order, target, hour, share)
+        none = np.zeros_like(order)  # a full morning and no top-up target: one delivery
+        *_, one_waste, one_lost = _plan(week, order, none, hour, 1.0)
+        columns[f"{name}_demand"] = _by_store(week, week.demand)
+        columns[f"{name}_saving"] = _by_store(week, one_waste + r * one_lost - waste - r * lost)
+    stores = pd.DataFrame(columns).rename_axis("store_id").reset_index()
+
+    past, held = stores.past_saving.to_numpy(), stores.held_out_saving.to_numpy()
+    largest = np.argsort(-stores.past_demand.to_numpy())
+    rows = []
+    for multiple in multiples:
+        cost = multiple * past.mean()
+        chosen, net = past > cost, held - cost
+        gain = chosen * net - (net.mean() > 0) * net
+        draws = bootstrap((gain, gain, np.ones(len(gain))))[1]  # the mean over resampled stores
+        rows.append({
+            "cost_multiple": multiple,
+            "delivery_cost": cost,
+            "stores_chosen": int(chosen.sum()),
+            "net_everywhere": net.mean(),
+            "net_targeted": (chosen * net).mean(),
+            "net_largest": net[largest[: chosen.sum()]].sum() / len(net),  # as many, by demand
+            "net_best_possible": np.maximum(net, 0).mean(),
+            "gain": gain.mean(),
+            "gain_low": np.percentile(draws, 2.5),
+            "gain_high": np.percentile(draws, 97.5),
+            "chosen_past_saving": past[chosen].mean() if chosen.any() else np.nan,
+            "chosen_held_out_saving": held[chosen].mean() if chosen.any() else np.nan,
+        })
+    return {"stores": stores, "targeting": pd.DataFrame(rows)}
+
+
 def shelf_life(
     h: Hours, folds: pd.DataFrame, forecasts: pd.DataFrame, r: float = HEADLINE, lives=LIVES
 ) -> pd.DataFrame:
@@ -350,6 +412,12 @@ def render_report(results: dict[str, pd.DataFrame]) -> str:
     best = p[p.chosen & (p.ratio == r0)].iloc[0]
     shown = ["decision_hour", "arrival_hour", "morning_share", "past_cost", "cost", "saving"]
     life = results["shelf_life"]
+    stores, where = results["stores"], results["targeting"]
+    at = where[where.cost_multiple == 1].iloc[0]
+    ranked = stores.held_out_saving.sort_values(ascending=False)
+    fifth = ranked.head(-(-len(ranked) // 5)).sum() / ranked.sum()
+    small = int((ranked < ranked.mean() / 2).sum())
+    held_rank = stores.held_out_saving.rank()
 
     def by_life(column: str, spec: str = ".0%") -> str:
         values = zip(life.life_days, life[column], strict=True)
@@ -389,6 +457,30 @@ def render_report(results: dict[str, pd.DataFrame]) -> str:
         md_table(p[p.chosen].drop(columns="chosen")),
         f"## Every decision hour at r = {r0:g}",
         md_table(p.loc[p.ratio == r0, shown]),
+        "## Where it pays",
+        "The saving above is an average, and a delivery costs the same wherever it goes. So "
+        f"each store's saving under the chosen plan is measured on the {int(s.past_days)} past "
+        "days, and a store gets the second delivery only if that saving beats the delivery's "
+        "cost. The held-out week scores the choice. The rival is the better of delivering "
+        "everywhere or nowhere, picked with hindsight. Savings and costs are wasted units per "
+        f"store per day, averaged over all {len(stores)} stores. Intervals resample stores.",
+        f"- **How uneven the saving is:** the top fifth of stores hold {fifth:.0%} of it, and "
+        f"{small} of {len(stores)} save less than half the average.",
+        "- **How well past weeks predict it:** the rank correlation between a store's past and "
+        f"held-out saving is {stores.past_saving.rank().corr(held_rank):.2f}. Its past demand "
+        f"alone gives {stores.past_demand.rank().corr(held_rank):.2f}.",
+        f"- **If a delivery costs the average past saving ({at.delivery_cost:.1f}):** "
+        f"delivering everywhere nets {at.net_everywhere:.1f}. Delivering to the "
+        f"{int(at.stores_chosen)} stores chosen on past weeks nets {at.net_targeted:.1f}, "
+        f"which is {at.gain:.1f} more than the rival (95% CI {at.gain_low:.1f} to "
+        f"{at.gain_high:.1f}). Choosing stores with hindsight could reach "
+        f"{at.net_best_possible:.1f}.",
+        f"- **Choosing by size alone:** delivering to as many stores, picked by past demand, "
+        f"nets {at.net_largest:.1f}.",
+        f"- **The chosen stores, past against held-out:** they saved "
+        f"{at.chosen_past_saving:.1f} on past days and {at.chosen_held_out_saving:.1f} on the "
+        "held-out week.",
+        md_table(where),
         "## If stock keeps longer",
         "Everything above throws unsold stock away the same night. The data has no shelf lives, "
         f"so this lets unsold units keep for up to {int(life.life_days.max())} days at "
@@ -438,7 +530,9 @@ def main(
     forecasts = pd.read_parquet(
         processed_dir / "forecast_eval.parquet", filters=[("model", "in", [CLASSICAL, BASELINE])]
     )
-    results = run(hours, folds, forecasts[forecasts.model == CLASSICAL])
+    held_out = forecasts[forecasts.model == CLASSICAL]
+    results = run(hours, folds, held_out)
+    results |= targeting(hours, folds, held_out, results)
     results["shelf_life"] = shelf_life(hours, folds, forecasts)
     (out_dir / "tables").mkdir(parents=True, exist_ok=True)
     for name, table in results.items():

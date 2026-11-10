@@ -143,7 +143,7 @@ def test_a_series_with_no_past_demand_borrows_the_pooled_shape():
 PAST, HELD_OUT = np.arange(7, 14), np.arange(14, 21)
 
 
-def _frame(h, days, calibrated):
+def _frame(h, days, calibrated, pooled=True):
     """A flat daily forecast made before the held-out week: the deciles of the past days."""
     demand = h.sale_amount[:, days]
     n, k = demand.shape
@@ -155,7 +155,9 @@ def _frame(h, days, calibrated):
         "actual": demand.ravel(),
         "in_stock": True,
     })
-    frame[DECILE_COLUMNS] = np.quantile(h.sale_amount[:, PAST], DECILES)
+    past = h.sale_amount[:, PAST]
+    own = np.repeat(np.quantile(past, DECILES, axis=1).T, k, axis=0)  # each line's own deciles
+    frame[DECILE_COLUMNS] = np.quantile(past, DECILES) if pooled else own
     if calibrated:
         frame["group"] = 0
         frame[CALIBRATED_COLUMNS] = frame[DECILE_COLUMNS].to_numpy()
@@ -201,6 +203,54 @@ def test_days_with_no_stockout_are_scored_on_their_own():
     every_day = topup.run(*_scenario(), ratios=(9.0,), headline=9.0)["plans"]
     assert not np.allclose(plans.saving_no_stockout, every_day.saving_no_stockout)
     assert np.allclose(plans.saving, every_day.saving)
+
+
+def _stores(scale=1.0):
+    """20 stores of 2 lines each, from a fifth of the usual size to 4 times it."""
+    sales = _scenario(scale)[0].sales * np.repeat(np.linspace(0.2, 4, 20), 2)[:, None, None]
+    h = _hours(sales)
+    h.ids["store_id"], h.ids["product_id"] = np.arange(40) // 2, np.arange(40) % 2
+    return h, _frame(h, PAST, False, pooled=False), _frame(h, HELD_OUT, True, pooled=False)
+
+
+def _targeting(scale=1.0):
+    h, past, held_out = _stores(scale)
+    results = topup.run(h, past, held_out, ratios=(9.0,), headline=9.0)
+    return results, topup.targeting(h, past, held_out, results)
+
+
+def test_store_savings_add_up_to_the_headline():
+    results, where = _targeting()
+    best = results["plans"].query("chosen").iloc[0]
+    assert len(where["stores"]) == 20
+    assert where["stores"].held_out_saving.mean() == pytest.approx(best.saved_per_store_day)
+
+
+def test_stores_are_chosen_on_past_weeks_only():
+    columns = ["cost_multiple", "delivery_cost", "stores_chosen"]
+    usual, busier = _targeting()[1]["targeting"], _targeting(scale=3.0)[1]["targeting"]
+    assert usual[columns].equals(busier[columns])
+    assert not np.allclose(usual.net_targeted, busier.net_targeted)
+
+
+def test_choosing_stores_beats_all_or_nothing_when_stores_differ():
+    table = _targeting()[1]["targeting"].set_index("cost_multiple")
+    at_average = table.loc[1.0]  # here delivering everywhere only breaks even on past weeks
+    assert 0 < at_average.stores_chosen < 20
+    rival = max(at_average.net_everywhere, 0)  # everywhere or nowhere, whichever did better
+    assert at_average.gain == pytest.approx(at_average.net_targeted - rival)
+    assert at_average.gain_low > 0
+    best = table[["net_targeted", "net_largest"]].max(axis=1)
+    assert (best <= table.net_best_possible + 1e-9).all()
+    assert (table.stores_chosen.diff().dropna() <= 0).all()  # a dearer delivery, fewer stores
+
+
+def test_a_cheap_delivery_goes_everywhere_so_choosing_gains_nothing():
+    h, past, held_out = _stores()
+    results = topup.run(h, past, held_out, ratios=(9.0,), headline=9.0)
+    free = topup.targeting(h, past, held_out, results, multiples=(0.0,))["targeting"].iloc[0]
+    assert free.stores_chosen == 20 and free.gain == 0
+    assert free.net_targeted == pytest.approx(free.net_everywhere)
 
 
 def _served(results, h, held_out):
@@ -334,8 +384,10 @@ def test_report_states_the_saving_and_what_it_leaves_out():
     h, past, held_out = _scenario()
     results = topup.run(h, past, held_out, ratios=(1.0, 9.0), headline=9.0)
     results["shelf_life"] = topup.shelf_life(h, past, _forecasts(held_out), r=9.0, lives=(1, 2))
+    results |= topup.targeting(h, past, held_out, results)
     best = results["plans"].query("chosen and ratio == 9").iloc[0]
     report = topup.render_report(results)
+    assert "## Where it pays" in report and "chosen on past weeks" in report
     assert "## If stock keeps longer" in report
     assert "most of the saving comes from ordering more than the median" in report
     assert f"{best.saving:.0%} less than one delivery" in report
@@ -349,6 +401,13 @@ def test_the_saved_one_delivery_costs_match_the_orders_report():
     orders = orders[orders.policy == CLASSICAL].set_index("ratio").cost
     saved = plans.groupby("ratio").one_delivery_cost.first()
     assert saved.to_numpy() == pytest.approx(orders[saved.index].to_numpy())
+
+
+def test_the_saved_store_savings_match_the_headline():
+    stores = pd.read_csv(REPORTS_DIR / "tables" / "topup_stores.csv")
+    plans = pd.read_csv(REPORTS_DIR / "tables" / "topup_plans.csv")
+    best = plans[plans.chosen & (plans.ratio == 9)].iloc[0]
+    assert stores.held_out_saving.mean() == pytest.approx(best.saved_per_store_day)
 
 
 def test_main_reports_missing_forecasts(tmp_path, capsys):

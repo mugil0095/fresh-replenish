@@ -506,6 +506,20 @@ A full re-check (tests on a clean copy, re-runs of Phases 1, 2 and 5, the API, t
 - **Fixed after the run:** a save refused for the limits now counts as a failed check, so the order goes to a planner, once, even if the agent skipped `compute_order`. Scripted-model tests cover it. Neither evaluation has measured it: the held-out questions can't be run again, and the published scores describe the agent before the fix.
 - **Command:** `FRESH_LLM=ollama:gpt-oss:120b uv run python -m fresh_replenish.agent.evaluate holdout` writes `reports/agent_holdout_gpt-oss-120b.md` and its own decision records, so the tuned results stay as they are.
 
+## 2026-11-10: Where a second delivery pays
+
+- **Why:** the second delivery's saving (24.3 wasted units per store per day) is an average, and its own cost isn't in the data. A delivery costs about the same wherever it goes, so the useful question is which stores earn it back.
+- **Method:** each store's saving under the chosen plan (13:00 count, 80% sent in the morning) is measured on the 28 past days. A store gets the delivery if that saving beats the delivery's cost. The held-out week scores the choice. The cost is tried from a quarter of the average past saving to twice it.
+- **A hard rival:** choosing stores is judged against the better of delivering everywhere or nowhere. That rival is picked with hindsight on the held-out week, so the gain isn't flattered.
+- **Result:**
+  - The saving is uneven: the top fifth of the 90 stores hold 43% of it, and 27 save less than half the average.
+  - It is predictable: a store's past and held-out savings have a rank correlation of 0.95.
+  - At a delivery cost of 22.4 (the average past saving), every store nets 2.0 per store per day and the 37 chosen stores net 7.7, a gain of 5.8 (95% CI 4.4–7.1). Hindsight could reach 7.9.
+  - At half that cost the gain is 1.1 (0.6–1.5), and at a quarter 0.2. At twice the cost, 9 stores still earn it back.
+- **A simpler rule does as well:** picking as many stores by past demand nets 7.6 at that cost, against 7.7. Store size carries the choice.
+- **No regression to the mean seen:** the chosen stores saved 36.1 on past days and 41.2 on the held-out week, which was about 10% busier.
+- **Limits:** 90 stores and one held-out week. Intervals resample stores, not days. Units are the data's normalised sales for the sampled lines. The dashboard doesn't show this.
+
 ## Known issues
 
 - **Hugging Face downloads on this laptop:** the antivirus intercepts HTTPS, so Hugging Face requests fail certificate checks. The forecasting run therefore used `HF_HUB_OFFLINE=1`, with the pinned weights already in the local cache.
