@@ -138,7 +138,7 @@ The orders above commit the whole day before opening. The hourly data shows what
 - **Observed days:** on days with no stockout, where hourly demand is fully observed, the saving is 23%. On other days the afternoon is recovered, not seen. Days with no stockout are also quieter (average demand 1.25 against 1.79), so the gap is not all down to recovery.
 - **Not counted:** the delivery's own cost. At 9× the saving is worth 24.3 wasted units per store per day, so a second delivery pays only below that.
 - **Where it pays:** the saving is uneven. The top fifth of the 90 stores hold 43% of it, and 27 save less than half the average. If a delivery cost the average past saving (22.4), delivering to every store would net 2.0 per store per day. Delivering only to the 37 stores chosen on past weeks nets 7.7, which is 5.8 more (95% CI 4.4–7.1) and close to the 7.9 that hindsight allows.
-- **Store size is enough to choose:** picking as many stores by past demand alone nets 7.6, so no per-store simulation is needed to rank them.
+- **Store size ranks them as well:** picking as many stores by past demand alone nets 7.6. How many stores to serve still comes from comparing savings with the delivery's cost.
 
 ## If stock keeps longer
 

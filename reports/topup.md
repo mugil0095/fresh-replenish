@@ -40,7 +40,7 @@ One delivery commits the whole day's order before opening. Here the morning carr
 
 ## Where it pays
 
-The saving above is an average, and a delivery costs the same wherever it goes. So each store's saving under the chosen plan is measured on the 28 past days, and a store gets the second delivery only if that saving beats the delivery's cost. The held-out week scores the choice. The rival is the better of delivering everywhere or nowhere, picked with hindsight. Savings and costs are wasted units per store per day, averaged over all 90 stores. Intervals resample stores.
+The saving above is an average, and a delivery costs the same wherever it goes. So each store's saving under the chosen plan is measured on the 28 past days, and a store gets the second delivery only if that saving beats the delivery's cost. The held-out week scores the choice. The rival is the better of delivering everywhere or nowhere, picked with hindsight. Savings and costs are wasted units per store per day, averaged over all 90 stores. Intervals resample stores with the cost and the chosen stores held fixed, so they are on the narrow side.
 
 - **How uneven the saving is:** the top fifth of stores hold 43% of it, and 27 of 90 save less than half the average.
 

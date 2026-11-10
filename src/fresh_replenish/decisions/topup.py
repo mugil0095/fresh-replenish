@@ -463,7 +463,8 @@ def render_report(results: dict[str, pd.DataFrame]) -> str:
         "days, and a store gets the second delivery only if that saving beats the delivery's "
         "cost. The held-out week scores the choice. The rival is the better of delivering "
         "everywhere or nowhere, picked with hindsight. Savings and costs are wasted units per "
-        f"store per day, averaged over all {len(stores)} stores. Intervals resample stores.",
+        f"store per day, averaged over all {len(stores)} stores. Intervals resample stores with "
+        "the cost and the chosen stores held fixed, so they are on the narrow side.",
         f"- **How uneven the saving is:** the top fifth of stores hold {fifth:.0%} of it, and "
         f"{small} of {len(stores)} save less than half the average.",
         "- **How well past weeks predict it:** the rank correlation between a store's past and "

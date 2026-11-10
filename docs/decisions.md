@@ -516,9 +516,9 @@ A full re-check (tests on a clean copy, re-runs of Phases 1, 2 and 5, the API, t
   - It is predictable: a store's past and held-out savings have a rank correlation of 0.95.
   - At a delivery cost of 22.4 (the average past saving), every store nets 2.0 per store per day and the 37 chosen stores net 7.7, a gain of 5.8 (95% CI 4.4–7.1). Hindsight could reach 7.9.
   - At half that cost the gain is 1.1 (0.6–1.5), and at a quarter 0.2. At twice the cost, 9 stores still earn it back.
-- **A simpler rule does as well:** picking as many stores by past demand nets 7.6 at that cost, against 7.7. Store size carries the choice.
+- **A simpler ranking does as well:** picking as many stores by past demand nets 7.6 at that cost, against 7.7. Store size carries the order, but the number of stores still comes from the simulated savings.
 - **No regression to the mean seen:** the chosen stores saved 36.1 on past days and 41.2 on the held-out week, which was about 10% busier.
-- **Limits:** 90 stores and one held-out week. Intervals resample stores, not days. Units are the data's normalised sales for the sampled lines. The dashboard doesn't show this.
+- **Limits:** 90 stores and one held-out week. Intervals resample stores, not days, and hold the delivery cost and the chosen stores fixed, so they are too narrow. Units are the data's normalised sales for the sampled lines. The dashboard doesn't show this.
 
 ## Known issues
 

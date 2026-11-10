@@ -46,7 +46,7 @@
 - **Recover hidden demand before forecasting.** Otherwise every stockout makes the next order smaller.
 - **Start with a simple multiple.** A fixed multiple of the forecast captures most of the gain. Per-line ranges add another 5–8%.
 - **Price a second delivery.** At the assumed 9×, counting the shelf at 13:00 and topping up by 15:00 pays if a delivery costs less than about 24 wasted units per store per day. That is for stock that lasts one day: at 2 days the figure falls to about 6, and at 3 days to about 2.
-- **Start the second delivery in the biggest stores.** The top fifth of stores hold 43% of its saving. Ranking stores by sales volume picks the ones that earn it back as well as a detailed simulation does.
+- **Start the second delivery in the biggest stores.** The top fifth of stores hold 43% of its saving. Ranking stores by sales volume orders them as well as a detailed simulation does. How far down the list to go depends on what a delivery costs.
 - **Keep a human on unusual orders.** The agent explains the routine ones and routes the exceptions.
 
 ## Caveats
