@@ -24,6 +24,8 @@ What didn't work, or didn't hold, and is reported rather than hidden. The eviden
 - **Updating the forecast from the morning's sales barely helped.** In a throwaway run on the past folds at 9× (not kept in the repo), it moved the cost from 0.721 to 0.689. Part of that is circular, so it was dropped. Nearly all the gain comes from counting the shelf.
 - **The saving shrinks on observed days:** 32% overall, 23% on days with no stockout. Part of the headline may rest on recovered afternoon demand, and those days are also quieter, so the two effects can't be separated.
 - **Waste stays high:** with a one-day shelf life, even a top-up wastes 0.418 units per unit of demand at 9×.
+- **Ranking stores needs no model:** past demand orders them as well as their simulated past saving does (7.6 against 7.7 net units per store per day, at a delivery cost equal to the average saving). Only the cutoff, how many stores to serve, uses the simulated savings.
+- **A cheap delivery leaves little to choose:** at a quarter of the average saving, choosing stores adds only 0.2 per store per day over delivering to all of them.
 - **It is worth far less if stock keeps:** 24.3 wasted units per store per day at a 1-day shelf life, 6.4 at 2 days and 2.0 at 3 days.
 - **First comparisons flattered it, and cost-based orders:** a re-tuned policy was judged against an untuned one. The top-up showed 50–57% savings at 2–3 days instead of 25% and 15%, and cost-based orders showed 78–80% over the median instead of 11% and 8.5% over a tuned multiple.
 

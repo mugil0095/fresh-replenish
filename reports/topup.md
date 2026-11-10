@@ -38,6 +38,30 @@ One delivery commits the whole day's order before opening. Here the morning carr
 | 17 | 19 | 0.9 | 0.8682 | 0.8119 | 0.1429 |
 | 18 | 20 | 0.9 | 0.9206 | 0.87 | 0.0815 |
 
+## Where it pays
+
+The saving above is an average, and a delivery costs the same wherever it goes. So each store's saving under the chosen plan is measured on the 28 past days, and a store gets the second delivery only if that saving beats the delivery's cost. The held-out week scores the choice. The rival is the better of delivering everywhere or nowhere, picked with hindsight. Savings and costs are wasted units per store per day, averaged over all 90 stores. Intervals resample stores with the cost and the chosen stores held fixed, so they are on the narrow side.
+
+- **How uneven the saving is:** the top fifth of stores hold 43% of it, and 27 of 90 save less than half the average.
+
+- **How well past weeks predict it:** the rank correlation between a store's past and held-out saving is 0.95. Its past demand alone gives 0.95.
+
+- **If a delivery costs the average past saving (22.4):** delivering everywhere nets 2.0. Delivering to the 37 stores chosen on past weeks nets 7.7, which is 5.8 more than the rival (95% CI 4.4 to 7.1). Choosing stores with hindsight could reach 7.9.
+
+- **Choosing by size alone:** delivering to as many stores, picked by past demand, nets 7.6.
+
+- **The chosen stores, past against held-out:** they saved 36.1 on past days and 41.2 on the held-out week.
+
+| cost_multiple | delivery_cost | stores_chosen | net_everywhere | net_targeted | net_largest | net_best_possible | gain | gain_low | gain_high | chosen_past_saving | chosen_held_out_saving |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 0.25 | 5.5951 | 83 | 18.7529 | 18.9235 | 18.9434 | 18.9485 | 0.1707 | 0.044 | 0.3151 | 23.9401 | 26.1146 |
+| 0.5 | 11.1903 | 69 | 13.1577 | 14.2198 | 14.1561 | 14.277 | 1.0621 | 0.6065 | 1.5304 | 26.8913 | 29.7378 |
+| 0.75 | 16.7854 | 50 | 7.5626 | 10.2737 | 10.4457 | 10.7752 | 2.7111 | 1.7084 | 3.6402 | 31.7884 | 35.2782 |
+| 1.0 | 22.3805 | 37 | 1.9675 | 7.7238 | 7.6286 | 7.8897 | 5.7563 | 4.3503 | 7.1104 | 36.0784 | 41.1681 |
+| 1.25 | 27.9757 | 27 | -3.6277 | 5.3741 | 5.3741 | 5.7029 | 5.3741 | 3.3478 | 7.73 | 40.6085 | 45.8892 |
+| 1.5 | 33.5708 | 20 | -9.2228 | 3.8957 | 3.7334 | 3.9966 | 3.8957 | 2.227 | 5.782 | 43.8866 | 51.1013 |
+| 2.0 | 44.7611 | 9 | -20.4131 | 1.1743 | 1.1634 | 1.6621 | 1.1743 | 0.2879 | 2.3056 | 50.8504 | 56.504 |
+
 ## If stock keeps longer
 
 Everything above throws unsold stock away the same night. The data has no shelf lives, so this lets unsold units keep for up to 3 days at r = 9, oldest sold first. Each policy counts the stock it carries. The week runs twice and the second pass is scored, so the shelf starts with normal stock.

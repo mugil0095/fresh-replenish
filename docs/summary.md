@@ -30,6 +30,7 @@
 | Ordering by cost vs ordering the most accurate forecast | −56% cost; served 96% of demand vs 77% |
 | Ordering by cost vs reordering last week's demand | −55% cost |
 | Adding a midday top-up delivery | a further −31% cost across all 50,000 lines (−23% on days with fully observed demand), before the delivery's own cost |
+| Top-up delivery only in stores chosen on past weeks | if a delivery cost the average saving: nets 7.7 units per store per day in 37 of 90 stores, against 2.0 in every store |
 | Ordering by cost vs a tuned 1.7× the forecast | −6.5% cost (95% CI 5–8%) |
 | If unsold stock keeps 2–3 days instead of 1 | cost falls by two-thirds or more; ordering by cost keeps an 8–11% edge |
 | Forecast ranges that hold on a new week | 80% of demand fell inside the stated 80% range |
@@ -45,6 +46,7 @@
 - **Recover hidden demand before forecasting.** Otherwise every stockout makes the next order smaller.
 - **Start with a simple multiple.** A fixed multiple of the forecast captures most of the gain. Per-line ranges add another 5–8%.
 - **Price a second delivery.** At the assumed 9×, counting the shelf at 13:00 and topping up by 15:00 pays if a delivery costs less than about 24 wasted units per store per day. That is for stock that lasts one day: at 2 days the figure falls to about 6, and at 3 days to about 2.
+- **Start the second delivery in the biggest stores.** The top fifth of stores hold 43% of its saving. Ranking stores by sales volume orders them as well as a detailed simulation does. How far down the list to go depends on what a delivery costs.
 - **Keep a human on unusual orders.** The agent explains the routine ones and routes the exceptions.
 
 ## Caveats
