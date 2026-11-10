@@ -15,7 +15,8 @@ def _opens_with_the_headline(app):
     assert not app.exception and not app.error
     assert "Cost-based orders cut" in app.markdown[0].value
     assert len(app.metric) == 4 and len(app.tabs) == 5
-    assert [s.value for s in app.subheader] == ["A second delivery"]
+    assert [s.value for s in app.subheader] == ["A second delivery", "Where it pays"]
+    assert any("stores chosen on past weeks" in c.value for c in app.caption)
 
 
 @pytest.mark.data

@@ -30,6 +30,7 @@ def load() -> dict:
         "policies": pd.read_csv(TABLES / "orders_policies.csv"),
         "topup": pd.read_csv(TABLES / "topup_plans.csv"),
         "shelf_life": pd.read_csv(TABLES / "topup_shelf_life.csv").set_index("life_days"),
+        "targeting": pd.read_csv(TABLES / "topup_targeting.csv"),
         "forecasts": pd.read_parquet(PROCESSED_DIR / "forecast_eval.parquet"),
         "categories": data.categories(RAW_DIR / "data" / "train.parquet"),
         "stockouts": pd.read_csv(TABLES / "stockout_by_hour.csv"),
@@ -184,6 +185,39 @@ with policy_tab:
         "own cost. That assumes unsold stock is thrown away the same night: if it keeps 2 or 3 "
         f"days, the worth falls to {d['shelf_life'].saved_per_store_day[2]:.1f} and "
         f"{d['shelf_life'].saved_per_store_day[3]:.1f}."
+    )
+
+    st.subheader("Where it pays")
+    names = {"net_everywhere": "Every store", "net_targeted": "Stores chosen on past weeks"}
+    nets = d["targeting"].melt(
+        id_vars=["delivery_cost", "stores_chosen"], value_vars=list(names),
+        var_name="policy", value_name="net",
+    ).replace({"policy": names})
+    by_cost = alt.Chart(
+        nets, title="Net saving per store per day, by what a delivery costs"
+    ).mark_line(point=alt.OverlayMarkDef(size=64), strokeWidth=2).encode(
+        x=alt.X("delivery_cost:Q",
+                title="A delivery costs this many wasted units per store per day"),
+        y=alt.Y("net:Q", title="Net saving per store per day"),
+        color=alt.Color("policy:N", scale=alt.Scale(domain=list(names.values()),
+                                                    range=[ORANGE, BLUE]), title=None,
+                        legend=alt.Legend(labelLimit=320, orient="bottom")),
+        tooltip=[alt.Tooltip("policy:N"), alt.Tooltip("delivery_cost:Q", format=".1f"),
+                 alt.Tooltip("net:Q", format=".1f", title="Net saving"),
+                 alt.Tooltip("stores_chosen:Q", title="Stores chosen")],
+    )
+    none = alt.Chart(pd.DataFrame({"net": [0.0]})).encode(y="net:Q")
+    none_label = none.mark_text(align="left", dy=-8, color=GRAY, text="No second delivery").encode(
+        x=alt.value(6)
+    )
+    st.altair_chart(by_cost + none.mark_rule(color=GRAY, strokeDash=[4, 4]) + none_label)
+    at = d["targeting"].query("cost_multiple == 1").iloc[0]
+    st.caption(
+        "A delivery costs the same wherever it goes, but the biggest stores hold most of the "
+        f"saving. If it cost the average past saving ({at.delivery_cost:.1f}), delivering to "
+        f"every store would net {at.net_everywhere:.1f}, and delivering to the "
+        f"{int(at.stores_chosen)} stores chosen on past weeks nets {at.net_targeted:.1f}. "
+        "The data has no delivery cost, so the chart tries a range."
     )
 
 with forecast_tab:
