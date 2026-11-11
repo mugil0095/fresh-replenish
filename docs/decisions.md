@@ -520,6 +520,14 @@ A full re-check (tests on a clean copy, re-runs of Phases 1, 2 and 5, the API, t
 - **No regression to the mean seen:** the chosen stores saved 36.1 on past days and 41.2 on the held-out week, which was about 10% busier.
 - **Limits:** 90 stores and one held-out week. Intervals resample stores, not days, and hold the delivery cost and the chosen stores fixed, so they are too narrow. Units are the data's normalised sales for the sampled lines. The dashboard shows it as a chart of net saving against delivery cost.
 
+## 2026-11-11: Repeat and late shelf counts
+
+- **Why:** `/topup` had two known gaps. A second count before the delivery landed ordered the same units again, and a count taken later than 13:00 was scored against the 13:00 target.
+- **No server state:** the API still keeps no record of orders. The store's system already knows what it ordered, so the count can carry `on_order`, and the top-up becomes target minus shelf minus units on order. A stored record would need a writable volume and locking for the same result.
+- **Count hour:** the count can carry `hour`. Any hour but the plan's is refused with a message naming the right one, because the batch only has targets for that hour.
+- **Both are optional,** so existing callers and the CI smoke call are unchanged. A caller that sends neither is trusted as before, which is in the limitations.
+- **Not done:** targets for other hours, and the same two fields on the agent's top-up tool. Changing the agent's tools would make its published scores describe an older agent.
+
 ## Known issues
 
 - **Hugging Face downloads on this laptop:** the antivirus intercepts HTTPS, so Hugging Face requests fail certificate checks. The forecasting run therefore used `HF_HUB_OFFLINE=1`, with the pinned weights already in the local cache.

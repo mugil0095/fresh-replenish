@@ -163,7 +163,7 @@ Costs are per unit of demand. Multiples are chosen on past weeks for each shelf 
 
 - **Batch job:** each night it trains LightGBM, calibrates the forecasts and writes cost-based orders and rest-of-day targets for all 50,000 series. A run takes 13.3 minutes on this laptop and is tracked in MLflow.
 - **API:** `GET /reorder?store_id=…&ratio=…` returns a store's orders, recomputed for any cost ratio from 1/9 to 9. It reads the orders again whenever the nightly batch rewrites them. p95 latency is 14.7 ms.
-- **Top-up:** `POST /topup` takes a store's 13:00 shelf count and returns the units to order for each counted line, up to its rest-of-day target. `/reorder` says what share of each order to send in the morning (the plan chosen at 9×, at every ratio). p95 latency is 12.3 ms for a whole store.
+- **Top-up:** `POST /topup` takes a store's 13:00 shelf count and returns the units to order for each counted line, up to its rest-of-day target. A second count can send the units already on order, so they aren't ordered twice, and a count that states another hour is refused. `/reorder` says what share of each order to send in the morning (the plan chosen at 9×, at every ratio). p95 latency is 12.3 ms for a whole store.
 - **Monitoring:** it checks median bias, range coverage and stockout drift, overall and per category, and replays the served top-up plan on the week. On the held-out week everything is within limits overall (coverage 81.5%), and 13 of 32 categories raise at least one alert.
 - **Docker:** one slim image (no ML stack) runs the API and the dashboard, and `docker compose up` adds MLflow. GitHub Actions runs `docker compose up` on tiny smoke data, then checks `/reorder`, `/topup`, MLflow and that the dashboard opens.
 
