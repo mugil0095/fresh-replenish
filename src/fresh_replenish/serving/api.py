@@ -40,10 +40,16 @@ class Reorder(BaseModel):
     lines: list[Line]
 
 
+Units = Annotated[float, Field(ge=0, allow_inf_nan=False)]
+
+
 class ShelfCount(BaseModel):
     store_id: int
     date: str
-    shelf: dict[int, Annotated[float, Field(ge=0, allow_inf_nan=False)]] = Field(min_length=1)
+    shelf: dict[int, Units] = Field(min_length=1)
+    # The API keeps no record of top-ups, so a second count must say what is already coming.
+    on_order: dict[int, Units] = Field({}, description="ordered today, not yet on the shelf")
+    hour: int | None = Field(None, description="hour of the count, checked against the plan's")
     ratio: float = Field(HEADLINE, ge=1 / 9, le=9, description="lost-sale cost / waste cost")
 
 
@@ -142,12 +148,20 @@ def create_app(orders_path: Path = ORDERS) -> FastAPI:
         unknown = sorted(set(count.shelf) - set(day.index))
         if unknown:
             raise HTTPException(422, f"store {count.store_id} has no orders for {unknown}")
+        uncounted = sorted(set(count.on_order) - set(count.shelf))
+        if uncounted:
+            raise HTTPException(422, f"on order but not counted: {uncounted}")
+        decision_hour = int(day.decision_hour.iloc[0])
+        if count.hour not in (None, decision_hour):  # the targets cover demand from that hour on
+            raise HTTPException(422, f"the targets are for a shelf counted at {decision_hour}:00")
         products, shelf = list(count.shelf), np.array(list(count.shelf.values()))
+        coming = np.array([count.on_order.get(p, 0.0) for p in products])
         level = critical_ratio(count.ratio)
         target = order_at(day.loc[products, REST_COLUMNS].to_numpy(), level)
+        units = top_up(target, shelf + coming)
         lines = [
             TopUpLine(product_id=p, shelf=s, target=t, top_up=u)
-            for p, s, t, u in zip(products, shelf, target, top_up(target, shelf), strict=True)
+            for p, s, t, u in zip(products, shelf, target, units, strict=True)
         ]
         return TopUp(
             store_id=count.store_id, date=count.date, as_of=as_of, ratio=count.ratio,

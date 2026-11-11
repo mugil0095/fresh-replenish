@@ -46,6 +46,30 @@ def test_a_shelf_count_is_topped_up_to_the_target(client):
     ]
 
 
+def test_a_second_count_does_not_order_the_same_units_again(client):
+    again = COUNT | {"on_order": {"10": 3.0}}  # the first count's top-up hasn't landed yet
+    assert client.post("/topup", json=again).json()["lines"][0]["top_up"] == 0.0
+    part = COUNT | {"on_order": {"10": 1.0}}
+    assert client.post("/topup", json=part).json()["lines"][0]["top_up"] == 2.0
+
+
+def test_a_count_at_the_plans_hour_is_accepted(client):
+    assert client.post("/topup", json=COUNT | {"hour": 13}).status_code == 200
+
+
+@pytest.mark.parametrize(
+    ("change", "message"),
+    [
+        ({"hour": 16}, "counted at 13:00"),
+        ({"on_order": {"99": 1.0}}, "on order but not counted: [99]"),
+        ({"on_order": {"10": -1.0}}, "greater than or equal to 0"),
+    ],
+)
+def test_counts_the_targets_cannot_answer_are_refused(client, change, message):
+    response = client.post("/topup", json=COUNT | change)
+    assert response.status_code == 422 and message in response.text
+
+
 def test_a_lower_ratio_tops_up_less(client):
     body = client.post("/topup", json=COUNT | {"ratio": 1}).json()
     assert [line["target"] for line in body["lines"]] == [2.5, 2.5]  # the median
