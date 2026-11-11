@@ -2,6 +2,8 @@
 
 **Ordering fresh food by cost instead of by the most accurate forecast cut simulated waste + lost-sales cost by 56%** on a held-out week: 4,928 store-product lines (538 products) in 90 quick-commerce dark stores, with a lost sale assumed to cost 9× a wasted unit. Most of that comes from ordering more than the forecast: a fixed 1.7× the median, tuned on past weeks, gets within 6.5%. The [one-page summary](docs/summary.md) gives the business view.
 
+**Demo:** [download the 4-minute video](https://github.com/mugil0095/fresh-replenish/releases/download/v1.0.0/fresh-replenish-demo-small.mp4) (11 MB, captions, no sound) from the [v1.0.0 release](https://github.com/mugil0095/fresh-replenish/releases/tag/v1.0.0). It walks through the dashboard and three agent conversations.
+
 | What | Result |
 |---|---|
 | Demand hidden by stockouts, recovered | +28% on all days, +62% on stockout days |
