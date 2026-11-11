@@ -56,8 +56,9 @@ class ShelfCount(BaseModel):
 class TopUpLine(BaseModel):
     product_id: int
     shelf: float
+    on_order: float
     target: float
-    top_up: float
+    top_up: float  # target - shelf - on_order, never below 0
 
 
 class TopUp(BaseModel):
@@ -160,12 +161,12 @@ def create_app(orders_path: Path = ORDERS) -> FastAPI:
         target = order_at(day.loc[products, REST_COLUMNS].to_numpy(), level)
         units = top_up(target, shelf + coming)
         lines = [
-            TopUpLine(product_id=p, shelf=s, target=t, top_up=u)
-            for p, s, t, u in zip(products, shelf, target, units, strict=True)
+            TopUpLine(product_id=p, shelf=s, on_order=c, target=t, top_up=u)
+            for p, s, c, t, u in zip(products, shelf, coming, target, units, strict=True)
         ]
         return TopUp(
             store_id=count.store_id, date=count.date, as_of=as_of, ratio=count.ratio,
-            critical_ratio=level, decision_hour=day.decision_hour.iloc[0],
+            critical_ratio=level, decision_hour=decision_hour,
             arrival_hour=day.arrival_hour.iloc[0], lines=lines,
         )
 

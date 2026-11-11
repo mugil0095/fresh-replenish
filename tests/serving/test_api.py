@@ -41,16 +41,16 @@ def test_a_shelf_count_is_topped_up_to_the_target(client):
     assert body["critical_ratio"] == pytest.approx(0.9) and body["as_of"] == "2024-06-25"
     assert (body["decision_hour"], body["arrival_hour"]) == (13, 15)
     assert body["lines"] == [
-        {"product_id": 10, "shelf": 1.5, "target": 4.5, "top_up": 3.0},
-        {"product_id": 11, "shelf": 6.0, "target": 4.5, "top_up": 0.0},
+        {"product_id": 10, "shelf": 1.5, "on_order": 0.0, "target": 4.5, "top_up": 3.0},
+        {"product_id": 11, "shelf": 6.0, "on_order": 0.0, "target": 4.5, "top_up": 0.0},
     ]
 
 
 def test_a_second_count_does_not_order_the_same_units_again(client):
     again = COUNT | {"on_order": {"10": 3.0}}  # the first count's top-up hasn't landed yet
     assert client.post("/topup", json=again).json()["lines"][0]["top_up"] == 0.0
-    part = COUNT | {"on_order": {"10": 1.0}}
-    assert client.post("/topup", json=part).json()["lines"][0]["top_up"] == 2.0
+    part = client.post("/topup", json=COUNT | {"on_order": {"10": 1.0}}).json()["lines"][0]
+    assert (part["on_order"], part["top_up"]) == (1.0, 2.0)  # the reply shows its sums
 
 
 def test_a_count_at_the_plans_hour_is_accepted(client):
