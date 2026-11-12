@@ -106,21 +106,27 @@ class Toolbox:
 
     def compute_top_up(
         self, store_id: int, product_id: int, date: str, shelf: float, ratio: float = HEADLINE,
+        on_order: float = 0.0, hour: int | None = None,
     ) -> dict:
-        """Units for the second delivery, from the shelf count at the decision hour. Advice only."""
+        """Units for the second delivery, from the shelf count at the decision hour. Advice only.
+
+        on_order: units ordered today that have not arrived. hour: when the shelf was counted.
+        """
         line = self._line(store_id, product_id, date)
         if line is None:
             return self._missing(store_id, product_id, date)
         if not 1 / 9 <= ratio <= 9:
             return {"error": BAD_RATIO}
-        if not shelf >= 0:  # also refuses NaN
-            return {"error": "the shelf count must be zero or more"}
+        if not shelf >= 0 or not on_order >= 0:  # also refuses NaN
+            return {"error": "the shelf count and units on order must be zero or more"}
+        if hour not in (None, int(line.decision_hour)):  # as /topup: no targets for other hours
+            return {"error": f"the targets are for a shelf counted at {int(line.decision_hour)}:00"}
         level = critical_ratio(ratio)
         target = float(order_at(line[REST_COLUMNS].to_numpy(dtype=float), level))
         return {
             "store_id": store_id, "product_id": product_id, "date": date, "ratio": ratio,
-            "critical_ratio": _r(level), "shelf": shelf, "target": _r(target),
-            "top_up": _r(top_up(target, shelf)),
+            "critical_ratio": _r(level), "shelf": shelf, "on_order": on_order,
+            "target": _r(target), "top_up": _r(top_up(target, shelf + on_order)),
             "decision_hour": int(line.decision_hour), "arrival_hour": int(line.arrival_hour),
         }
 
