@@ -126,6 +126,18 @@ def _week(frame: pd.DataFrame, h: Hours) -> Week:
     )
 
 
+def _weeks(h: Hours, folds: pd.DataFrame, held_out: pd.DataFrame) -> tuple:
+    """The line groups, the past weeks with their calibrated forecasts, and the held-out week."""
+    groups = held_out[[*KEYS, "group"]].drop_duplicates()
+    return groups, _week(calibrate(folds, shifts(folds, groups), groups), h), _week(held_out, h)
+
+
+def _rest_deciles(week: Week, rest: pd.DataFrame, table: pd.DataFrame, groups) -> np.ndarray:
+    """Calibrated deciles of the demand left at the decision hour, shaped like the week's."""
+    calibrated = calibrate(rest, table, groups)[CALIBRATED_COLUMNS]
+    return calibrated.to_numpy(dtype=float).reshape(week.deciles.shape)
+
+
 def _rest_of_day(week: Week, hour: int) -> pd.DataFrame:
     """A forecast frame for the demand left at the decision hour: the day's deciles, scaled."""
     t = hour - OPENING
@@ -214,9 +226,7 @@ def run(
     """Score a top-up at every decision hour and cost ratio; only past weeks pick the plan."""
     if headline not in ratios:
         raise ValueError(f"headline ratio {headline:g} is not one of the ratios {ratios}")
-    groups = held_out[[*KEYS, "group"]].drop_duplicates()
-    past = _week(calibrate(folds, shifts(folds, groups), groups), h)
-    week = _week(held_out, h)
+    groups, past, week = _weeks(h, folds, held_out)
     orders = {r: order_at(week.deciles, critical_ratio(r)) for r in ratios}
     levels = {}
     for r in ratios:  # stock that keeps makes overstock cheaper than the newsvendor rule assumes
@@ -224,17 +234,13 @@ def run(
         levels[r] = 1.0 if life == 1 else _best_level(past, past_order, r, life)
     one = {r: _one_delivery(week, levels[r] * orders[r], r, life) for r in ratios}
 
-    def targets(rest: pd.DataFrame, table: pd.DataFrame, like: Week) -> np.ndarray:
-        calibrated = calibrate(rest, table, groups)[CALIBRATED_COLUMNS]
-        return calibrated.to_numpy(dtype=float).reshape(like.deciles.shape)
-
     shares = MORNING_SHARES if life > 1 else MORNING_SHARES[MORNING_SHARES <= 1]
     rows, tables = [], {}
     for hour in DECISION_HOURS:
         past_rest = _rest_of_day(past, hour)
         table = tables[hour] = shifts(past_rest, groups)
-        past_targets = targets(past_rest, table, past)
-        week_targets = targets(_rest_of_day(week, hour), table, week)
+        past_targets = _rest_deciles(past, past_rest, table, groups)
+        week_targets = _rest_deciles(week, _rest_of_day(week, hour), table, groups)
         for r in ratios:
             ratio = critical_ratio(r)
             on_past = order_at(past.deciles, ratio), order_at(past_targets, ratio)
@@ -279,15 +285,10 @@ def targeting(
     plan, r = results["shifts"], float(results["sample"].headline_ratio.iloc[0])
     hour, share = int(plan.decision_hour.iloc[0]), float(plan.morning_share.iloc[0])
     level = critical_ratio(r)
-    groups = held_out[[*KEYS, "group"]].drop_duplicates()
-    weeks = {
-        "past": _week(calibrate(folds, shifts(folds, groups), groups), h),
-        "held_out": _week(held_out, h),
-    }
+    groups, past_week, held_week = _weeks(h, folds, held_out)
     columns = {}
-    for name, week in weeks.items():
-        rest = calibrate(_rest_of_day(week, hour), plan, groups)[CALIBRATED_COLUMNS]
-        target = order_at(rest.to_numpy(dtype=float).reshape(week.deciles.shape), level)
+    for name, week in {"past": past_week, "held_out": held_week}.items():
+        target = order_at(_rest_deciles(week, _rest_of_day(week, hour), plan, groups), level)
         order = order_at(week.deciles, level)
         *_, waste, lost = _plan(week, order, target, hour, share)
         none = np.zeros_like(order)  # a full morning and no top-up target: one delivery
@@ -331,10 +332,8 @@ def shelf_life(
     orders and the top-up where stock keeps, so no policy is judged against an untuned one.
     """
     held_out = forecasts[forecasts.model == CLASSICAL]
-    groups = held_out[[*KEYS, "group"]].drop_duplicates()
-    past = _week(calibrate(folds, shifts(folds, groups), groups), h)
+    _, past, week = _weeks(h, folds, held_out)
     past_median = past.frame.q50.to_numpy(dtype=float).reshape(past.demand.shape)
-    week = _week(held_out, h)
 
     def median(model: str) -> np.ndarray:
         rows = forecasts[forecasts.model == model].sort_values([*KEYS, "dt"])
