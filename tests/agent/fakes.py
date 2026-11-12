@@ -16,3 +16,10 @@ class Recording(Scripted):
     def _generate(self, messages, *args, **kwargs):
         self.rules.append(messages[0].text)
         return super()._generate(messages, *args, **kwargs)
+
+
+class Broken(Scripted):
+    """A model whose provider refuses every call, like an account out of credits."""
+
+    def _generate(self, *args, **kwargs):
+        raise RuntimeError("402: add usage credits")
