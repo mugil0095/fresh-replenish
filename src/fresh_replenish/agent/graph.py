@@ -187,7 +187,7 @@ def build_agent(model, toolbox: Toolbox):
         orders, failed = _orders(state), _failed(state)
         # After 3 failed checks a planner takes over all of them; otherwise each one in turn.
         index = failed[-1] if len(failed) >= MAX_FAILED_CHECKS else failed[0]
-        line = orders[index]
+        line = {k: v for k, v in orders[index].items() if k != "error"}  # a refused save's note
         decision = interrupt({"order": line, "failed_checks": len(failed)})
         verdict = "approved" if decision.get("approved") else "rejected"
         approved = state.get("approved", []) + (

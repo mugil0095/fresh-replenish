@@ -68,7 +68,7 @@ uv run python -m fresh_replenish.imputation.recovery  # writes reports/demand_re
 uv run python -m fresh_replenish.forecasting.evaluate  # writes reports/forecasting.md (~10 min; ~2.5 GB of model weights the first time)
 uv run python -m fresh_replenish.uncertainty.conformal  # writes reports/calibration.md (~4 min)
 uv run python -m fresh_replenish.decisions.newsvendor   # writes reports/orders.md (seconds)
-uv run python -m fresh_replenish.decisions.topup        # writes reports/topup.md (~3 min)
+uv run python -m fresh_replenish.decisions.topup        # writes reports/topup.md (~3.5 min)
 uv run python -m fresh_replenish.serving.batch          # nightly orders for all 50,000 series (~13 min)
 uv run uvicorn --factory fresh_replenish.serving.api:create_app  # GET /reorder?store_id=0, POST /topup
 uv run python -m fresh_replenish.serving.latency        # writes reports/service.md
