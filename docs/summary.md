@@ -29,6 +29,7 @@
 | Real demand hidden by stockouts | +28% overall, +62% on days with a stockout |
 | Ordering by cost vs ordering the most accurate forecast | −56% cost; served 96% of demand vs 77% |
 | Ordering by cost vs reordering last week's demand | −55% cost |
+| The same comparison on each of the 4 earlier weeks | −40% to −57% against the most accurate forecast; −50% to −59% against last week |
 | Adding a midday top-up delivery | a further −31% cost across all 50,000 lines (−23% on days with fully observed demand), before the delivery's own cost |
 | Top-up delivery only in stores chosen on past weeks | if a delivery cost the average saving: nets 7.7 units per store per day in 37 of 90 stores, against 2.0 in every store |
 | Ordering by cost vs a tuned 1.7× the forecast | −6.5% cost (95% CI 5–8%) |

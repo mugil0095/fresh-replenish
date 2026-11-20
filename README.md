@@ -10,6 +10,7 @@
 | Forecast error (WAPE), held-out week | LightGBM 32.5%; Chronos-2 33.3% zero-shot; reorder last week 41.7% |
 | Forecast ranges that hold | 80% of demand inside the calibrated 10–90% range (target 80%) |
 | Cost of orders, against the most accurate forecast's median | −56% (−55% against reordering last week's demand) |
+| The same comparison on each of the 4 weeks before | −40% to −57% (−50% to −59% against last week's demand) |
 | Cost of orders, against a fixed 1.7× that median, tuned on past weeks | −6.5% (95% CI 5–8%) |
 | A second delivery, ordered at 13:00 | a further −32% on the 90-store sample, −31% on all 50,000 lines (−23% on days with fully observed demand), before the delivery's own cost |
 | A second delivery only where it pays | if a delivery cost the average saving: 7.7 net units per store per day for 37 of 90 stores chosen on past weeks, against 2.0 for every store |
@@ -68,6 +69,7 @@ uv run python -m fresh_replenish.imputation.recovery  # writes reports/demand_re
 uv run python -m fresh_replenish.forecasting.evaluate  # writes reports/forecasting.md (~10 min; ~2.5 GB of model weights the first time)
 uv run python -m fresh_replenish.uncertainty.conformal  # writes reports/calibration.md (~4 min)
 uv run python -m fresh_replenish.decisions.newsvendor   # writes reports/orders.md (seconds)
+uv run python -m fresh_replenish.decisions.weekly       # writes reports/weekly.md: the headline week by week
 uv run python -m fresh_replenish.decisions.topup        # writes reports/topup.md (~3.5 min)
 uv run python -m fresh_replenish.serving.batch          # nightly orders for all 50,000 series (~13 min)
 uv run uvicorn --factory fresh_replenish.serving.api:create_app  # GET /reorder?store_id=0, POST /topup
@@ -126,6 +128,7 @@ The checks use a held-out week (Jun 26–Jul 2) that no model saw.
 - **Cost-based orders win:** at 9×, LightGBM's cost-based orders cost 55% less than reordering last week's demand (recovered, so its stockout gaps are filled in).
 - **The most accurate number is a poor order:** ordering LightGBM's median costs 2.3× as much as its cost-based order, and more than reordering last week's demand.
 - **Most of the gain is ordering more:** a fixed multiple of the median, chosen on past weeks (1.7×), costs 1.013 per unit of demand. Cost-based orders are 6.5% cheaper than that (95% CI 5–8%), so per-line calibrated ranges add that last part, not the whole 56%.
+- **Week by week:** on each of the 4 weeks before, with ranges calibrated on the other weeks only, cost-based orders cost 40% to 57% less than ordering the median (average 49%). The held-out week's 56% is near the top of that range ([report](reports/weekly.md)).
 - **LightGBM is cheapest overall,** at every cost ratio. A foundation model is cheapest in 27 of the 90 stores.
 
 ## A second delivery

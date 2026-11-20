@@ -18,6 +18,7 @@ What didn't work, or didn't hold, and is reported rather than hidden. The eviden
 - **The spec's claim fails across models.** "The most accurate model is not the cheapest" didn't hold: LightGBM's cost-based orders were the cheapest at every cost ratio. It holds only for the decision rule (ordering the median vs ordering by cost), and in 27 of 90 stores, which is too few days per store to test.
 - **Calibrated deciles still run 1–5 points low** on the held-out week, whose demand was higher than the weeks the calibration learned from.
 - **Most of the headline is ordering more.** Against a fixed multiple of the median tuned on past weeks (1.7×), cost-based orders save 6.5% (95% CI 5–8%), not 56%. That is what per-line calibrated ranges are worth at 9×.
+- **The held-out week flatters the headline a little:** its 56% saving against the median sits near the top of the 40% to 57% seen on the 4 weeks before it (average 49%). Against last week's demand it is typical (55% against 50% to 59%).
 - **Availability costs waste:** at the 9× headline ratio, about a third of the units ordered are wasted.
 
 ## Second delivery

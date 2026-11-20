@@ -542,6 +542,14 @@ A full re-check (tests on a clean copy, re-runs of Phases 1, 2 and 5, the API, t
 - **Not evaluated:** the tuned evaluation run failed on its first question: the Ollama key had no credits left (HTTP 402). The published scores describe the agent before this change. Scripted-model tests cover the new fields.
 - **A failed run overwrote the published scores:** with nothing finished, the evaluation wrote an empty report over the last one. The files were restored from git. Now a run where nothing finishes changes no files and keeps the last decision records. The local records from the last good run were already lost, so the dashboard's agent table stays empty until the next run.
 
+## 2026-11-20: The headline, week by week
+
+- **Why:** the 56% comes from one held-out week. One week can be lucky.
+- **Method:** the orders study runs again on each of the 4 weeks before it, at 9×. Each week's ranges are calibrated on the other 3 weeks only, and a test checks that a week's own demand never changes its calibration. The held-out week, calibrated on all 4, stays the headline.
+- **Result:** against the most accurate forecast's median, cost-based orders cost 40%, 46%, 51% and 57% less, week by week (average 49%). Against last week's demand: 50% to 59%. LightGBM was the most accurate model in every week.
+- **What it means:** ordering by cost wins in every week, but the held-out week's 56% is near the top of the range. A fair one-line claim is "about half".
+- **Not re-run:** the top-up, shelf-life and agent results stay on the held-out week.
+
 ## Known issues
 
 - **Hugging Face downloads on this laptop:** the antivirus intercepts HTTPS, so Hugging Face requests fail certificate checks. The forecasting run therefore used `HF_HUB_OFFLINE=1`, with the pinned weights already in the local cache.
