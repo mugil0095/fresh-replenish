@@ -15,5 +15,5 @@ What this project can and can't claim. Results that failed or didn't hold are in
 - **The number checker reads percentile labels by pattern.** The patterns come from how `gpt-oss:120b` types them, so another model may trigger retries or give-ups.
 - **The agent stops after 5 failed tool calls.** A question about 5 or more missing products ends in "ask a planner", not "no data". Loops of successful calls aren't capped.
 - **The agent's top-ups are advice.** It saves nothing, skips the order limits and store capacity, and assumes the shelf was counted at the decision hour (13:00), as `/topup` does. It doesn't mention the morning share.
-- **One dataset, one retailer.** All results come from FreshRetailNet-50K (Dingdong, 18 Chinese cities, spring 2024).
+- **One dataset, one retailer.** All results come from FreshRetailNet-50K (Dingdong, 18 Chinese cities, spring 2024). The headline comes from one held-out week; the 4 weeks before it give 40% to 57%.
 - **Not production-hardened.** No authentication on the API, one process, and the orders file is the only store. CI runs Docker Compose on tiny smoke data, but the stack has not been run on the real outputs.
