@@ -533,6 +533,7 @@ A full re-check (tests on a clean copy, re-runs of Phases 1, 2 and 5, the API, t
 - **What moved:** `uv lock --upgrade` moved 40 packages within the project's constraints. Among them: FastAPI 0.162.5, Streamlit 1.67, MLflow 3.18, LangChain 1.5, LangGraph 1.2.20, pyarrow 26, and two majors, pypots 2.0 and pyfixest 0.70. All tests pass, including the ones on the real data and model weights.
 - **Held back:** pandas stays on 2.3 (toto-2's gluonts caps it below 3), transformers on 4.57 (pypots and chronos-forecasting), and torch on 2.14 (the project's own pin, with the CUDA 12.6 wheels).
 - **MLflow migrates its store:** the 3.18 client upgrades the SQLite schema the first time it logs a run, checked on a copy of `mlruns/mlflow.db`. A 3.17 server can't read the upgraded store, so the Compose file now runs `ghcr.io/mlflow/mlflow:v3.18.0` (tag checked on GHCR). The local store is migrated by the next batch run.
+- **Second pass (20 Nov):** 36 more packages moved, including FastAPI 0.165, LangGraph 1.2.24, LangChain 1.5.2, DuckDB 2.0.1 and NumPy 2.5.5; all tests pass. Still blocked: pandas 3 (gluonts), transformers 5 and huggingface-hub 2 (pypots, chronos-forecasting), and torch 2.15, which has no CUDA 12.6 wheel for Windows.
 - **Results not re-run:** the reports come from outputs saved with the old versions. pyfixest 0.70 and pypots 2.0 could move the Phase 2 and Phase 3 numbers slightly if those phases were run again.
 
 ## 2026-11-12: The agent's top-ups match the API
