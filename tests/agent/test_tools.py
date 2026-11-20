@@ -12,7 +12,7 @@ def test_a_shelf_count_is_topped_up_to_the_rest_of_day_target(toolbox):
     out = toolbox.compute_top_up(1, 10, "2024-06-26", shelf=1.5)
     assert out == {
         "store_id": 1, "product_id": 10, "date": "2024-06-26", "ratio": 9.0,
-        "critical_ratio": 0.9, "shelf": 1.5, "target": 4.5, "top_up": 3.0,
+        "critical_ratio": 0.9, "shelf": 1.5, "on_order": 0.0, "target": 4.5, "top_up": 3.0,
         "decision_hour": 13, "arrival_hour": 15,
     }
     json.dumps(out)  # the model reads it as JSON
@@ -20,6 +20,16 @@ def test_a_shelf_count_is_topped_up_to_the_rest_of_day_target(toolbox):
 
 def test_a_full_shelf_needs_no_top_up(toolbox):
     assert toolbox.compute_top_up(1, 10, "2024-06-26", shelf=6.0)["top_up"] == 0
+
+
+def test_units_on_order_are_not_ordered_again(toolbox):
+    out = toolbox.compute_top_up(1, 10, "2024-06-26", shelf=1.5, on_order=1.0)
+    assert (out["on_order"], out["top_up"]) == (1.0, 2.0)  # the same sums as /topup
+
+
+def test_a_count_at_another_hour_is_refused(toolbox):
+    assert "counted at 13:00" in toolbox.compute_top_up(1, 10, "2024-06-26", 1.5, hour=16)["error"]
+    assert "error" not in toolbox.compute_top_up(1, 10, "2024-06-26", 1.5, hour=13)
 
 
 def test_the_top_up_target_follows_the_cost_ratio(toolbox):
@@ -32,6 +42,7 @@ def test_the_top_up_target_follows_the_cost_ratio(toolbox):
 )
 def test_a_top_up_refuses_what_it_cannot_answer(toolbox, product, shelf, ratio):
     assert "error" in toolbox.compute_top_up(1, product, "2024-06-26", shelf, ratio)
+    assert "error" in toolbox.compute_top_up(1, 10, "2024-06-26", 1.0, on_order=-1.0)
 
 
 def test_forecast_lookup(toolbox):

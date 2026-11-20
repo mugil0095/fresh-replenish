@@ -246,3 +246,15 @@ def test_the_planner_is_shown_a_failed_order(toolbox):
     result = app.invoke({"messages": [HumanMessage("Order product 10.")]},
                         {"configurable": {"thread_id": "t"}})
     assert result["__interrupt__"][0].value["order"]["within_limits"] is False
+
+
+def test_the_planner_sees_a_refused_save_as_an_order_not_an_error(toolbox):
+    save = {"name": "write_decision_record", "id": "1",
+            "args": {**DAY, "order": 20.0, "reason": "asked"}}
+    script = [AIMessage("", tool_calls=[save]), AIMessage("20 units is over the limit.")]
+    app = build_agent(Scripted(responses=script), toolbox)
+    question = "Place an order of 20 units of product 10 for store 1 on 2024-06-26."
+    config = {"configurable": {"thread_id": "t"}}
+    result = app.invoke({"messages": [HumanMessage(question)]}, config)
+    order = result["__interrupt__"][0].value["order"]
+    assert order["order"] == 20.0 and "error" not in order

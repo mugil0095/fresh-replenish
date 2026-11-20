@@ -528,6 +528,20 @@ A full re-check (tests on a clean copy, re-runs of Phases 1, 2 and 5, the API, t
 - **Both are optional,** so existing callers and the CI smoke call are unchanged. A caller that sends neither is trusted as before, which is in the limitations.
 - **Not done:** targets for other hours, and the same two fields on the agent's top-up tool. Changing the agent's tools would make its published scores describe an older agent.
 
+## 2026-11-12: Package upgrades
+
+- **What moved:** `uv lock --upgrade` moved 40 packages within the project's constraints. Among them: FastAPI 0.162.5, Streamlit 1.67, MLflow 3.18, LangChain 1.5, LangGraph 1.2.20, pyarrow 26, and two majors, pypots 2.0 and pyfixest 0.70. All tests pass, including the ones on the real data and model weights.
+- **Held back:** pandas stays on 2.3 (toto-2's gluonts caps it below 3), transformers on 4.57 (pypots and chronos-forecasting), and torch on 2.14 (the project's own pin, with the CUDA 12.6 wheels).
+- **MLflow migrates its store:** the 3.18 client upgrades the SQLite schema the first time it logs a run, checked on a copy of `mlruns/mlflow.db`. A 3.17 server can't read the upgraded store, so the Compose file now runs `ghcr.io/mlflow/mlflow:v3.18.0` (tag checked on GHCR). The local store is migrated by the next batch run.
+- **Results not re-run:** the reports come from outputs saved with the old versions. pyfixest 0.70 and pypots 2.0 could move the Phase 2 and Phase 3 numbers slightly if those phases were run again.
+
+## 2026-11-12: The agent's top-ups match the API
+
+- **Why:** `/topup` learned to take units on order and the count's hour, but the agent's top-up tool hadn't, so the same count could get two answers.
+- **Change:** `compute_top_up` takes `on_order` and `hour`, with the same sums and the same refusal as `/topup`. The prompt asks the agent to pass them.
+- **Not evaluated:** the tuned evaluation run failed on its first question: the Ollama key had no credits left (HTTP 402). The published scores describe the agent before this change. Scripted-model tests cover the new fields.
+- **A failed run overwrote the published scores:** with nothing finished, the evaluation wrote an empty report over the last one. The files were restored from git. Now a run where nothing finishes changes no files and keeps the last decision records. The local records from the last good run were already lost, so the dashboard's agent table stays empty until the next run.
+
 ## Known issues
 
 - **Hugging Face downloads on this laptop:** the antivirus intercepts HTTPS, so Hugging Face requests fail certificate checks. The forecasting run therefore used `HF_HUB_OFFLINE=1`, with the pinned weights already in the local cache.

@@ -2,7 +2,7 @@ import json
 
 import pandas as pd
 import pytest
-from fakes import Scripted
+from fakes import Broken, Scripted
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
 from fresh_replenish.agent import evaluate
@@ -117,6 +117,28 @@ def test_the_held_out_questions_run_only_once(tmp_path, capsys, monkeypatch):
     # No data here: even without the guard it stops before calling a model.
     assert evaluate.main(tmp_path, tmp_path, tmp_path, holdout=True) == 2
     assert "run once" in capsys.readouterr().err
+
+
+def test_a_run_where_nothing_finishes_keeps_the_last_results(tmp_path, orders, capsys,
+                                                             monkeypatch):
+    processed, decisions = tmp_path / "data" / "processed", tmp_path / "data" / "decisions"
+    processed.mkdir(parents=True)
+    decisions.mkdir()
+    orders.to_parquet(processed / "orders.parquet")
+    records = decisions / "eval_records.jsonl"
+    records.write_text("kept\n", encoding="utf-8")
+    report = tmp_path / "agent_gpt-oss-120b.md"
+    report.write_text("last results", encoding="utf-8")
+    monkeypatch.setenv("FRESH_LLM", "ollama:gpt-oss:120b")
+    monkeypatch.setattr(evaluate, "local_paths", lambda raw_dir: ("train", "eval"))
+    monkeypatch.setattr(evaluate, "connect", lambda *paths: None)
+    monkeypatch.setattr(evaluate, "chronos_scenario", lambda *args: None)
+    monkeypatch.setattr(evaluate, "chat_model", lambda name: Broken(responses=[AIMessage("")]))
+    assert evaluate.main(tmp_path, processed, tmp_path) == 1
+    assert report.read_text(encoding="utf-8") == "last results"
+    assert records.read_text(encoding="utf-8") == "kept\n"
+    assert not (tmp_path / "tables").exists()
+    assert "402: add usage credits" in capsys.readouterr().err
 
 
 def test_provider_errors_are_recorded_and_stop_the_run(orders):

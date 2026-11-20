@@ -313,6 +313,7 @@ def main(
     con = connect(*paths)
     model = chat_model(model_name)  # a bad model setting fails before the last run's records go
     records = processed_dir.parent / "decisions" / f"eval_records{suffix}.jsonl"
+    last = records.read_bytes() if records.exists() else None
     records.unlink(missing_ok=True)  # saved orders count toward capacity: start each run empty
     toolbox = Toolbox(
         orders, scenario=chronos_scenario(con, processed_dir / "recovered_demand.parquet"),
@@ -324,6 +325,12 @@ def main(
         lambda question: app, questions,
         price=None if not price else tuple(float(x) for x in price.split(",")),
     )
+    if not summary.set_index("type").loc["all", "runs"]:  # out of credits, an outage: no results
+        if last is not None:
+            records.write_bytes(last)
+        print(f"No run finished, so the last results stay. First error: {runs.error.iloc[0]}",
+              file=sys.stderr)
+        return 1
     (out_dir / "tables").mkdir(parents=True, exist_ok=True)
     runs.to_csv(out_dir / "tables" / f"agent_runs{suffix}_{slug}.csv", index=False)
     summary.to_csv(out_dir / "tables" / f"agent_summary{suffix}_{slug}.csv", index=False)
